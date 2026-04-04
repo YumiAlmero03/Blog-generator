@@ -1,16 +1,15 @@
 from config import PROVIDER, MODEL
 from generators.title_generator import generate_titles
 
-from providers.ollama_provider import OllamaProvider
-from providers.openai_provider import OpenAIProvider
-from providers.gemini_provider import GeminiProvider
-
 def get_provider():
     if PROVIDER == "ollama":
+        from providers.ollama_provider import OllamaProvider
         return OllamaProvider(MODEL)
     elif PROVIDER == "openai":
+        from providers.openai_provider import OpenAIProvider
         return OpenAIProvider(MODEL)
     elif PROVIDER == "gemini":
+        from providers.gemini_provider import GeminiProvider
         return GeminiProvider(MODEL)
     else:
         raise ValueError(f"Unsupported provider: {PROVIDER}")

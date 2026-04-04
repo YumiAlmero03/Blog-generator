@@ -19,7 +19,7 @@ Rules:
   - problem/solution
   - benefits
   - list style if appropriate
-- Keep titles around 45 to 65 characters when possible
+- Keep titles around 45 to 55 characters when possible
 - Use the keyword naturally
 - No explanations
 
@@ -34,3 +34,4 @@ Return valid JSON only in this format:
 
 Tone: {tone}
 """
+
