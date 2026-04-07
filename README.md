@@ -145,3 +145,7 @@ The generated content should aim to follow these guidelines:
 - Internal linking suggestions
 - Meta title and meta description generation
 - Provider switching between Ollama, OpenAI, and Gemini
+
+source venv/bin/activate   
+pip install -r requirements.txt
+python ui.py

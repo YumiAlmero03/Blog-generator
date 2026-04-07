@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auto Blog Generator</title>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #f4f4f8; color: #111; }
+      .page { max-width: 1000px; margin: 0 auto; padding: 32px; }
+      .box { background: #fff; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); padding: 28px; margin-bottom: 20px; }
+      h1, h2 { margin-top: 0; }
+      label { display: block; margin-bottom: 8px; font-weight: 600; }
+      input, textarea, select { width: 100%; padding: 12px 14px; margin-bottom: 16px; border: 1px solid #d5d5e0; border-radius: 10px; font-size: 1rem; }
+      button { background: #2563eb; color: #fff; border: none; border-radius: 10px; padding: 12px 20px; cursor: pointer; font-size: 1rem; font-weight: 500; }
+      button:hover { background: #1d4ed8; }
+      button:disabled { background: #9ca3af; cursor: not-allowed; }
+      .meta { margin-bottom: 24px; color: #5f6f86; font-size: 0.95rem; }
+      .error { background: #fee2e2; color: #991b1b; padding: 14px 16px; border-radius: 12px; margin-bottom: 20px; }
+      .title-list { list-style: none; padding-left: 0; }
+      .title-item { margin-bottom: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; }
+      .title-item input[type="radio"] { margin-right: 10px; }
+      .title-item label { margin: 0; display: inline; font-weight: normal; }
+      .title-item:hover { background: #f9fafb; }
+      .title-item input[type="radio"]:checked + label { font-weight: 600; color: #2563eb; }
+      .meta-box { background: #f0f7ff; border-left: 4px solid #2563eb; padding: 16px; border-radius: 8px; margin-top: 16px; }
+      .char-count { font-size: 0.9rem; color: #666; margin-top: 8px; }
+      .loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; }
+      .loading-overlay.active { display: flex; }
+      .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #fff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+      .spinner-text { color: #fff; margin-top: 16px; font-size: 1.1rem; text-align: center; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .quill-editor { height: 400px; margin-bottom: 16px; background: #fff; }
+      .ql-toolbar { border: 1px solid #d5d5e0; border-radius: 10px 10px 0 0; background: #f0f0f0; }
+      .ql-container { border: 1px solid #d5d5e0; border-radius: 0 0 10px 10px; font-family: system-ui, sans-serif; font-size: 1rem; }
+      .footer { margin-top: 28px; color: #667085; font-size: 0.95rem; }
+      .step-badge { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 4px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 600; margin-bottom: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="loading-overlay" id="loadingOverlay">
+      <div>
+        <div class="spinner"></div>
+        <div class="spinner-text" id="loadingText">Generating content...</div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="box">
+        <h1>Auto Blog Generator</h1>
+        <p class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></p>
+
+        {% if error %}
+          <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <!-- Step 1: Generate Titles -->
+        <form method="post" id="titlesForm" onsubmit="showLoading('Generating titles...')">
+          <span class="step-badge">Step 1</span>
+          <h2>Generate Blog Titles</h2>
+          <label for="keyword">Keyword(s)</label>
+          <textarea id="keyword" name="keyword" rows="2" placeholder="Enter one or more keywords separated by commas">{{ keyword }}</textarea>
+
+          <label for="supporting_keyword">Supporting keyword</label>
+          <input id="supporting_keyword" name="supporting_keyword" type="text" value="{{ supporting_keyword }}" placeholder="Add a supporting keyword" />
+
+          <label for="tone">Tone</label>
+          <select id="tone" name="tone">
+            <option value="natural" {% if tone == 'natural' %}selected{% endif %}>Natural</option>
+            <option value="professional" {% if tone == 'professional' %}selected{% endif %}>Professional</option>
+            <option value="friendly" {% if tone == 'friendly' %}selected{% endif %}>Friendly</option>
+          </select>
+
+          <label for="count">Number of Titles</label>
+          <input id="count" name="count" type="number" min="1" max="20" value="{{ count }}" />
+
+          <input type="hidden" name="action" value="generate_titles" />
+          <button type="submit">Generate Titles</button>
+        </form>
+
+        <!-- Step 2: Select Title & Generate Meta Description -->
+        {% if titles %}
+          <form method="post" id="metaForm" onsubmit="showLoading('Generating meta description...')">
+            <span class="step-badge">Step 2</span>
+            <h2>Select Title & Generate Meta Description</h2>
+            <ul class="title-list">
+              {% for title in titles %}
+                <li class="title-item">
+                  <input type="radio" id="title_{{ loop.index }}" name="selected_title" value="{{ title }}" {% if selected_title == title %}checked{% endif %} />
+                  <label for="title_{{ loop.index }}">{{ title }}</label>
+                </li>
+              {% endfor %}
+            </ul>
+
+            <button type="button" onclick="generateMeta()" style="margin-top: 16px;">Generate Meta Descriptions</button>
+            
+            {% if meta_descriptions %}
+              <div style="margin-top: 28px;">
+                <h3>Generated Meta Descriptions</h3>
+                <div class="meta-list">
+                  {% for meta_desc in meta_descriptions %}
+                    <div class="meta-box">
+                      <p>{{ meta_desc.text }}</p>
+                      <div class="char-count">Character count: {{ meta_desc.character_count }}</div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <input type="hidden" name="keyword" value="{{ keyword }}" />
+            <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+            <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
+            <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
+            <input type="hidden" name="action" value="generate_meta" />
+          </form>
+        {% endif %}
+
+        <!-- Step 3: Generate Article Content -->
+        {% if titles and selected_title %}
+          <form method="post" id="contentForm" onsubmit="prepareContentForm(); showLoading('Generating article content...');">
+            <span class="step-badge">Step 3</span>
+            <h2>Generate Article Content</h2>
+            <p>Selected Title: <strong>{{ selected_title }}</strong></p>
+            
+            <button type="button" onclick="generateContent()" style="margin-bottom: 16px;">Generate Full Article</button>
+            
+            {% if content %}
+              <button type="button" onclick="previewDoc()" style="margin-left: 12px;">Print Preview</button>
+              <button type="button" onclick="downloadDoc()" style="margin-left: 12px;">Download .doc</button>
+            {% endif %}
+
+            <!-- Links to Include Section -->
+            <div style="margin-top: 28px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+              <h3 style="margin-top: 0;">Links to Include in Content</h3>
+              <p style="margin-top: 0; color: #666; font-size: 0.95rem;">Add links that should be naturally incorporated into your article content. These will be included where contextually relevant.</p>
+              <div id="linksContainer"></div>
+              <button type="button" onclick="addLinkField()" style="background: #10b981; margin-top: 12px;">+ Add Link</button>
+            </div>
+
+            {% if content %}
+              <div style="margin-top: 28px;">
+                <h3>Article Content (WYSIWYG Editor)</h3>
+                <div id="editorContainer">
+                  <div id="contentEditor" class="quill-editor">{{ content }}</div>
+                </div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 8px;">Edit the content above directly in the editor. Click and format as needed.</p>
+              </div>
+            {% endif %}
+
+            <input type="hidden" name="keyword" value="{{ keyword }}" />
+            <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+            <input type="hidden" name="tone" value="{{ tone }}" />
+            <input type="hidden" name="selected_title" value="{{ selected_title }}" />
+            <input type="hidden" name="meta_description" value="{{ meta_description }}" />
+            <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
+            <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
+            <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
+            <input type="hidden" name="action" value="generate_content" />
+          </form>
+
+        <form id="previewForm" method="post" action="/preview" style="display:none;">
+          <input type="hidden" name="selected_title" value="{{ selected_title }}" />
+          <input type="hidden" name="keyword" value="{{ keyword }}" />
+          <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+          <input type="hidden" name="meta_description" value="{{ meta_description }}" />
+          <input type="hidden" id="previewContentHtml" name="content_html" value="" />
+        </form>
+
+        <form id="downloadForm" method="post" action="/download_doc" style="display:none;">
+          <input type="hidden" name="selected_title" value="{{ selected_title }}" />
+          <input type="hidden" name="keyword" value="{{ keyword }}" />
+          <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+          <input type="hidden" name="meta_description" value="{{ meta_description }}" />
+          <input type="hidden" id="downloadContentHtml" name="content_html" value="" />
+        </form>
+        {% endif %}
+
+        <div class="footer">
+          Run this app with <code>python ui.py</code> and open <strong>http://localhost:3444</strong> in your browser.
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script>
+      let quill = null;
+
+      function showLoading(text) {
+        document.getElementById('loadingOverlay').classList.add('active');
+        document.getElementById('loadingText').textContent = text;
+      }
+
+      function hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('active');
+      }
+
+      function generateMeta() {
+        const selectedTitle = document.querySelector('input[name="selected_title"]:checked');
+        if (!selectedTitle) {
+          alert('Please select a title first.');
+          return;
+        }
+        showLoading('Generating meta description...');
+        document.getElementById('metaForm').submit();
+      }
+
+      function prepareContentForm() {
+        if (quill) {
+          const html = quill.root.innerHTML;
+          document.getElementById('contentHtmlInput').value = html;
+        }
+      }
+
+      function generateContent() {
+        const selectedTitle = document.querySelector('input[name="selected_title"]:checked');
+        if (!selectedTitle) {
+          alert('Please select a title first.');
+          return;
+        }
+        prepareContentForm();
+        showLoading('Generating article content...');
+        document.getElementById('contentForm').submit();
+      }
+
+      function previewDoc() {
+        if (quill) {
+          document.getElementById('previewContentHtml').value = quill.root.innerHTML;
+          document.getElementById('downloadContentHtml').value = quill.root.innerHTML;
+        }
+        document.getElementById('previewForm').submit();
+      }
+
+      function downloadDoc() {
+        if (quill) {
+          document.getElementById('previewContentHtml').value = quill.root.innerHTML;
+          document.getElementById('downloadContentHtml').value = quill.root.innerHTML;
+        }
+        document.getElementById('downloadForm').submit();
+      }
+
+      // Convert markdown headings, links, and bold to HTML when raw markdown is present
+      function convertMarkdownToHtml(text) {
+        let html = text;
+        html = html.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\[(.*?)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>');
+        return html;
+      }
+
+      function containsHtmlTags(text) {
+        return /<\/?(h[1-6]|p|a|strong|em|ul|ol|li|br|b|i|h3|h2)>/i.test(text);
+      }
+
+      // Initialize Quill editor if content exists
+      document.addEventListener('DOMContentLoaded', function() {
+        const editorContainer = document.getElementById('contentEditor');
+        if (editorContainer) {
+          const rawHtml = editorContainer.innerHTML;
+          const cleanHtml = containsHtmlTags(rawHtml)
+            ? rawHtml
+            : convertMarkdownToHtml(editorContainer.textContent || editorContainer.innerText || rawHtml);
+
+          quill = new Quill('#contentEditor', {
+            theme: 'snow',
+            modules: {
+              toolbar: [
+                ['bold', 'italic', 'underline'],
+                ['blockquote', 'code-block'],
+                [{ 'header': [1, 2, 3, false] }],
+                ['link', 'image'],
+                ['clean']
+              ]
+            }
+          });
+
+          quill.root.innerHTML = cleanHtml;
+        }
+      });
+
+      // Hide loading when page loads
+      window.addEventListener('load', hideLoading);
+
+      // Link management functions
+      let linkFieldCounter = 0;
+
+      function addLinkField() {
+        linkFieldCounter++;
+        const container = document.getElementById('linksContainer');
+        const linkField = document.createElement('div');
+        linkField.id = 'linkField_' + linkFieldCounter;
+        linkField.style.cssText = 'display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-end;';
+        
+        linkField.innerHTML = `
+          <div style="flex: 1;">
+            <label for="link_text_${linkFieldCounter}" style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9rem;">Link Text</label>
+            <input type="text" id="link_text_${linkFieldCounter}" name="link_text[]" placeholder="e.g., Best Practices" style="width: 100%; padding: 8px 12px; border: 1px solid #d5d5e0; border-radius: 6px; font-size: 0.95rem;" />
+          </div>
+          <div style="flex: 1.5;">
+            <label for="link_url_${linkFieldCounter}" style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9rem;">URL</label>
+            <input type="url" id="link_url_${linkFieldCounter}" name="link_url[]" placeholder="https://example.com" style="width: 100%; padding: 8px 12px; border: 1px solid #d5d5e0; border-radius: 6px; font-size: 0.95rem;" />
+          </div>
+          <button type="button" onclick="removeLinkField(${linkFieldCounter})" style="background: #ef4444; padding: 8px 16px; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-weight: 500;">Remove</button>
+        `;
+        
+        container.appendChild(linkField);
+      }
+
+      function removeLinkField(fieldId) {
+        const field = document.getElementById('linkField_' + fieldId);
+        if (field) {
+          field.remove();
+        }
+      }
+    </script>
+  </body>
+</html>

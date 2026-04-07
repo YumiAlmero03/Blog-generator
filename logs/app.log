@@ -1,0 +1,42 @@
+2026-04-07 16:52:17,923 ERROR blog_generator content_generator.py:17 generate_content() - generate_content : 
+You are a professional blog writer who creates SEO-friendly, human-sounding content.
+
+Write a complete blog article for this title:
+"Fixing Common Mistakes in Your Test Blog Setup"
+
+Keyword: test blog
+Tone: natural
+
+
+Rules:
+- Write blog article between 1500 - 2000 words
+- Start with an engaging introduction (150-200 words) that explains the problem
+- Use HTML headings: <h2> for sections and <h3> for sub-sections
+- Use <b> for bold text
+- Use <p> for paragraphs and <ul><li> for bullet lists
+- Structure: introduction, 3-4 main sections with subheadings, conclusion
+- Make it natural, human-sounding, and conversational
+- Include the keyword naturally 2-3 times throughout
+- Include the supporting keyword naturally where appropriate
+- Use active voice, short sentences
+- Avoid keyword stuffing and robotic language
+- Write for readability with short paragraphs
+- Add detailed explanations and examples in each section to reach word count
+- End with a clear and short call-to-action (e.g. "Start your fitness journey today with our expert tips!")
+- Do not use markdown headings like ## or ###
+- Use HTML anchor tags with single quotes: <a href='URL'>anchor text</a>
+- Return the content as valid HTML inside the JSON string
+- CRITICAL: Do not truncate, abbreviate, or cut short the content
+- Do not add any explanation, analysis, or notes before or after the JSON
+- Start your response with ' and end your response with '
+- Close every open tag and quotation mark
+- Make sure the JSON is complete and valid
+- Verify the content word count is at least 800 words before finishing
+
+Return valid JSON only in this format:
+{
+  "content": "<h2>Your HTML content here</h2><p>...</p>",
+  "word_count": 850
+}
+NoneType: None
+2026-04-07 16:54:15,342 INFO blog_generator content_generator.py:34 generate_content() - Content generated successfully with 1368 words

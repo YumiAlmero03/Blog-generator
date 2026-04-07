@@ -1,0 +1,310 @@
+from flask import Flask, render_template, request, make_response
+from io import BytesIO
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+import re
+
+from config import PROVIDER, MODEL
+from generators.title_generator import generate_titles
+from generators.meta_description_generator import generate_meta_descriptions
+from generators.content_generator import generate_content
+from logger import logger
+
+app = Flask(__name__)
+
+
+def html_to_docx_paragraph(doc, html_content):
+    """Convert HTML content to docx paragraphs with formatting"""
+    # Remove extra whitespace
+    html_content = html_content.strip()
+    if not html_content:
+        return
+    
+    # Split by common HTML tags and process
+    # Handle h2, h3, p, strong, br, a, ul, li tags
+    lines = html_content.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Handle h2 headings
+        if '<h2>' in line:
+            text = re.sub(r'</?h2>', '', line)
+            p = doc.add_paragraph(text.strip(), style='Heading 2')
+            continue
+        
+        # Handle h3 headings
+        if '<h3>' in line:
+            text = re.sub(r'</?h3>', '', line)
+            p = doc.add_paragraph(text.strip(), style='Heading 3')
+            continue
+        
+        # Handle paragraphs and other content
+        if html_content or line:
+            # Parse inline formatting (bold, links, etc)
+            p = doc.add_paragraph()
+            parse_inline_html(p, line)
+
+def parse_inline_html(paragraph, html_text):
+    """Parse inline HTML and add formatted text to paragraph"""
+    if not html_text:
+        return
+    
+    # Replace <br> with newlines
+    html_text = html_text.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
+    
+    # Split by tags to preserve formatting
+    parts = re.split(r'(<a\s+href=["\']([^"\']+)["\']>|</a>|<strong>|</strong>|<b>|</b>)', html_text)
+    
+    current_bold = False
+    current_url = None
+    
+    i = 0
+    while i < len(parts):
+        part = parts[i]
+        
+        if not part:
+            i += 1
+            continue
+        
+        # Check for link start
+        if part.startswith('<a'):
+            current_url = parts[i + 1] if i + 1 < len(parts) else None
+            i += 2
+            continue
+        
+        # Check for link end
+        if part == '</a>':
+            current_url = None
+            i += 1
+            continue
+        
+        # Check for bold tags
+        if part in ['<strong>', '<b>']:
+            current_bold = True
+            i += 1
+            continue
+        
+        if part in ['</strong>', '</b>']:
+            current_bold = False
+            i += 1
+            continue
+        
+        # Regular text content
+        if part and not part.startswith('<'):
+            run = paragraph.add_run(part)
+            if current_bold:
+                run.bold = True
+            if current_url:
+                # Add hyperlink
+                from docx.oxml import OxmlElement
+                from docx.oxml.ns import qn
+                r = run._element
+                rPr = r.get_or_add_rPr()
+                rStyle = OxmlElement('w:rStyle')
+                rStyle.set(qn('w:val'), 'Hyperlink')
+                rPr.append(rStyle)
+                # Create hyperlink element
+                fldChar1 = OxmlElement('w:fldChar')
+                fldChar1.set(qn('w:fldCharType'), 'begin')
+                r.addprevious(fldChar1)
+                instrText = OxmlElement('w:instrText')
+                instrText.set(qn('xml:space'), 'preserve')
+                instrText.text = f'HYPERLINK "{current_url}"'
+                r.addprevious(instrText)
+                fldChar2 = OxmlElement('w:fldChar')
+                fldChar2.set(qn('w:fldCharType'), 'end')
+                r.addnext(fldChar2)
+        
+        i += 1
+
+
+def get_provider():
+    if PROVIDER == "ollama":
+        from providers.ollama_provider import OllamaProvider
+        return OllamaProvider(MODEL)
+    elif PROVIDER == "openai":
+        from providers.openai_provider import OpenAIProvider
+        return OpenAIProvider(MODEL)
+    elif PROVIDER == "gemini":
+        from providers.gemini_provider import GeminiProvider
+        return GeminiProvider(MODEL)
+    else:
+        raise ValueError(f"Unsupported provider: {PROVIDER}")
+
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    keyword = ""
+    supporting_keyword = ""
+    tone = "natural"
+    count = 10
+    titles = []
+    selected_title = ""
+    meta_descriptions = []
+    meta_description = ""
+    content = ""
+    error = None
+    step = "title"  # "title", "meta_description", or "content"
+
+    if request.method == "POST":
+        action = request.form.get("action", "").strip()
+        
+        if action == "generate_titles":
+            keyword = request.form.get("keyword", "").strip()
+            supporting_keyword = request.form.get("supporting_keyword", "").strip()
+            tone = request.form.get("tone", "natural").strip() or "natural"
+            count_raw = request.form.get("count", "10").strip()
+
+            if not keyword:
+                error = "Please enter one or more keywords."
+            else:
+                try:
+                    count = int(count_raw)
+                except ValueError:
+                    count = 10
+
+                try:
+                    provider = get_provider()
+                    titles = generate_titles(provider, keyword=keyword, tone=tone, count=count)
+                    step = "title"
+                except Exception as exc:
+                    logger.exception("generate_titles action failed")
+                    error = "An error occurred while generating titles. Check logs/app.log for details."
+        
+        elif action == "generate_meta":
+            selected_title = request.form.get("selected_title", "").strip()
+            keyword = request.form.get("keyword", "").strip()
+            supporting_keyword = request.form.get("supporting_keyword", "").strip()
+            titles_raw = request.form.get("titles_json", "").strip()
+            
+            if not selected_title:
+                error = "Please select a title first."
+            else:
+                try:
+                    import json
+                    titles = json.loads(titles_raw) if titles_raw else []
+                    provider = get_provider()
+                    meta_descriptions = generate_meta_descriptions(provider, title=selected_title, keyword=keyword, count=3)
+                    if meta_descriptions:
+                        meta_description = meta_descriptions[0]["text"]
+                    step = "meta_description"
+                except Exception as exc:
+                    logger.exception("generate_meta action failed")
+                    error = "An error occurred while generating meta descriptions. Check logs/app.log for details."
+        
+        elif action == "generate_content":
+            selected_title = request.form.get("selected_title", "").strip()
+            keyword = request.form.get("keyword", "").strip()
+            supporting_keyword = request.form.get("supporting_keyword", "").strip()
+            tone = request.form.get("tone", "natural").strip() or "natural"
+            titles_raw = request.form.get("titles_json", "").strip()
+            meta_descriptions_raw = request.form.get("meta_descriptions_json", "").strip()
+            
+            # Extract links from form
+            links = []
+            link_texts = request.form.getlist("link_text[]")
+            link_urls = request.form.getlist("link_url[]")
+            for text, url in zip(link_texts, link_urls):
+                text = text.strip()
+                url = url.strip()
+                if text and url:
+                    links.append({"text": text, "url": url})
+            
+            if not selected_title:
+                error = "Please select a title first."
+            else:
+                try:
+                    import json
+                    titles = json.loads(titles_raw) if titles_raw else []
+                    meta_descriptions = json.loads(meta_descriptions_raw) if meta_descriptions_raw else []
+                    if meta_descriptions and not meta_description:
+                        meta_description = meta_descriptions[0].get("text", "")
+                    provider = get_provider()
+                    content = generate_content(provider, title=selected_title, keyword=keyword, supporting_keyword=supporting_keyword, tone=tone, links=links)
+                    step = "content"
+                except Exception as exc:
+                    logger.exception("generate_content action failed")
+                    error = "An error occurred while generating article content. Check logs/app.log for details."
+
+    return render_template(
+        "index.html",
+        provider=PROVIDER,
+        model=MODEL,
+        keyword=keyword,
+        supporting_keyword=supporting_keyword,
+        tone=tone,
+        count=count,
+        titles=titles,
+        selected_title=selected_title,
+        meta_descriptions=meta_descriptions,
+        meta_description=meta_description,
+        content=content,
+        error=error,
+        step=step,
+    )
+
+
+@app.route("/preview", methods=["POST"])
+def preview():
+    title = request.form.get("selected_title", "")
+    keyword = request.form.get("keyword", "")
+    supporting_keyword = request.form.get("supporting_keyword", "")
+    meta_description = request.form.get("meta_description", "")
+    content_html = request.form.get("content_html", "")
+
+    return render_template(
+        "preview.html",
+        title=title,
+        keyword=keyword,
+        supporting_keyword=supporting_keyword,
+        meta_description=meta_description,
+        content_html=content_html,
+    )
+
+
+@app.route("/download_doc", methods=["POST"])
+def download_doc():
+    title = request.form.get("selected_title", "")
+    keyword = request.form.get("keyword", "")
+    supporting_keyword = request.form.get("supporting_keyword", "")
+    meta_description = request.form.get("meta_description", "")
+    content_html = request.form.get("content_html", "")
+
+    # Create a new Document
+    doc = Document()
+    
+    # Add title
+    title_para = doc.add_paragraph(title, style='Heading 1')
+    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Add metadata
+    doc.add_paragraph(f"Keyword: {keyword}")
+    if supporting_keyword:
+        doc.add_paragraph(f"Supporting Keyword: {supporting_keyword}")
+    doc.add_paragraph(f"Meta Description: {meta_description}")
+    
+    # Add separator
+    doc.add_paragraph()
+    
+    # Add content with formatting
+    html_to_docx_paragraph(doc, content_html)
+    
+    # Save to BytesIO
+    doc_io = BytesIO()
+    doc.save(doc_io)
+    doc_io.seek(0)
+    
+    filename = title.replace(" ", "_")[:50] or "blog_post"
+    
+    response = make_response(doc_io.getvalue())
+    response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}.docx"
+    return response
+
+
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=3444, debug=True)
