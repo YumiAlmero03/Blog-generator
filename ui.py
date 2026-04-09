@@ -9,6 +9,7 @@ from config import PROVIDER, MODEL
 from generators.title_generator import generate_titles
 from generators.meta_description_generator import generate_meta_descriptions
 from generators.content_generator import generate_content
+from generators.page_generator import generate_page
 from logger import logger
 
 app = Flask(__name__)
@@ -139,6 +140,7 @@ def get_provider():
 @app.route("/", methods=["GET", "POST"])
 def index():
     keyword = ""
+    brand = ""
     supporting_keyword = ""
     tone = "natural"
     count = 10
@@ -155,6 +157,7 @@ def index():
         
         if action == "generate_titles":
             keyword = request.form.get("keyword", "").strip()
+            brand = request.form.get("brand", "").strip()
             supporting_keyword = request.form.get("supporting_keyword", "").strip()
             tone = request.form.get("tone", "natural").strip() or "natural"
             count_raw = request.form.get("count", "10").strip()
@@ -169,7 +172,7 @@ def index():
 
                 try:
                     provider = get_provider()
-                    titles = generate_titles(provider, keyword=keyword, tone=tone, count=count)
+                    titles = generate_titles(provider, keyword=keyword, tone=tone, count=count, brand=brand)
                     step = "title"
                 except Exception as exc:
                     logger.exception("generate_titles action failed")
@@ -178,6 +181,7 @@ def index():
         elif action == "generate_meta":
             selected_title = request.form.get("selected_title", "").strip()
             keyword = request.form.get("keyword", "").strip()
+            brand = request.form.get("brand", "").strip()
             supporting_keyword = request.form.get("supporting_keyword", "").strip()
             titles_raw = request.form.get("titles_json", "").strip()
             
@@ -188,7 +192,13 @@ def index():
                     import json
                     titles = json.loads(titles_raw) if titles_raw else []
                     provider = get_provider()
-                    meta_descriptions = generate_meta_descriptions(provider, title=selected_title, keyword=keyword, count=3)
+                    meta_descriptions = generate_meta_descriptions(
+                        provider,
+                        title=selected_title,
+                        keyword=keyword,
+                        count=3,
+                        brand=brand,
+                    )
                     if meta_descriptions:
                         meta_description = meta_descriptions[0]["text"]
                     step = "meta_description"
@@ -199,6 +209,7 @@ def index():
         elif action == "generate_content":
             selected_title = request.form.get("selected_title", "").strip()
             keyword = request.form.get("keyword", "").strip()
+            brand = request.form.get("brand", "").strip()
             supporting_keyword = request.form.get("supporting_keyword", "").strip()
             tone = request.form.get("tone", "natural").strip() or "natural"
             titles_raw = request.form.get("titles_json", "").strip()
@@ -224,7 +235,15 @@ def index():
                     if meta_descriptions and not meta_description:
                         meta_description = meta_descriptions[0].get("text", "")
                     provider = get_provider()
-                    content = generate_content(provider, title=selected_title, keyword=keyword, supporting_keyword=supporting_keyword, tone=tone, links=links)
+                    content = generate_content(
+                        provider,
+                        title=selected_title,
+                        keyword=keyword,
+                        supporting_keyword=supporting_keyword,
+                        tone=tone,
+                        links=links,
+                        brand=brand,
+                    )
                     step = "content"
                 except Exception as exc:
                     logger.exception("generate_content action failed")
@@ -235,6 +254,7 @@ def index():
         provider=PROVIDER,
         model=MODEL,
         keyword=keyword,
+        brand=brand,
         supporting_keyword=supporting_keyword,
         tone=tone,
         count=count,
@@ -245,6 +265,64 @@ def index():
         content=content,
         error=error,
         step=step,
+    )
+
+
+@app.route("/page-generator", methods=["GET", "POST"])
+def page_generator():
+    keyword = ""
+    brand = ""
+    supporting_keywords = ""
+    page_type = ""
+    expectations = ""
+    page_title = ""
+    meta_description = ""
+    page_content = ""
+    image_count = 0
+    error = None
+
+    if request.method == "POST":
+        keyword = request.form.get("keyword", "").strip()
+        brand = request.form.get("brand", "").strip()
+        supporting_keywords = request.form.get("supporting_keywords", "").strip()
+        page_type = request.form.get("page_type", "").strip()
+        expectations = request.form.get("expectations", "").strip()
+
+        if not keyword:
+            error = "Please enter a keyword."
+        else:
+            try:
+                provider = get_provider()
+                result = generate_page(
+                    provider,
+                    keyword=keyword,
+                    brand=brand,
+                    supporting_keywords=supporting_keywords,
+                    page_type=page_type,
+                    expectations=expectations,
+                )
+                page_title = result.get("title", "")
+                meta_description = result.get("meta_description", "")
+                page_content = result.get("content", "")
+                image_count = result.get("image_count", 0)
+            except Exception:
+                logger.exception("page_generator action failed")
+                error = "An error occurred while generating the page. Check logs/app.log for details."
+
+    return render_template(
+        "page_generator.html",
+        provider=PROVIDER,
+        model=MODEL,
+        keyword=keyword,
+        brand=brand,
+        supporting_keywords=supporting_keywords,
+        page_type=page_type,
+        expectations=expectations,
+        page_title=page_title,
+        meta_description=meta_description,
+        page_content=page_content,
+        image_count=image_count,
+        error=error,
     )
 
 

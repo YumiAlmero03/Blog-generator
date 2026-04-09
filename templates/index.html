@@ -48,6 +48,10 @@
 
     <div class="page">
       <div class="box">
+        <p style="margin-top: 0; margin-bottom: 18px;">
+          <a href="/" style="color: #1d4ed8; font-weight: 700; text-decoration: none; margin-right: 16px;">Blog Generator</a>
+          <a href="/page-generator" style="color: #475467; font-weight: 600; text-decoration: none;">Page Generator</a>
+        </p>
         <h1>Auto Blog Generator</h1>
         <p class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></p>
 
@@ -59,6 +63,9 @@
         <form method="post" id="titlesForm" onsubmit="showLoading('Generating titles...')">
           <span class="step-badge">Step 1</span>
           <h2>Generate Blog Titles</h2>
+          <label for="brand">Brand</label>
+          <input id="brand" name="brand" type="text" value="{{ brand }}" placeholder="Enter your brand or business name" />
+
           <label for="keyword">Keyword(s)</label>
           <textarea id="keyword" name="keyword" rows="2" placeholder="Enter one or more keywords separated by commas">{{ keyword }}</textarea>
 
@@ -110,6 +117,7 @@
             {% endif %}
 
             <input type="hidden" name="keyword" value="{{ keyword }}" />
+            <input type="hidden" name="brand" value="{{ brand }}" />
             <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
             <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
             <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
@@ -150,6 +158,7 @@
             {% endif %}
 
             <input type="hidden" name="keyword" value="{{ keyword }}" />
+            <input type="hidden" name="brand" value="{{ brand }}" />
             <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
             <input type="hidden" name="tone" value="{{ tone }}" />
             <input type="hidden" name="selected_title" value="{{ selected_title }}" />
@@ -163,6 +172,7 @@
         <form id="previewForm" method="post" action="/preview" style="display:none;">
           <input type="hidden" name="selected_title" value="{{ selected_title }}" />
           <input type="hidden" name="keyword" value="{{ keyword }}" />
+          <input type="hidden" name="brand" value="{{ brand }}" />
           <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
           <input type="hidden" name="meta_description" value="{{ meta_description }}" />
           <input type="hidden" id="previewContentHtml" name="content_html" value="" />
@@ -171,6 +181,7 @@
         <form id="downloadForm" method="post" action="/download_doc" style="display:none;">
           <input type="hidden" name="selected_title" value="{{ selected_title }}" />
           <input type="hidden" name="keyword" value="{{ keyword }}" />
+          <input type="hidden" name="brand" value="{{ brand }}" />
           <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
           <input type="hidden" name="meta_description" value="{{ meta_description }}" />
           <input type="hidden" id="downloadContentHtml" name="content_html" value="" />

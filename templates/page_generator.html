@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Generator</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Georgia, serif;
+        background:
+          radial-gradient(circle at top left, rgba(251, 191, 36, 0.28), transparent 30%),
+          linear-gradient(135deg, #fffaf0 0%, #f7f1e3 45%, #f3efe6 100%);
+        color: #1f2937;
+      }
+      .page { max-width: 1180px; margin: 0 auto; padding: 32px 20px 48px; }
+      .topbar { display: flex; gap: 14px; margin-bottom: 18px; }
+      .topbar a {
+        text-decoration: none;
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.7);
+        color: #475467;
+        font-weight: 700;
+      }
+      .topbar a.active { background: #1f2937; color: #fff; }
+      .hero {
+        background: rgba(255,255,255,0.86);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        border-radius: 28px;
+        padding: 28px;
+        margin-bottom: 24px;
+      }
+      .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3.6rem); line-height: 1; }
+      .hero p { margin: 0; font-size: 1.05rem; color: #475467; max-width: 760px; }
+      .meta { margin-top: 16px; color: #667085; font-size: 0.95rem; }
+      .layout {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      .panel {
+        background: rgba(255,255,255,0.88);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+      }
+      label { display: block; margin-bottom: 8px; font-weight: 700; }
+      input, textarea {
+        width: 100%;
+        padding: 13px 14px;
+        border-radius: 14px;
+        border: 1px solid #d0d5dd;
+        font: inherit;
+        margin-bottom: 16px;
+        background: #fff;
+      }
+      textarea { min-height: 110px; resize: vertical; }
+      .button-row { display: flex; gap: 12px; flex-wrap: wrap; }
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 13px 18px;
+        background: #b45309;
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.secondary { background: #1f2937; }
+      .hint {
+        margin: 0 0 18px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: #fff7ed;
+        color: #9a3412;
+        font-size: 0.96rem;
+      }
+      .error {
+        margin-bottom: 16px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: #fef2f2;
+        color: #b42318;
+      }
+      .result-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: start;
+        margin-bottom: 16px;
+      }
+      .result-head h2 { margin: 0 0 6px; }
+      .result-meta { color: #667085; font-size: 0.95rem; }
+      .preview {
+        border: 1px solid #e4e7ec;
+        border-radius: 22px;
+        padding: 28px;
+        background: #fffdfa;
+        min-height: 240px;
+      }
+      .preview h1, .preview h2, .preview h3 { color: #101828; }
+      .preview p, .preview li, .preview blockquote { line-height: 1.75; }
+      .meta-card {
+        margin-bottom: 18px;
+        padding: 18px;
+        border-radius: 18px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+      }
+      .meta-card p {
+        margin: 0;
+        line-height: 1.65;
+        color: #7c2d12;
+      }
+      .html-box {
+        width: 100%;
+        min-height: 260px;
+        margin-top: 18px;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid #d0d5dd;
+        background: #111827;
+        color: #f9fafb;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9rem;
+      }
+      .empty-state {
+        border: 2px dashed #d0d5dd;
+        border-radius: 22px;
+        padding: 32px;
+        text-align: center;
+        color: #667085;
+        background: rgba(255,255,255,0.6);
+      }
+      .loading-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.58);
+        z-index: 999;
+        align-items: center;
+        justify-content: center;
+      }
+      .loading-overlay.active { display: flex; }
+      .loading-card {
+        min-width: 280px;
+        padding: 26px 28px;
+        border-radius: 24px;
+        background: rgba(255,255,255,0.96);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+        text-align: center;
+      }
+      .spinner {
+        width: 44px;
+        height: 44px;
+        margin: 0 auto 14px;
+        border: 4px solid rgba(180, 83, 9, 0.18);
+        border-top: 4px solid #b45309;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      .spinner-text {
+        color: #7c2d12;
+        font-weight: 700;
+        font-size: 1rem;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @media (max-width: 920px) {
+        .layout { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <div class="spinner-text" id="loadingText">Generating page...</div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="topbar">
+        <a href="/">Blog Generator</a>
+        <a href="/page-generator" class="active">Page Generator</a>
+      </div>
+
+      <section class="hero">
+        <h1>Page Generator</h1>
+        <p>Create WordPress page content that is easy to copy into Gutenberg. If the page benefits from visuals, the output includes colored placeholder boxes you can replace with real images later.</p>
+        <div class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></div>
+      </section>
+
+      <div class="layout">
+        <section class="panel">
+          {% if error %}
+            <div class="error">{{ error }}</div>
+          {% endif %}
+
+          <p class="hint">Use this for landing pages, service pages, about pages, local pages, or any custom WordPress page layout.</p>
+
+          <form method="post" id="pageGeneratorForm" onsubmit="showLoading('Generating page content...')">
+            <label for="brand">Brand</label>
+            <input id="brand" name="brand" type="text" value="{{ brand }}" placeholder="e.g. Phoenix Home Services" />
+
+            <label for="keyword">Keyword</label>
+            <input id="keyword" name="keyword" type="text" value="{{ keyword }}" placeholder="e.g. emergency plumber in phoenix" />
+
+            <label for="supporting_keywords">Supporting keywords</label>
+            <textarea id="supporting_keywords" name="supporting_keywords" placeholder="e.g. 24/7 plumbing, drain cleaning, leak repair, licensed plumber">{{ supporting_keywords }}</textarea>
+
+            <label for="page_type">Page type</label>
+            <input id="page_type" name="page_type" type="text" value="{{ page_type }}" placeholder="e.g. service page, location page, about page" />
+
+            <label for="expectations">What to expect in the page</label>
+            <textarea id="expectations" name="expectations" placeholder="e.g. hero section, benefits, pricing overview, service areas, FAQs, trust signals, strong call to action">{{ expectations }}</textarea>
+
+            <div class="button-row">
+              <button type="submit">Generate Page</button>
+              {% if page_content %}
+                <button type="button" class="secondary" onclick="copyHtml()">Copy HTML</button>
+              {% endif %}
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          {% if page_content %}
+            <div class="result-head">
+              <div>
+                <h2>{{ page_title or "Generated Page" }}</h2>
+                <div class="result-meta">{{ image_count }} image placeholder{% if image_count != 1 %}s{% endif %} added for Gutenberg-ready paste</div>
+              </div>
+              <div class="button-row">
+                {% if meta_description %}
+                  <button type="button" class="secondary" onclick="copyField('metaOutput', 'Meta description copied.')">Copy Meta</button>
+                {% endif %}
+                <button type="button" class="secondary" onclick="copyField('htmlOutput', 'HTML copied. You can now paste it into WordPress Gutenberg.')">Copy HTML</button>
+              </div>
+            </div>
+
+            {% if meta_description %}
+              <div class="meta-card">
+                <label for="metaOutput">Meta description</label>
+                <p>{{ meta_description }}</p>
+                <textarea id="metaOutput" readonly style="position:absolute;left:-9999px;top:-9999px;">{{ meta_description }}</textarea>
+              </div>
+            {% endif %}
+
+            <div class="preview" id="previewArea">{{ page_content|safe }}</div>
+
+            <label for="htmlOutput" style="margin-top: 18px;">HTML output</label>
+            <textarea id="htmlOutput" class="html-box" readonly>{{ page_content }}</textarea>
+          {% else %}
+            <div class="empty-state">
+              Fill in the keyword, supporting keywords, and page type to generate a full WordPress page.
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+
+    <script>
+      function showLoading(message) {
+        document.getElementById('loadingOverlay').classList.add('active');
+        document.getElementById('loadingText').textContent = message;
+      }
+
+      function hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('active');
+      }
+
+      function copyField(fieldId, message) {
+        const textarea = document.getElementById(fieldId);
+        if (!textarea) return;
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          alert(message);
+        }).catch(() => {
+          document.execCommand('copy');
+          alert(message);
+        });
+      }
+
+      function copyHtml() {
+        copyField('htmlOutput', 'HTML copied. You can now paste it into WordPress Gutenberg.');
+      }
+
+      window.addEventListener('load', hideLoading);
+    </script>
+  </body>
+</html>

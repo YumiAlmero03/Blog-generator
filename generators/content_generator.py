@@ -12,8 +12,23 @@ def count_html_words(html_text: str) -> int:
     words = clean_text.split()
     return len(words)
 
-def generate_content(provider, title: str, keyword: str = "", supporting_keyword: str = "", tone: str = "natural", links: list = None):
-    prompt = build_content_prompt(title=title, keyword=keyword, supporting_keyword=supporting_keyword, tone=tone, links=links)
+def generate_content(
+    provider,
+    title: str,
+    keyword: str = "",
+    supporting_keyword: str = "",
+    tone: str = "natural",
+    links: list = None,
+    brand: str = "",
+):
+    prompt = build_content_prompt(
+        title=title,
+        keyword=keyword,
+        supporting_keyword=supporting_keyword,
+        tone=tone,
+        links=links,
+        brand=brand,
+    )
     raw = provider.generate_json(prompt)
 
     try:

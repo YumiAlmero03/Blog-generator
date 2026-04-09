@@ -40,3 +40,16 @@ Return valid JSON only in this format:
 }
 NoneType: None
 2026-04-07 16:54:15,342 INFO blog_generator content_generator.py:34 generate_content() - Content generated successfully with 1368 words
+2026-04-08 09:47:07,445 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 0 image placeholders
+2026-04-08 09:59:49,204 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 0 image placeholders
+2026-04-08 10:01:12,780 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 3 image placeholders
+2026-04-08 10:11:05,433 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 2 image placeholders
+2026-04-08 10:25:19,682 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 3 image placeholders
+2026-04-08 11:21:15,085 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 0 image placeholders
+2026-04-08 11:23:34,144 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 0 image placeholders
+2026-04-08 11:28:35,281 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 0 image placeholders
+2026-04-08 12:03:31,443 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames login' with 0 image placeholders
+2026-04-08 15:44:10,421 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames app download' with 0 image placeholders
+2026-04-08 17:02:18,858 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames app download' with 2 image placeholders
+2026-04-09 10:15:37,179 WARNING blog_generator content_generator.py:42 generate_content() - Content word count is 788 (target: 800-1000). Response may be incomplete. Raw response length: 5633 chars
+2026-04-09 10:21:59,251 WARNING blog_generator content_generator.py:42 generate_content() - Content word count is 706 (target: 800-1000). Response may be incomplete. Raw response length: 5327 chars

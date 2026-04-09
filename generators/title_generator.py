@@ -3,8 +3,21 @@ from prompts import build_title_prompt
 from utils import extract_json_string
 from logger import logger
 
-def generate_titles(provider, keyword: str, supporting_keyword: str = "", tone: str = "natural", count: int = 10):
-    prompt = build_title_prompt(keyword=keyword, supporting_keyword=supporting_keyword, tone=tone, count=count)
+def generate_titles(
+    provider,
+    keyword: str,
+    supporting_keyword: str = "",
+    tone: str = "natural",
+    count: int = 10,
+    brand: str = "",
+):
+    prompt = build_title_prompt(
+        keyword=keyword,
+        supporting_keyword=supporting_keyword,
+        tone=tone,
+        count=count,
+        brand=brand,
+    )
     raw = provider.generate_json(prompt)
 
     try:

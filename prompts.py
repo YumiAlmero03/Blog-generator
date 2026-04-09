@@ -1,5 +1,11 @@
 # Pro
-def build_title_prompt(keyword: str, supporting_keyword: str = "", tone: str = "natural", count: int = 10) -> str:
+def build_title_prompt(
+    keyword: str,
+    supporting_keyword: str = "",
+    tone: str = "natural",
+    count: int = 10,
+    brand: str = "",
+) -> str:
     return f"""
 You are an SEO blog title generator.
 
@@ -7,6 +13,7 @@ Generate exactly {count} blog title variants for this keyword/topic:
 {keyword}
 
 Supporting ideas: {supporting_keyword}
+Brand: {brand}
 
 Rules:
 - Return exactly {count} titles
@@ -14,6 +21,7 @@ Rules:
 - Make them natural and human sounding
 - Make them SEO-friendly
 - Clear and clickable
+- If a brand is provided, let the titles fit the brand naturally without forcing the brand name into every title
 - Avoid robotic wording
 - Avoid duplicates
 - Mix styles:
@@ -41,7 +49,7 @@ Return valid JSON only in this format:
 Tone: {tone}
 """
 
-def build_meta_description_prompt(title: str, keyword: str = "", count: int = 3) -> str:
+def build_meta_description_prompt(title: str, keyword: str = "", count: int = 3, brand: str = "") -> str:
     return f"""
 You are an SEO meta description writer.
 
@@ -49,6 +57,7 @@ Generate exactly {count} compelling meta description variants for this blog post
 "{title}"
 
 Keyword: {keyword}
+Brand: {brand}
 
 Rules:
 - Each meta description must be 120-150 characters exactly
@@ -58,6 +67,7 @@ Rules:
 - Use active voice
 - Include a call-to-action or value proposition
 - Make it human and natural sounding
+- If a brand is provided, align the wording to the brand and include the brand only when it fits naturally
 - Vary the approach for each variant
 - Do not add any extra text before or after the JSON
 - Start your response with '{' and end with '}'
@@ -78,7 +88,14 @@ Return valid JSON only in this format:
 """
 
 # Prompts for content generation with optional links section
-def build_content_prompt(title: str, keyword: str = "", supporting_keyword: str = "", tone: str = "natural", links: list = None) -> str:
+def build_content_prompt(
+    title: str,
+    keyword: str = "",
+    supporting_keyword: str = "",
+    tone: str = "natural",
+    links: list = None,
+    brand: str = "",
+) -> str:
     links_section = ""
     if links and len(links) > 0:
         links_list = "\n".join([
@@ -107,12 +124,13 @@ Write a complete blog article for this title:
 "{title}"
 
 Keyword: {keyword}
+Brand: {brand}
 Tone: {tone}
 {links_section}
 
 Rules:
 - Write blog article between 800 - 1000 words
-- Start with an engaging introduction (100-140 words) that explains the problem
+- Start with an engaging introduction (60-80 words) that explains the problem
 - Use HTML headings: <h2> for sections and <h3> for sub-sections
 - Use <b> for bold text
 - Use <p> for paragraphs and <ul><li> for bullet lists
@@ -121,6 +139,7 @@ Rules:
 - Include the keyword naturally 2-4 times throughout the content, especially in the introduction and conclusion
 - Avoid keyword stuffing; do not force the keyword into sentences where it does not fit
 - Include the supporting keyword naturally where appropriate
+- If a brand is provided, reflect the brand voice, positioning, and audience naturally throughout the article
 - Use active voice, short sentences
 - Avoid keyword stuffing and robotic language
 - Write for readability with short paragraphs
@@ -140,5 +159,65 @@ Return valid JSON only in this format:
 {{
   "content": "<h2>Your HTML content here</h2><p>...</p>",
   "word_count": 850
+}}
+"""
+
+
+def build_page_prompt(
+    keyword: str,
+    supporting_keywords: str = "",
+    page_type: str = "",
+    expectations: str = "",
+    brand: str = "",
+) -> str:
+    return f"""
+You are an expert SEO landing page writer for WordPress.
+
+Create a complete WordPress page for this primary keyword:
+{keyword}
+
+Supporting keywords:
+{supporting_keywords}
+
+Brand:
+{brand}
+
+Page type:
+{page_type}
+
+What to expect in the page:
+{expectations}
+
+Rules:
+- Keep the main keyword, dont separate it with punctuations, or words, or rearrange the words, use it naturally in the title and throughout the content
+- Write for a real website visitor, not for search engines only
+- If a brand is provided, make the page fit that brand's voice, offer, and positioning naturally
+- Use keywords naturally without keyword stuffing. use the main keyword ONCE in the title, introduction, at least one subheading, and conclusion. Include supporting keywords where they fit naturally.
+- Title should be catchy and include the main keyword naturally. make it 40 to 55 characters only.
+- Introduction should be atleast 60-80 words and hook the reader. include the main keyword onces and naturally in the introduction
+- remove bold or strong tags on keywords in the content, you can bold other important words but not the keywords
+- Return clean HTML that can be copy-pasted into the WordPress Gutenberg editor
+- Use only simple HTML tags: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>
+- Include exactly one <h1> at the top
+- Structure the page clearly for conversions and readability
+- Adapt the structure to the page type naturally
+- Keep paragraphs fairly short. Use bullet points and subheadings to break up the text
+- Include at least 5 sections after the introduction with relevant subheadings
+- Follow Yoast SEO guidelines for keyword usage and content structure
+- Use the "What to expect in the page" notes as direct guidance for sections, offers, tone, and important details
+- If an image would genuinely improve the page, insert a placeholder token on its own line in this exact format:
+  [IMAGE: alt text describing the image here]
+- Add no more than 3 image placeholders
+- Do not use markdown
+- Do not add explanations before or after the JSON
+- Content must be more than 1500 words
+- Start your response with '{{' and end with '}}'
+
+Return valid JSON only in this format:
+{{
+  "title": "Page Title",
+  "meta_description": "SEO meta description here",
+  "content": "<h1>Page Title</h1><p>...</p>",
+  "image_count": 2
 }}
 """
