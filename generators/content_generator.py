@@ -20,6 +20,7 @@ def generate_content(
     tone: str = "natural",
     links: list = None,
     brand: str = "",
+    brand_context: str = "",
 ):
     prompt = build_content_prompt(
         title=title,
@@ -28,6 +29,7 @@ def generate_content(
         tone=tone,
         links=links,
         brand=brand,
+        brand_context=brand_context,
     )
     raw = provider.generate_json(prompt)
 

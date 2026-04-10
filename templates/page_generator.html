@@ -189,6 +189,8 @@
       <div class="topbar">
         <a href="/">Blog Generator</a>
         <a href="/page-generator" class="active">Page Generator</a>
+        <a href="/simple-page-generator">Simple Pages</a>
+        <a href="/brands">Brands</a>
       </div>
 
       <section class="hero">
@@ -207,7 +209,7 @@
 
           <form method="post" id="pageGeneratorForm" onsubmit="showLoading('Generating page content...')">
             <label for="brand">Brand</label>
-            <input id="brand" name="brand" type="text" value="{{ brand }}" placeholder="e.g. Phoenix Home Services" />
+            <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="e.g. Phoenix Home Services" />
 
             <label for="keyword">Keyword</label>
             <input id="keyword" name="keyword" type="text" value="{{ keyword }}" placeholder="e.g. emergency plumber in phoenix" />
@@ -265,6 +267,12 @@
         </section>
       </div>
     </div>
+
+    <datalist id="brandSuggestions">
+      {% for item in brand_names %}
+        <option value="{{ item }}"></option>
+      {% endfor %}
+    </datalist>
 
     <script>
       function showLoading(message) {

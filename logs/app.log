@@ -53,3 +53,100 @@ NoneType: None
 2026-04-08 17:02:18,858 INFO blog_generator page_generator.py:68 generate_page() - Page generated successfully for keyword 'okgames app download' with 2 image placeholders
 2026-04-09 10:15:37,179 WARNING blog_generator content_generator.py:42 generate_content() - Content word count is 788 (target: 800-1000). Response may be incomplete. Raw response length: 5633 chars
 2026-04-09 10:21:59,251 WARNING blog_generator content_generator.py:42 generate_content() - Content word count is 706 (target: 800-1000). Response may be incomplete. Raw response length: 5327 chars
+2026-04-09 11:25:18,296 INFO blog_generator content_generator.py:50 generate_content() - Content generated successfully with 824 words
+2026-04-09 11:44:40,593 ERROR blog_generator ui.py:270 index() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/ui.py", line 257, in index
+    content = generate_content(
+        provider,
+    ...<6 lines>...
+        brand_context=brand_context,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 25, in generate_content
+    prompt = build_content_prompt(
+        title=title,
+    ...<5 lines>...
+        brand_context=brand_context,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/prompts.py", line 179, in build_content_prompt
+    - Return only valid JSON with this format: {"content":"<p>...</p>"}.
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: Invalid format specifier '"<p>...</p>"' for object of type 'str'
+2026-04-09 11:52:05,771 INFO blog_generator content_generator.py:50 generate_content() - Content generated successfully with 856 words
+2026-04-09 17:54:42,751 INFO blog_generator page_generator.py:72 generate_page() - Page generated successfully for keyword 'Terms and Conditions' with 0 image placeholders
+2026-04-10 09:27:24,294 INFO blog_generator simple_page_generator.py:31 generate_simple_page() - Simple page generated successfully for 'Terms and Conditions'
+2026-04-10 09:36:58,414 INFO blog_generator simple_page_generator.py:31 generate_simple_page() - Simple page generated successfully for 'Terms and Conditions'
+2026-04-10 09:51:26,793 INFO blog_generator page_generator.py:72 generate_page() - Page generated successfully for keyword 'about PHBingo' with 3 image placeholders
+2026-04-10 12:21:33,508 ERROR blog_generator ui.py:359 page_generator() - page_generator action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/ui.py", line 337, in page_generator
+    result = generate_page(
+        provider,
+    ...<5 lines>...
+        brand_context=brand_context,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/page_generator.py", line 62, in generate_page
+    raw = provider.generate_json(prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/providers/ollama_provider.py", line 9, in generate_json
+    response = chat(
+        model=self.model,
+    ...<4 lines>...
+        }
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/ollama/_client.py", line 365, in chat
+    return self._request(
+           ~~~~~~~~~~~~~^
+      ChatResponse,
+      ^^^^^^^^^^^^^
+    ...<14 lines>...
+      stream=stream,
+      ^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/ollama/_client.py", line 189, in _request
+    return cls(**self._request_raw(*args, **kwargs).json())
+                 ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/ollama/_client.py", line 133, in _request_raw
+    raise ResponseError(e.response.text, e.response.status_code) from None
+ollama._types.ResponseError: model failed to load, this may be due to resource limitations or an internal error, check ollama server logs for details (status code: 500)
+2026-04-10 14:58:12,545 ERROR blog_generator ui.py:375 page_generator() - page_generator action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/providers/ollama_provider.py", line 11, in generate_json
+    response = chat(
+        model=self.model,
+    ...<4 lines>...
+        }
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/ollama/_client.py", line 365, in chat
+    return self._request(
+           ~~~~~~~~~~~~~^
+      ChatResponse,
+      ^^^^^^^^^^^^^
+    ...<14 lines>...
+      stream=stream,
+      ^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/ollama/_client.py", line 189, in _request
+    return cls(**self._request_raw(*args, **kwargs).json())
+                 ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/ollama/_client.py", line 133, in _request_raw
+    raise ResponseError(e.response.text, e.response.status_code) from None
+ollama._types.ResponseError: model failed to load, this may be due to resource limitations or an internal error, check ollama server logs for details (status code: 500)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/ui.py", line 353, in page_generator
+    result = generate_page(
+        provider,
+    ...<5 lines>...
+        brand_context=brand_context,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/page_generator.py", line 62, in generate_page
+    raw = provider.generate_json(prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/providers/ollama_provider.py", line 23, in generate_json
+    raise ProviderError(
+    ...<4 lines>...
+    ) from exc
+providers.base.ProviderError: Ollama could not load model 'qwen3:8b' (status 500). Restart Ollama, close other memory-heavy apps, or switch config.py to a smaller installed model. Ollama details: model failed to load, this may be due to resource limitations or an internal error, check ollama server logs for details (status code: 500)

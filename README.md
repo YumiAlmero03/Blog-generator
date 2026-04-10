@@ -18,6 +18,7 @@ The architecture supports multiple AI providers (Ollama, OpenAI, Gemini) for fle
 
 - Keyword-based content generation (single or multi-keyword support)
 - Automated title generation with multiple options
+- Lightweight TinyDB storage for brands, saved brand pages, and used keywords
 - Introduction generation (≤450 characters, problem-focused)
 - Full article generation (~800 words, SEO-optimized)
 - Featured image generation (text-free, button-free visuals)
@@ -65,7 +66,18 @@ Contains the `generate_titles` function, which orchestrates title generation. Bu
 - `ollama` (for Ollama provider)
 - `openai` (for OpenAI provider)
 - `google-genai` (for Gemini provider)
+- `tinydb` (for lightweight local storage)
 - Standard library: `json`, `os`, `abc`
+
+## Local Brand Data
+
+The app now keeps lightweight local data in `data/app_db.json` using TinyDB. It stores:
+
+- saved brand names
+- pages generated for each brand
+- keywords already used for blog posts and pages
+
+This data is used as prompt context so future generations can stay more consistent and avoid repeating the same keyword angles too often.
 
 ## Notes
 

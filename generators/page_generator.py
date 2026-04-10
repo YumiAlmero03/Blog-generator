@@ -49,6 +49,7 @@ def generate_page(
     page_type: str = "",
     expectations: str = "",
     brand: str = "",
+    brand_context: str = "",
 ):
     prompt = build_page_prompt(
         keyword=keyword,
@@ -56,6 +57,7 @@ def generate_page(
         page_type=page_type,
         expectations=expectations,
         brand=brand,
+        brand_context=brand_context,
     )
     raw = provider.generate_json(prompt)
 

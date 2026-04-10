@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Page Generator</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Georgia, serif;
+        background:
+          radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 28%),
+          linear-gradient(135deg, #f7fff9 0%, #f1f5f9 52%, #fafaf9 100%);
+        color: #1f2937;
+      }
+      .page { max-width: 1160px; margin: 0 auto; padding: 32px 20px 48px; }
+      .topbar { display: flex; gap: 14px; margin-bottom: 18px; }
+      .topbar a {
+        text-decoration: none;
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.74);
+        color: #475467;
+        font-weight: 700;
+      }
+      .topbar a.active { background: #166534; color: #fff; }
+      .hero, .panel {
+        background: rgba(255,255,255,0.9);
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+      }
+      .hero { padding: 28px; margin-bottom: 24px; }
+      .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1; }
+      .hero p { margin: 0; color: #475467; max-width: 760px; font-size: 1.05rem; }
+      .meta { margin-top: 16px; color: #667085; font-size: 0.95rem; }
+      .layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+      .panel { padding: 24px; }
+      label { display: block; margin-bottom: 8px; font-weight: 700; }
+      input, textarea, select {
+        width: 100%;
+        padding: 13px 14px;
+        border-radius: 14px;
+        border: 1px solid #d0d5dd;
+        font: inherit;
+        margin-bottom: 16px;
+        background: #fff;
+      }
+      textarea { min-height: 120px; resize: vertical; }
+      .button-row { display: flex; gap: 12px; flex-wrap: wrap; }
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 13px 18px;
+        background: #166534;
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.secondary { background: #1f2937; }
+      .hint, .error {
+        margin: 0 0 18px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        font-size: 0.96rem;
+      }
+      .hint { background: #ecfdf3; color: #166534; }
+      .error { background: #fef2f2; color: #b42318; }
+      .preview {
+        border: 1px solid #e4e7ec;
+        border-radius: 22px;
+        padding: 28px;
+        background: #fff;
+        min-height: 240px;
+      }
+      .preview h1, .preview h2, .preview h3 { color: #101828; }
+      .preview p, .preview li, .preview blockquote { line-height: 1.72; }
+      .html-box {
+        width: 100%;
+        min-height: 260px;
+        margin-top: 18px;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid #d0d5dd;
+        background: #111827;
+        color: #f9fafb;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9rem;
+      }
+      .empty-state {
+        border: 2px dashed #d0d5dd;
+        border-radius: 22px;
+        padding: 32px;
+        text-align: center;
+        color: #667085;
+      }
+      .loading-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.58);
+        z-index: 999;
+        align-items: center;
+        justify-content: center;
+      }
+      .loading-overlay.active { display: flex; }
+      .loading-card {
+        min-width: 280px;
+        padding: 26px 28px;
+        border-radius: 24px;
+        background: rgba(255,255,255,0.96);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+        text-align: center;
+      }
+      .spinner {
+        width: 44px;
+        height: 44px;
+        margin: 0 auto 14px;
+        border: 4px solid rgba(22, 101, 52, 0.16);
+        border-top: 4px solid #166534;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      .spinner-text { color: #166534; font-weight: 700; font-size: 1rem; }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @media (max-width: 920px) {
+        .layout { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <div class="spinner-text" id="loadingText">Generating simple page...</div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="topbar">
+        <a href="/">Blog Generator</a>
+        <a href="/page-generator">Page Generator</a>
+        <a href="/simple-page-generator" class="active">Simple Pages</a>
+        <a href="/brands">Brands</a>
+      </div>
+
+      <section class="hero">
+        <h1>Simple Page Generator</h1>
+        <p>Create simpler WordPress pages such as Privacy Policy, Terms and Conditions, About Us, Contact Us, Disclaimer, Refund Policy, or similar basic pages.</p>
+        <div class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></div>
+      </section>
+
+      <div class="layout">
+        <section class="panel">
+          {% if error %}
+            <div class="error">{{ error }}</div>
+          {% endif %}
+
+          <p class="hint">Use this for straightforward pages that do not need the full SEO landing-page structure.</p>
+
+          <form method="post" onsubmit="showLoading('Generating simple page...')">
+            <label for="brand">Brand</label>
+            <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="e.g. Phoenix Home Services" />
+
+            <label for="page_title">Page title</label>
+            <input id="page_title" name="page_title" type="text" value="{{ page_title }}" placeholder="e.g. Privacy Policy" />
+
+            <label for="page_type">Page type</label>
+            <select id="page_type" name="page_type">
+              <option value="" {% if not page_type %}selected{% endif %}>Select page type</option>
+              <option value="Privacy Policy" {% if page_type == 'Privacy Policy' %}selected{% endif %}>Privacy Policy</option>
+              <option value="Terms and Conditions" {% if page_type == 'Terms and Conditions' %}selected{% endif %}>Terms and Conditions</option>
+              <option value="Disclaimer" {% if page_type == 'Disclaimer' %}selected{% endif %}>Disclaimer</option>
+              <option value="About Us" {% if page_type == 'About Us' %}selected{% endif %}>About Us</option>
+              <option value="Contact Us" {% if page_type == 'Contact Us' %}selected{% endif %}>Contact Us</option>
+              <option value="Refund Policy" {% if page_type == 'Refund Policy' %}selected{% endif %}>Refund Policy</option>
+              <option value="Shipping Policy" {% if page_type == 'Shipping Policy' %}selected{% endif %}>Shipping Policy</option>
+              <option value="Cookie Policy" {% if page_type == 'Cookie Policy' %}selected{% endif %}>Cookie Policy</option>
+            </select>
+
+            <label for="expectations">What to include</label>
+            <textarea id="expectations" name="expectations" placeholder="e.g. include data collection details, contact email, refund timeframe, governing law, or other notes">{{ expectations }}</textarea>
+
+            <div class="button-row">
+              <button type="submit">Generate Simple Page</button>
+              {% if generated_content %}
+                <button type="button" class="secondary" onclick="copyField('htmlOutput', 'HTML copied. You can now paste it into WordPress Gutenberg.')">Copy HTML</button>
+              {% endif %}
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          {% if generated_content %}
+            <h2 style="margin-top:0;">{{ generated_title or page_title }}</h2>
+            <div class="preview">{{ generated_content|safe }}</div>
+
+            <label for="htmlOutput" style="margin-top: 18px;">HTML output</label>
+            <textarea id="htmlOutput" class="html-box" readonly>{{ generated_content }}</textarea>
+          {% else %}
+            <div class="empty-state">
+              Enter a page title and choose a simple page type to generate content.
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+
+    <datalist id="brandSuggestions">
+      {% for item in brand_names %}
+        <option value="{{ item }}"></option>
+      {% endfor %}
+    </datalist>
+
+    <script>
+      function showLoading(message) {
+        document.getElementById('loadingOverlay').classList.add('active');
+        document.getElementById('loadingText').textContent = message;
+      }
+
+      function hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('active');
+      }
+
+      function copyField(fieldId, message) {
+        const textarea = document.getElementById(fieldId);
+        if (!textarea) return;
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          alert(message);
+        }).catch(() => {
+          document.execCommand('copy');
+          alert(message);
+        });
+      }
+
+      window.addEventListener('load', hideLoading);
+    </script>
+  </body>
+</html>

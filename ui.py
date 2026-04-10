@@ -6,13 +6,31 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 import re
 
 from config import PROVIDER, MODEL
+from database import (
+    check_keyword_usage,
+    get_brand_context,
+    get_brand_record,
+    list_brand_names,
+    list_brand_records,
+    record_blog,
+    record_page,
+    upsert_brand,
+)
 from generators.title_generator import generate_titles
 from generators.meta_description_generator import generate_meta_descriptions
 from generators.content_generator import generate_content
 from generators.page_generator import generate_page
+from generators.simple_page_generator import generate_simple_page
 from logger import logger
+from providers.base import ProviderError
 
 app = Flask(__name__)
+
+
+def generation_error_message(default_message: str, exc: Exception) -> str:
+    if isinstance(exc, ProviderError):
+        return str(exc)
+    return default_message
 
 
 def html_to_docx_paragraph(doc, html_content):
@@ -151,6 +169,7 @@ def index():
     content = ""
     error = None
     step = "title"  # "title", "meta_description", or "content"
+    brand_names = list_brand_names()
 
     if request.method == "POST":
         action = request.form.get("action", "").strip()
@@ -165,6 +184,8 @@ def index():
             if not keyword:
                 error = "Please enter one or more keywords."
             else:
+                if brand:
+                    upsert_brand(brand)
                 try:
                     count = int(count_raw)
                 except ValueError:
@@ -172,11 +193,22 @@ def index():
 
                 try:
                     provider = get_provider()
-                    titles = generate_titles(provider, keyword=keyword, tone=tone, count=count, brand=brand)
+                    brand_context = get_brand_context(brand)
+                    titles = generate_titles(
+                        provider,
+                        keyword=keyword,
+                        tone=tone,
+                        count=count,
+                        brand=brand,
+                        brand_context=brand_context,
+                    )
                     step = "title"
                 except Exception as exc:
                     logger.exception("generate_titles action failed")
-                    error = "An error occurred while generating titles. Check logs/app.log for details."
+                    error = generation_error_message(
+                        "An error occurred while generating titles. Check logs/app.log for details.",
+                        exc,
+                    )
         
         elif action == "generate_meta":
             selected_title = request.form.get("selected_title", "").strip()
@@ -192,19 +224,26 @@ def index():
                     import json
                     titles = json.loads(titles_raw) if titles_raw else []
                     provider = get_provider()
+                    if brand:
+                        upsert_brand(brand)
+                    brand_context = get_brand_context(brand)
                     meta_descriptions = generate_meta_descriptions(
                         provider,
                         title=selected_title,
                         keyword=keyword,
                         count=3,
                         brand=brand,
+                        brand_context=brand_context,
                     )
                     if meta_descriptions:
                         meta_description = meta_descriptions[0]["text"]
                     step = "meta_description"
                 except Exception as exc:
                     logger.exception("generate_meta action failed")
-                    error = "An error occurred while generating meta descriptions. Check logs/app.log for details."
+                    error = generation_error_message(
+                        "An error occurred while generating meta descriptions. Check logs/app.log for details.",
+                        exc,
+                    )
         
         elif action == "generate_content":
             selected_title = request.form.get("selected_title", "").strip()
@@ -235,6 +274,9 @@ def index():
                     if meta_descriptions and not meta_description:
                         meta_description = meta_descriptions[0].get("text", "")
                     provider = get_provider()
+                    if brand:
+                        upsert_brand(brand)
+                    brand_context = get_brand_context(brand)
                     content = generate_content(
                         provider,
                         title=selected_title,
@@ -243,16 +285,27 @@ def index():
                         tone=tone,
                         links=links,
                         brand=brand,
+                        brand_context=brand_context,
+                    )
+                    record_blog(
+                        brand=brand,
+                        title=selected_title,
+                        keyword=keyword,
+                        supporting_keyword=supporting_keyword,
                     )
                     step = "content"
                 except Exception as exc:
                     logger.exception("generate_content action failed")
-                    error = "An error occurred while generating article content. Check logs/app.log for details."
+                    error = generation_error_message(
+                        "An error occurred while generating article content. Check logs/app.log for details.",
+                        exc,
+                    )
 
     return render_template(
         "index.html",
         provider=PROVIDER,
         model=MODEL,
+        brand_names=brand_names,
         keyword=keyword,
         brand=brand,
         supporting_keyword=supporting_keyword,
@@ -280,6 +333,7 @@ def page_generator():
     page_content = ""
     image_count = 0
     error = None
+    brand_names = list_brand_names()
 
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
@@ -293,6 +347,9 @@ def page_generator():
         else:
             try:
                 provider = get_provider()
+                if brand:
+                    upsert_brand(brand)
+                brand_context = get_brand_context(brand)
                 result = generate_page(
                     provider,
                     keyword=keyword,
@@ -300,19 +357,32 @@ def page_generator():
                     supporting_keywords=supporting_keywords,
                     page_type=page_type,
                     expectations=expectations,
+                    brand_context=brand_context,
                 )
                 page_title = result.get("title", "")
                 meta_description = result.get("meta_description", "")
                 page_content = result.get("content", "")
                 image_count = result.get("image_count", 0)
-            except Exception:
+                record_page(
+                    brand=brand,
+                    keyword=keyword,
+                    page_title=page_title,
+                    page_type=page_type,
+                    supporting_keywords=supporting_keywords,
+                    expectations=expectations,
+                )
+            except Exception as exc:
                 logger.exception("page_generator action failed")
-                error = "An error occurred while generating the page. Check logs/app.log for details."
+                error = generation_error_message(
+                    "An error occurred while generating the page. Check logs/app.log for details.",
+                    exc,
+                )
 
     return render_template(
         "page_generator.html",
         provider=PROVIDER,
         model=MODEL,
+        brand_names=brand_names,
         keyword=keyword,
         brand=brand,
         supporting_keywords=supporting_keywords,
@@ -323,6 +393,162 @@ def page_generator():
         page_content=page_content,
         image_count=image_count,
         error=error,
+    )
+
+
+@app.route("/simple-page-generator", methods=["GET", "POST"])
+def simple_page_generator():
+    brand = ""
+    page_title = ""
+    page_type = ""
+    expectations = ""
+    generated_title = ""
+    generated_content = ""
+    error = None
+    brand_names = list_brand_names()
+
+    if request.method == "POST":
+        brand = request.form.get("brand", "").strip()
+        page_title = request.form.get("page_title", "").strip()
+        page_type = request.form.get("page_type", "").strip()
+        expectations = request.form.get("expectations", "").strip()
+
+        if not page_title:
+            error = "Please enter the page title or page name."
+        else:
+            try:
+                provider = get_provider()
+                if brand:
+                    upsert_brand(brand)
+                brand_context = get_brand_context(brand)
+                result = generate_simple_page(
+                    provider,
+                    page_title=page_title,
+                    page_type=page_type,
+                    brand=brand,
+                    expectations=expectations,
+                    brand_context=brand_context,
+                )
+                generated_title = result.get("title", "")
+                generated_content = result.get("content", "")
+                record_page(
+                    brand=brand,
+                    keyword=page_title,
+                    page_title=generated_title or page_title,
+                    page_type=page_type or "simple page",
+                    supporting_keywords="",
+                    expectations=expectations,
+                )
+            except Exception as exc:
+                logger.exception("simple_page_generator action failed")
+                error = generation_error_message(
+                    "An error occurred while generating the simple page. Check logs/app.log for details.",
+                    exc,
+                )
+
+    return render_template(
+        "simple_page_generator.html",
+        provider=PROVIDER,
+        model=MODEL,
+        brand_names=brand_names,
+        brand=brand,
+        page_title=page_title,
+        page_type=page_type,
+        expectations=expectations,
+        generated_title=generated_title,
+        generated_content=generated_content,
+        error=error,
+    )
+
+
+@app.route("/brands", methods=["GET", "POST"])
+def brands():
+    brand_name = ""
+    website = ""
+    niche = ""
+    main_keywords = ""
+    tone = ""
+    notes = ""
+    check_brand = ""
+    check_keyword = ""
+    keyword_check_result = None
+    error = None
+    success = None
+
+    edit_brand = request.args.get("edit", "").strip()
+    if request.method == "GET" and edit_brand:
+        brand_record = get_brand_record(edit_brand)
+        if brand_record:
+            brand_name = brand_record.get("name", "")
+            website = brand_record.get("website", "")
+            niche = brand_record.get("niche", "")
+            main_keywords = brand_record.get("main_keywords", "")
+            tone = brand_record.get("tone", "")
+            notes = brand_record.get("notes", "")
+
+    if request.method == "POST":
+        action = request.form.get("action", "save_brand").strip()
+
+        if action == "save_brand":
+            brand_name = request.form.get("brand_name", "").strip()
+            website = request.form.get("website", "").strip()
+            niche = request.form.get("niche", "").strip()
+            main_keywords = request.form.get("main_keywords", "").strip()
+            tone = request.form.get("tone", "").strip()
+            notes = request.form.get("notes", "").strip()
+
+            if not brand_name:
+                error = "Please enter a brand name."
+            else:
+                try:
+                    upsert_brand(
+                        brand_name,
+                        website=website,
+                        tone=tone,
+                        notes=notes,
+                        niche=niche,
+                        main_keywords=main_keywords,
+                    )
+                    success = f"Saved brand: {brand_name}"
+                    brand_name = ""
+                    website = ""
+                    niche = ""
+                    main_keywords = ""
+                    tone = ""
+                    notes = ""
+                except Exception:
+                    logger.exception("brands save action failed")
+                    error = "An error occurred while saving the brand. Check logs/app.log for details."
+
+        elif action == "check_keyword":
+            check_brand = request.form.get("check_brand", "").strip()
+            check_keyword = request.form.get("check_keyword", "").strip()
+
+            if not check_brand or not check_keyword:
+                error = "Please enter both a brand and a keyword to check."
+            else:
+                try:
+                    keyword_check_result = check_keyword_usage(check_brand, check_keyword)
+                except Exception:
+                    logger.exception("brands check_keyword action failed")
+                    error = "An error occurred while checking the keyword. Check logs/app.log for details."
+
+    return render_template(
+        "brands.html",
+        provider=PROVIDER,
+        model=MODEL,
+        brand_name=brand_name,
+        website=website,
+        niche=niche,
+        main_keywords=main_keywords,
+        tone=tone,
+        notes=notes,
+        check_brand=check_brand,
+        check_keyword=check_keyword,
+        keyword_check_result=keyword_check_result,
+        brands=list_brand_records(),
+        error=error,
+        success=success,
     )
 
 

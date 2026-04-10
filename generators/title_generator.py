@@ -10,6 +10,7 @@ def generate_titles(
     tone: str = "natural",
     count: int = 10,
     brand: str = "",
+    brand_context: str = "",
 ):
     prompt = build_title_prompt(
         keyword=keyword,
@@ -17,6 +18,7 @@ def generate_titles(
         tone=tone,
         count=count,
         brand=brand,
+        brand_context=brand_context,
     )
     raw = provider.generate_json(prompt)
 

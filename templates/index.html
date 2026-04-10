@@ -51,6 +51,8 @@
         <p style="margin-top: 0; margin-bottom: 18px;">
           <a href="/" style="color: #1d4ed8; font-weight: 700; text-decoration: none; margin-right: 16px;">Blog Generator</a>
           <a href="/page-generator" style="color: #475467; font-weight: 600; text-decoration: none;">Page Generator</a>
+          <a href="/simple-page-generator" style="color: #475467; font-weight: 600; text-decoration: none; margin-left: 16px;">Simple Pages</a>
+          <a href="/brands" style="color: #475467; font-weight: 600; text-decoration: none; margin-left: 16px;">Brands</a>
         </p>
         <h1>Auto Blog Generator</h1>
         <p class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></p>
@@ -64,7 +66,7 @@
           <span class="step-badge">Step 1</span>
           <h2>Generate Blog Titles</h2>
           <label for="brand">Brand</label>
-          <input id="brand" name="brand" type="text" value="{{ brand }}" placeholder="Enter your brand or business name" />
+          <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Enter your brand or business name" />
 
           <label for="keyword">Keyword(s)</label>
           <textarea id="keyword" name="keyword" rows="2" placeholder="Enter one or more keywords separated by commas">{{ keyword }}</textarea>
@@ -193,6 +195,12 @@
         </div>
       </div>
     </div>
+
+    <datalist id="brandSuggestions">
+      {% for item in brand_names %}
+        <option value="{{ item }}"></option>
+      {% endfor %}
+    </datalist>
 
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script>
