@@ -84,6 +84,23 @@ This data is used as prompt context so future generations can stay more consiste
 - Ensure the selected model supports JSON output format.
 - For OpenAI and Gemini, set the appropriate API keys in your environment.
 - Titles are generated to be around 45-65 characters for SEO optimization.
+
+## Docker
+
+You can run the app with Docker Compose.
+
+1. Copy the example env file:
+   `cp .env.example .env`
+2. Update `.env` if you want a different provider or model.
+3. Start the app:
+   `docker compose up --build`
+
+Then open `http://localhost:3444`.
+
+Notes:
+- The app data is persisted through the `./data` volume mount.
+- If you use `ollama`, the default Docker config points to Ollama running on your host at `http://host.docker.internal:11434`.
+- If you use `openai` or `gemini`, set `OPENAI_API_KEY` or `GEMINI_API_KEY` in `.env`.
 MODEL = "gemini-3-flash-preview"
 
 <!-- the plan -->

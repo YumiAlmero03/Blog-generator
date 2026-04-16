@@ -125,6 +125,7 @@ def upsert_brand(
     notes: str = "",
     niche: str = "",
     main_keywords: str = "",
+    logo_path: str = "",
 ) -> Optional[dict]:
     brand_name = (brand or "").strip()
     if not brand_name:
@@ -141,6 +142,7 @@ def upsert_brand(
         "notes": (notes or "").strip(),
         "niche": (niche or "").strip(),
         "main_keywords": (main_keywords or "").strip(),
+        "logo_path": (logo_path or "").strip(),
     }
 
     if existing:
@@ -152,6 +154,7 @@ def upsert_brand(
             "notes": payload["notes"] or existing.get("notes", ""),
             "niche": payload["niche"] or existing.get("niche", ""),
             "main_keywords": payload["main_keywords"] or existing.get("main_keywords", ""),
+            "logo_path": payload["logo_path"] or existing.get("logo_path", ""),
         }
         brands_table.update(merged, doc_ids=[existing.doc_id])
         existing.update(merged)

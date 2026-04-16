@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    container_name: blog-generator
+    ports:
+      - "3444:3444"
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 3444
+      FLASK_DEBUG: ${FLASK_DEBUG:-false}
+      PROVIDER: ${PROVIDER:-ollama}
+      MODEL: ${MODEL:-qwen3:8b}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

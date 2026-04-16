@@ -82,7 +82,7 @@ Brand: {brand}
 {context_section}
 
 Rules:
-- Each meta description must be 110-145 characters exactly
+- Each meta description must be 160–170 characters exactly
 - Include the main keyword naturally
 - Be compelling and encourage clicks
 - Avoid keyword stuffing
@@ -92,6 +92,7 @@ Rules:
 - If a brand is provided, align the wording to the brand and include the brand only when it fits naturally
 - Vary the approach for each variant
 - Do not add any extra text before or after the JSON
+- Ensure the meta description is complete and exceeds 160 characters.
 - Start your response with '{' and end with '}'
 
 Return valid JSON only in this format:
@@ -235,7 +236,7 @@ Rules:
 
 - Title should be catchy, include the main keyword naturally, and be 45–55 characters when possible.
 - Introduction should be 60–80 words, engaging, and include the main keyword naturally once.
-- Content should be between 900 and 1000 words, structured with clear sections and subheadings.
+- Content should be between 1000 and 1200 words, structured with clear sections and subheadings.
 - Paragraphs should be short and easy to read.
 
 - If a brand is provided, match the brand’s voice, positioning, and audience naturally.
@@ -263,7 +264,7 @@ Rules:
 
 - Do not use markdown.
 - Do not add explanations before or after the JSON.
-- Ensure the content is complete and exceeds 900 words.
+- Ensure the content is complete and exceeds 1000 words.
 - Start your response with '{{' and end with '}}'
 
 Return valid JSON only in this format:

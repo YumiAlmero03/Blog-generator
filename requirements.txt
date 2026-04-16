@@ -1,5 +1,7 @@
 flask
 google-genai
 ollama
+openai
+pillow
 python-docx
 tinydb

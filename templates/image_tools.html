@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Tools</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Georgia, serif;
+        background:
+          radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 28%),
+          linear-gradient(135deg, #f8fbff 0%, #eef6ff 48%, #f8fafc 100%);
+        color: #111827;
+      }
+      .page { max-width: 1180px; margin: 0 auto; padding: 32px 20px 48px; }
+      .topbar { display: flex; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+      .topbar a {
+        text-decoration: none;
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.76);
+        color: #475467;
+        font-weight: 700;
+      }
+      .topbar a.active { background: #0369a1; color: #fff; }
+      .hero, .panel {
+        background: rgba(255,255,255,0.9);
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+      }
+      .hero { padding: 28px; margin-bottom: 24px; }
+      .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1; }
+      .hero p { margin: 0; color: #475467; max-width: 780px; font-size: 1.05rem; }
+      .meta { margin-top: 16px; color: #667085; font-size: 0.95rem; }
+      .layout { display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start; }
+      .panel { padding: 24px; }
+      label { display: block; margin-bottom: 8px; font-weight: 700; }
+      input, select {
+        width: 100%;
+        padding: 13px 14px;
+        border-radius: 14px;
+        border: 1px solid #d0d5dd;
+        font: inherit;
+        margin-bottom: 16px;
+        background: #fff;
+      }
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 13px 18px;
+        background: #0369a1;
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .hint, .success, .error {
+        margin: 0 0 18px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        font-size: 0.96rem;
+      }
+      .hint { background: #eff6ff; color: #075985; }
+      .success { background: #ecfdf3; color: #166534; }
+      .error { background: #fef2f2; color: #b42318; }
+      .preview-wrap {
+        display: grid;
+        gap: 18px;
+      }
+      .preview-card {
+        padding: 18px;
+        border-radius: 22px;
+        border: 1px solid #e4e7ec;
+        background: #f8fbff;
+      }
+      .preview-card h3 { margin: 0 0 12px; }
+      .preview-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+      .preview-image {
+        width: 100%;
+        max-height: 620px;
+        object-fit: contain;
+        border-radius: 18px;
+        background: #fff;
+        border: 1px solid #d0d5dd;
+      }
+      .logo-thumb {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        border-radius: 18px;
+        background: #fff;
+        border: 1px solid #d0d5dd;
+        padding: 10px;
+      }
+      .button-link {
+        display: inline-block;
+        text-decoration: none;
+        border-radius: 999px;
+        padding: 13px 18px;
+        background: #0369a1;
+        color: #fff;
+        font-weight: 700;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .empty-state {
+        border: 2px dashed #d0d5dd;
+        border-radius: 24px;
+        padding: 32px;
+        text-align: center;
+        color: #667085;
+      }
+      @media (max-width: 920px) {
+        .layout { grid-template-columns: 1fr; }
+        .form-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="topbar">
+        <a href="/">Blog Generator</a>
+        <a href="/page-generator">Page Generator</a>
+        <a href="/simple-page-generator">Simple Pages</a>
+        <a href="/text-tools">Text Tools</a>
+        <a href="/image-tools" class="active">Image Tools</a>
+        <a href="/brands">Brands</a>
+      </div>
+
+      <section class="hero">
+        <h1>Image Tools</h1>
+        <p>Upload an image, pull the saved brand logo from your brand record, and generate a resized watermarked version in one step.</p>
+        <div class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></div>
+      </section>
+
+      <div class="layout">
+        <section class="panel">
+          {% if error %}
+            <div class="error">{{ error }}</div>
+          {% endif %}
+          {% if success %}
+            <div class="success">{{ success }}</div>
+          {% endif %}
+
+          <p class="hint">Pick a saved brand with a logo, upload your base image, then choose resize behavior, snap ratio, and watermark placement.</p>
+
+          <form method="post" enctype="multipart/form-data">
+            <label for="brand">Brand</label>
+            <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Select a saved brand" />
+
+            <label for="image_file">Image upload</label>
+            <input id="image_file" name="image_file" type="file" accept=".png,.jpg,.jpeg,.webp" />
+
+            <label for="resize_mode">Resize mode</label>
+            <select id="resize_mode" name="resize_mode">
+              <option value="pixels" {% if resize_mode == 'pixels' %}selected{% endif %}>Specific pixels</option>
+              <option value="ratio" {% if resize_mode == 'ratio' %}selected{% endif %}>Scale ratio percent</option>
+              <option value="none" {% if resize_mode == 'none' %}selected{% endif %}>Keep original size</option>
+            </select>
+
+            <div class="form-grid">
+              <div>
+                <label for="pixel_width">Width in px</label>
+                <input id="pixel_width" name="pixel_width" type="number" min="1" value="{{ pixel_width }}" placeholder="e.g. 1200" />
+              </div>
+              <div>
+                <label for="pixel_height">Height in px</label>
+                <input id="pixel_height" name="pixel_height" type="number" min="1" value="{{ pixel_height }}" placeholder="e.g. 630" />
+              </div>
+            </div>
+
+            <label for="scale_percent">Scale percent</label>
+            <input id="scale_percent" name="scale_percent" type="number" min="1" value="{{ scale_percent }}" placeholder="e.g. 50 for half size" />
+
+            <label for="snap_ratio">Snap ratio</label>
+            <select id="snap_ratio" name="snap_ratio">
+              <option value="original" {% if snap_ratio == 'original' %}selected{% endif %}>Keep original ratio</option>
+              <option value="1:1" {% if snap_ratio == '1:1' %}selected{% endif %}>1:1 square</option>
+              <option value="4:5" {% if snap_ratio == '4:5' %}selected{% endif %}>4:5 portrait</option>
+              <option value="16:9" {% if snap_ratio == '16:9' %}selected{% endif %}>16:9 landscape</option>
+              <option value="9:16" {% if snap_ratio == '9:16' %}selected{% endif %}>9:16 vertical</option>
+              <option value="3:2" {% if snap_ratio == '3:2' %}selected{% endif %}>3:2 classic</option>
+            </select>
+
+            <label for="watermark_position">Watermark position</label>
+            <select id="watermark_position" name="watermark_position">
+              <option value="bottom-right" {% if watermark_position == 'bottom-right' %}selected{% endif %}>Bottom right</option>
+              <option value="bottom-left" {% if watermark_position == 'bottom-left' %}selected{% endif %}>Bottom left</option>
+              <option value="top-right" {% if watermark_position == 'top-right' %}selected{% endif %}>Top right</option>
+              <option value="top-left" {% if watermark_position == 'top-left' %}selected{% endif %}>Top left</option>
+              <option value="center" {% if watermark_position == 'center' %}selected{% endif %}>Center</option>
+            </select>
+
+            <div class="form-grid">
+              <div>
+                <label for="watermark_opacity">Logo opacity percent</label>
+                <input id="watermark_opacity" name="watermark_opacity" type="number" min="0" max="100" value="{{ watermark_opacity }}" />
+              </div>
+              <div>
+                <label for="logo_scale">Logo width percent</label>
+                <input id="logo_scale" name="logo_scale" type="number" min="1" max="100" value="{{ logo_scale }}" />
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <label for="output_filename">File name</label>
+                <input id="output_filename" name="output_filename" type="text" value="{{ output_filename }}" placeholder="e.g. homepage-banner" />
+              </div>
+              <div>
+                <label for="output_format">Download format</label>
+                <select id="output_format" name="output_format">
+                  <option value="webp" {% if output_format == 'webp' %}selected{% endif %}>WEBP</option>
+                  <option value="png" {% if output_format == 'png' %}selected{% endif %}>PNG</option>
+                  <option value="jpg" {% if output_format == 'jpg' %}selected{% endif %}>JPG</option>
+                  <option value="jpeg" {% if output_format == 'jpeg' %}selected{% endif %}>JPEG</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit">Process Image</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="preview-wrap">
+            {% if brand_logo_url %}
+              <div class="preview-card">
+                <h3>Saved brand logo</h3>
+                <img src="{{ brand_logo_url }}" alt="Brand logo" class="logo-thumb" />
+              </div>
+            {% endif %}
+
+            {% if result_image_url %}
+              <div class="preview-card">
+                <h3>Processed image</h3>
+                <a href="{{ result_image_url }}" target="_blank" rel="noopener">
+                  <img src="{{ result_image_url }}" alt="Processed image preview" class="preview-image" />
+                </a>
+                <div class="preview-actions">
+                  <a href="{{ result_image_url }}" class="button-link" download="{{ result_download_name or 'processed-image.png' }}">Download Image</a>
+                  <a href="{{ result_image_url }}" class="button-link" target="_blank" rel="noopener">Open Full Size</a>
+                </div>
+                {% if result_download_name %}
+                  <p style="margin-bottom: 0;">Download name: <strong>{{ result_download_name }}</strong></p>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="empty-state">
+                Upload an image and pick a brand logo to generate a watermarked version here.
+              </div>
+            {% endif %}
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <datalist id="brandSuggestions">
+      {% for item in brand_names %}
+        <option value="{{ item }}"></option>
+      {% endfor %}
+    </datalist>
+  </body>
+</html>

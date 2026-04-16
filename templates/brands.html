@@ -74,6 +74,17 @@
         background: #f8fafc;
         border: 1px solid #e4e7ec;
       }
+      .brand-logo {
+        width: 96px;
+        height: 96px;
+        object-fit: contain;
+        display: block;
+        margin-bottom: 12px;
+        border-radius: 16px;
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        padding: 10px;
+      }
       .brand-card h3 { margin: 0 0 10px; }
       .field { margin-bottom: 8px; color: #475467; line-height: 1.55; }
       .field strong { color: #111827; }
@@ -132,6 +143,8 @@
         <a href="/">Blog Generator</a>
         <a href="/page-generator">Page Generator</a>
         <a href="/simple-page-generator">Simple Pages</a>
+        <a href="/text-tools">Text Tools</a>
+        <a href="/image-tools">Image Tools</a>
         <a href="/brands" class="active">Brands</a>
       </div>
 
@@ -159,7 +172,7 @@
               {% endif %}
             </p>
 
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
               <input type="hidden" name="action" value="save_brand" />
 
               <label for="brand_name">Brand name</label>
@@ -179,6 +192,12 @@
 
               <label for="notes">Brand notes</label>
               <textarea id="notes" name="notes" placeholder="e.g. family-owned, serves Phoenix metro, focuses on emergency plumbing and same-day repairs">{{ notes }}</textarea>
+
+              <label for="logo_file">Logo upload</label>
+              <input id="logo_file" name="logo_file" type="file" accept=".png,.jpg,.jpeg,.webp" />
+              {% if logo_url %}
+                <img src="{{ logo_url }}" alt="Saved brand logo" class="brand-logo" />
+              {% endif %}
 
               <button type="submit">{% if brand_name %}Update Brand{% else %}Save Brand{% endif %}</button>
             </form>
@@ -238,6 +257,9 @@
             <div class="brand-grid">
               {% for brand in brands %}
                 <article class="brand-card">
+                  {% if brand.logo_path %}
+                    <img src="/uploads/{{ brand.logo_path }}" alt="{{ brand.name }} logo" class="brand-logo" />
+                  {% endif %}
                   <h3>{{ brand.name }}</h3>
                   {% if brand.website %}
                     <div class="field"><strong>Website:</strong> {{ brand.website }}</div>
@@ -254,7 +276,7 @@
                   {% if brand.notes %}
                     <div class="field"><strong>Notes:</strong> {{ brand.notes }}</div>
                   {% endif %}
-                  {% if not brand.website and not brand.niche and not brand.main_keywords and not brand.tone and not brand.notes %}
+                  {% if not brand.website and not brand.niche and not brand.main_keywords and not brand.tone and not brand.notes and not brand.logo_path %}
                     <div class="field">No extra details saved yet.</div>
                   {% endif %}
                   <div class="card-actions">

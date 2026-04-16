@@ -9,3 +9,5 @@ build/
 dist/
 .eggs/
 *.egg-info/
+data
+logs

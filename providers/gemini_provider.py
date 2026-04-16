@@ -5,7 +5,7 @@ from providers.base import BaseProvider
 class GeminiProvider(BaseProvider):
     def __init__(self, model: str):
         self.model = model
-        api_key = "AIzaSyAdcNjnpUwN8YxSmn1AK8Tm6bVxy55CqAU"
+        api_key = os.getenv("GEMINI_API_KEY", "").strip()
         if not api_key:
             raise EnvironmentError(
                 "GEMINI_API_KEY is not set. Set it in your environment before running the app."
