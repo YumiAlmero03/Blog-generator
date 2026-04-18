@@ -198,6 +198,9 @@ Rules:
 - Do not guess what a brand, game, or platform is. If the provided links clarify the topic, use that context to keep descriptions accurate.
 - Only include a link if it fits naturally in the article and is relevant to the section.
 - If a provided link refers to a specific brand or page, make sure the surrounding content matches that page correctly.
+- Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
+- Do not use these sections together in the same page.
+- Choose the ending section that best matches the page type and search intent.
 - Ensure the final article is complete and within the 900 word range before finishing.
 
 Return valid JSON only in this format:
