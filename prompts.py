@@ -1,3 +1,6 @@
+from word_bank import build_banned_words_prompt_section
+
+
 # Pro
 def build_brand_context_section(brand_context: str = "") -> str:
     cleaned = (brand_context or "").strip()
@@ -18,6 +21,7 @@ def build_title_prompt(
     brand_context: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an SEO blog title generator.
 
@@ -27,6 +31,7 @@ Generate exactly {count} blog title variants for this keyword/topic:
 Supporting ideas: {supporting_keyword}
 Brand: {brand}
 {context_section}
+{banned_words_section}
 
 Rules:
 - Return exactly {count} titles
@@ -71,6 +76,7 @@ def build_meta_description_prompt(
     brand_context: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an SEO meta description writer.
 
@@ -80,6 +86,7 @@ Generate exactly {count} compelling meta description variants for this blog post
 Keyword: {keyword}
 Brand: {brand}
 {context_section}
+{banned_words_section}
 
 Rules:
 - Each meta description must be 160–170 characters exactly
@@ -122,6 +129,7 @@ def build_content_prompt(
 ) -> str:
     links_section = ""
     context_section = build_brand_context_section(brand_context)
+    banned_words_section = build_banned_words_prompt_section()
     if links and len(links) > 0:
         links_list = "\n".join([
             f"- Text: '{link.get('text', '').strip()}' -> URL: {link.get('url', '').strip()}"
@@ -152,11 +160,12 @@ Keyword: {keyword}
 Supporting keyword: {supporting_keyword}
 Brand: {brand}
 {context_section}
+{banned_words_section}
 
 {links_section}
 
 Rules:
-- Write a blog article between 1000 and 1200 words.
+- Write a blog article between 900 and 1200 words.
 - Start with an engaging introduction of 60–80 words that explains the reader’s problem or need.
 - Do not repeat the exact article title in the body unless absolutely necessary. However, keep the content closely aligned with the title and main topic.
 - Use the primary keyword naturally 2–4 times throughout the article. Include it in the introduction, and include it again in the conclusion only if it fits naturally.
@@ -189,7 +198,7 @@ Rules:
 - Do not guess what a brand, game, or platform is. If the provided links clarify the topic, use that context to keep descriptions accurate.
 - Only include a link if it fits naturally in the article and is relevant to the section.
 - If a provided link refers to a specific brand or page, make sure the surrounding content matches that page correctly.
-- Ensure the final article is complete and within the 1000–1200 word range before finishing.
+- Ensure the final article is complete and within the 900 word range before finishing.
 
 Return valid JSON only in this format:
 {{
@@ -208,6 +217,7 @@ def build_page_prompt(
     brand_context: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an expert SEO landing page writer for WordPress.
 
@@ -220,6 +230,7 @@ Supporting keywords:
 Brand:
 {brand}
 {context_section}
+{banned_words_section}
 
 Page type:
 {page_type}
@@ -236,7 +247,7 @@ Rules:
 
 - Title should be catchy, include the main keyword naturally, and be 45–55 characters when possible.
 - Introduction should be 60–80 words, engaging, and include the main keyword naturally once.
-- Content should be between 1000 and 1200 words, structured with clear sections and subheadings.
+- Content should be between 900 and 1200 words, structured with clear sections and subheadings.
 - Paragraphs should be short and easy to read.
 
 - If a brand is provided, match the brand’s voice, positioning, and audience naturally.
@@ -264,7 +275,7 @@ Rules:
 
 - Do not use markdown.
 - Do not add explanations before or after the JSON.
-- Ensure the content is complete and exceeds 1000 words.
+- Ensure the content is complete and exceeds 900 words.
 - Start your response with '{{' and end with '}}'
 
 Return valid JSON only in this format:
@@ -285,6 +296,7 @@ def build_simple_page_prompt(
     brand_context: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an expert WordPress page writer for simple website pages.
 
@@ -297,6 +309,7 @@ Page type:
 Brand:
 {brand}
 {context_section}
+{banned_words_section}
 
 What to include:
 {expectations}

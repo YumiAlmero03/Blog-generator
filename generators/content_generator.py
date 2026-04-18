@@ -3,14 +3,26 @@ import re
 from prompts import build_content_prompt
 from utils import extract_json_string
 from logger import logger
+from word_bank import find_banned_terms_in_text
+
+MIN_BLOG_WORDS = 800
+MAX_GENERATION_ATTEMPTS = 3
+
 
 def count_html_words(html_text: str) -> int:
     """Count words in HTML content by removing tags."""
-    # Remove HTML tags
     clean_text = re.sub(r'<[^>]+>', '', html_text)
-    # Remove extra whitespace and split
     words = clean_text.split()
     return len(words)
+
+
+def parse_generated_content(raw: str) -> tuple[str, int]:
+    json_text = extract_json_string(raw)
+    data = json.loads(json_text)
+    content = data.get("content", "")
+    word_count = count_html_words(content)
+    return content, word_count
+
 
 def generate_content(
     provider,
@@ -31,25 +43,63 @@ def generate_content(
         brand=brand,
         brand_context=brand_context,
     )
-    raw = provider.generate_json(prompt)
 
-    try:
-        json_text = extract_json_string(raw)
-        data = json.loads(json_text)
-        content = data.get("content", "")
-        word_count = count_html_words(content)
-        
-        # Log warning if content is below target
-        if word_count < 800:
-            logger.warning(
-                "Content word count is %d (target: 800-1000). Response may be incomplete. Raw response length: %d chars",
-                word_count,
-                len(raw)
+    last_error = None
+    last_word_count = 0
+
+    for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+        retry_instruction = ""
+        if attempt > 1:
+            retry_instruction = (
+                f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
+                f"- Your previous response was too short.\n"
+                f"- Return COMPLETE valid HTML content only inside JSON.\n"
+                f"- The article must be at least {MIN_BLOG_WORDS} words.\n"
+                f"- Expand each section with more detail, examples, and explanation.\n"
             )
-        else:
-            logger.info("Content generated successfully with %d words", word_count)
-        
-        return content
-    except Exception as exc:
-        logger.exception("generate_content failed. Raw response: %s", raw)
-        raise ValueError("Could not parse JSON from model output.") from exc
+
+        raw = provider.generate_json(prompt + retry_instruction)
+
+        try:
+            content, word_count = parse_generated_content(raw)
+            last_word_count = word_count
+            banned_terms = find_banned_terms_in_text(content)
+
+            if banned_terms:
+                logger.warning(
+                    "Content used banned terms %s on attempt %d/%d",
+                    ", ".join(banned_terms),
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
+
+            if word_count < MIN_BLOG_WORDS:
+                logger.warning(
+                    "Content word count is %d (minimum: %d) on attempt %d/%d. Raw response length: %d chars",
+                    word_count,
+                    MIN_BLOG_WORDS,
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                    len(raw),
+                )
+                continue
+
+            logger.info(
+                "Content generated successfully with %d words on attempt %d/%d",
+                word_count,
+                attempt,
+                MAX_GENERATION_ATTEMPTS,
+            )
+            return content
+        except Exception as exc:
+            last_error = exc
+            logger.exception("generate_content failed on attempt %d. Raw response: %s", attempt, raw)
+
+    if last_error is not None:
+        raise ValueError("Could not parse JSON from model output.") from last_error
+
+    raise ValueError(
+        f"Generated article could not satisfy the rules after {MAX_GENERATION_ATTEMPTS} attempts. "
+        f"Last attempt was {last_word_count} words."
+    )

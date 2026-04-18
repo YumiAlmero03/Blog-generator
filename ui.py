@@ -69,28 +69,56 @@ def image_url(relative_path: str) -> str:
     return url_for("uploaded_file", filename=cleaned)
 
 
-def calculate_resized_dimensions(width: int, height: int, resize_mode: str, pixel_width: str, pixel_height: str, scale_percent: str) -> tuple[int, int]:
-    if resize_mode == "pixels":
-        width_value = int(pixel_width) if str(pixel_width).strip() else 0
-        height_value = int(pixel_height) if str(pixel_height).strip() else 0
-        if width_value <= 0 and height_value <= 0:
-            raise ValueError("Enter a width, a height, or both for pixel resize.")
-        if width_value > 0 and height_value > 0:
-            return width_value, height_value
-        if width_value > 0:
-            ratio = width_value / width
-            return width_value, max(1, round(height * ratio))
-        ratio = height_value / height
-        return max(1, round(width * ratio)), height_value
+def parse_ratio_dimensions(snap_ratio: str, fallback_width: int, fallback_height: int) -> tuple[int, int]:
+    ratio_map = {
+        "1:1": (1, 1),
+        "4:5": (4, 5),
+        "16:9": (16, 9),
+        "9:16": (9, 16),
+        "3:2": (3, 2),
+        "original": (fallback_width, fallback_height),
+    }
+    ratio = ratio_map.get(snap_ratio)
+    if not ratio or ratio[0] <= 0 or ratio[1] <= 0:
+        return fallback_width, fallback_height
+    return ratio
 
-    if resize_mode == "ratio":
-        percent = float(scale_percent)
-        if percent <= 0:
-            raise ValueError("Resize ratio must be greater than 0.")
-        scale = percent / 100.0
-        return max(1, round(width * scale)), max(1, round(height * scale))
 
-    return width, height
+def calculate_output_dimensions(pixel_width: str, pixel_height: str, snap_ratio: str, fallback_width: int, fallback_height: int) -> tuple[int, int]:
+    width_value = int(str(pixel_width or "").strip() or 0)
+    height_value = int(str(pixel_height or "").strip() or 0)
+    ratio_width, ratio_height = parse_ratio_dimensions(snap_ratio, fallback_width, fallback_height)
+
+    if width_value <= 0 and height_value <= 0:
+        raise ValueError("Enter a width or height for the final exported image.")
+    if width_value > 0:
+        return width_value, max(1, round(width_value * (ratio_height / ratio_width)))
+    return max(1, round(height_value * (ratio_width / ratio_height))), height_value
+
+
+def crop_image_to_box(image, crop_x: str, crop_y: str, crop_width: str, crop_height: str):
+    crop_width_value = int(float(crop_width or 0))
+    crop_height_value = int(float(crop_height or 0))
+    if crop_width_value <= 0 or crop_height_value <= 0:
+        raise ValueError("Set a crop area before processing the image.")
+    if crop_width_value > image.width or crop_height_value > image.height:
+        raise ValueError("The crop size is larger than the source image. Reduce the target crop size.")
+
+    crop_x_value = int(float(crop_x or 0))
+    crop_y_value = int(float(crop_y or 0))
+    max_x = image.width - crop_width_value
+    max_y = image.height - crop_height_value
+    crop_x_value = min(max(crop_x_value, 0), max_x)
+    crop_y_value = min(max(crop_y_value, 0), max_y)
+
+    return image.crop(
+        (
+            crop_x_value,
+            crop_y_value,
+            crop_x_value + crop_width_value,
+            crop_y_value + crop_height_value,
+        )
+    )
 
 
 def snap_image_to_ratio(image, snap_ratio: str):
@@ -131,6 +159,9 @@ def apply_logo_watermark(
     position: str,
     opacity_percent: str,
     logo_scale_percent: str,
+    watermark_x_percent: str = "",
+    watermark_y_percent: str = "",
+    watermark_rotation: str = "0",
 ):
     from PIL import Image
 
@@ -150,14 +181,28 @@ def apply_logo_watermark(
     logo.putalpha(alpha)
 
     padding = max(16, round(min(base.width, base.height) * 0.03))
-    positions = {
-        "top-left": (padding, padding),
-        "top-right": (base.width - logo.width - padding, padding),
-        "bottom-left": (padding, base.height - logo.height - padding),
-        "center": ((base.width - logo.width) // 2, (base.height - logo.height) // 2),
-        "bottom-right": (base.width - logo.width - padding, base.height - logo.height - padding),
-    }
-    x, y = positions.get(position, positions["bottom-right"])
+
+    rotation = float(str(watermark_rotation or "0").strip() or 0)
+    if rotation:
+        logo = logo.rotate(-rotation, expand=True, resample=Image.Resampling.BICUBIC)
+
+    if str(watermark_x_percent).strip() and str(watermark_y_percent).strip():
+        center_x = round(base.width * (float(watermark_x_percent) / 100.0))
+        center_y = round(base.height * (float(watermark_y_percent) / 100.0))
+        x = center_x - (logo.width // 2)
+        y = center_y - (logo.height // 2)
+    else:
+        positions = {
+            "top-left": (padding, padding),
+            "top-right": (base.width - logo.width - padding, padding),
+            "bottom-left": (padding, base.height - logo.height - padding),
+            "center": ((base.width - logo.width) // 2, (base.height - logo.height) // 2),
+            "bottom-right": (base.width - logo.width - padding, base.height - logo.height - padding),
+        }
+        x, y = positions.get(position, positions["bottom-right"])
+
+    x = min(max(0, x), max(0, base.width - logo.width))
+    y = min(max(0, y), max(0, base.height - logo.height))
     overlay = base.copy()
     overlay.alpha_composite(logo, (max(0, x), max(0, y)))
     return overlay
@@ -609,83 +654,127 @@ def text_tools():
 def image_tools():
     brand = ""
     brand_logo_url = ""
+    source_image_url = ""
+    source_image_name = ""
     result_image_url = ""
     result_download_name = ""
     error = None
     success = None
-    resize_mode = "pixels"
     pixel_width = "800"
-    pixel_height = "500"
-    scale_percent = "100"
-    snap_ratio = "original"
+    pixel_height = "450"
+    snap_ratio = "16:9"
     watermark_position = "bottom-right"
     watermark_opacity = "100"
     logo_scale = "20"
     output_filename = "watermarked-image"
     output_format = "webp"
+    crop_x = "0"
+    crop_y = "0"
+    crop_width = ""
+    crop_height = ""
+    crop_scale = "70"
+    watermark_x = "85"
+    watermark_y = "85"
+    watermark_rotation = "0"
+    use_watermark = True
     brand_names = list_brand_names()
 
     if request.method == "POST":
         brand = request.form.get("brand", "").strip()
-        resize_mode = request.form.get("resize_mode", "pixels").strip() or "pixels"
         pixel_width = request.form.get("pixel_width", "").strip()
         pixel_height = request.form.get("pixel_height", "").strip()
-        scale_percent = request.form.get("scale_percent", "100").strip() or "100"
-        snap_ratio = request.form.get("snap_ratio", "original").strip() or "original"
+        snap_ratio = request.form.get("snap_ratio", "16:9").strip() or "16:9"
         watermark_position = request.form.get("watermark_position", "bottom-right").strip() or "bottom-right"
         watermark_opacity = request.form.get("watermark_opacity", "45").strip() or "45"
         logo_scale = request.form.get("logo_scale", "20").strip() or "20"
         output_filename = request.form.get("output_filename", "watermarked-image").strip() or "watermarked-image"
-        output_format = request.form.get("output_format", "png").strip().lower() or "png"
+        output_format = request.form.get("output_format", "webp").strip().lower() or "webp"
+        saved_source_image = request.form.get("saved_source_image", "").strip()
+        crop_x = request.form.get("crop_x", "0").strip() or "0"
+        crop_y = request.form.get("crop_y", "0").strip() or "0"
+        crop_width = request.form.get("crop_width", "").strip()
+        crop_height = request.form.get("crop_height", "").strip()
+        crop_scale = request.form.get("crop_scale", "70").strip() or "70"
+        watermark_x = request.form.get("watermark_x", "85").strip() or "85"
+        watermark_y = request.form.get("watermark_y", "85").strip() or "85"
+        watermark_rotation = request.form.get("watermark_rotation", "0").strip() or "0"
+        use_watermark = request.form.get("use_watermark") == "1"
 
         brand_record = get_brand_record(brand)
         if brand_record and brand_record.get("logo_path"):
             brand_logo_url = image_url(brand_record.get("logo_path", ""))
 
         uploaded_image = request.files.get("image_file")
-        if not brand:
-            error = "Please select or enter a brand."
-        elif not brand_record:
-            error = "That brand is not saved yet. Add it first on the Brands page."
-        elif not brand_record.get("logo_path"):
-            error = "This brand does not have a logo yet. Upload one on the Brands page first."
-        elif not uploaded_image or not uploaded_image.filename:
+        source_filename = saved_source_image
+        if uploaded_image and uploaded_image.filename:
+            source_filename = ""
+
+        if source_filename:
+            source_image_name = Path(source_filename).name
+            source_image_url = image_url(f"image_tools/{source_filename}")
+
+        if (not uploaded_image or not uploaded_image.filename) and not source_filename:
             error = "Please upload the image you want to process."
         elif output_format not in {"png", "jpg", "jpeg", "webp"}:
             error = "Please choose PNG, JPG, JPEG, or WEBP as the export format."
+        elif use_watermark and not brand:
+            error = "Please select or enter a brand to use a watermark."
+        elif use_watermark and not brand_record:
+            error = "That brand is not saved yet. Add it first on the Brands page."
+        elif use_watermark and not brand_record.get("logo_path"):
+            error = "This brand does not have a logo yet. Upload one on the Brands page first."
         else:
             try:
                 from PIL import Image
 
-                source_filename = save_uploaded_image(uploaded_image, IMAGE_TOOL_DIR, "source")
+                if uploaded_image and uploaded_image.filename:
+                    source_filename = save_uploaded_image(uploaded_image, IMAGE_TOOL_DIR, "source")
+                if not source_filename:
+                    raise ValueError("Please upload the image you want to process.")
                 source_path = IMAGE_TOOL_DIR / source_filename
-                logo_path = UPLOAD_ROOT / brand_record["logo_path"]
+                if not source_path.exists():
+                    raise ValueError("The last uploaded image could not be found. Please upload it again.")
+
+                source_image_name = Path(source_filename).name
+                source_image_url = image_url(f"image_tools/{source_filename}")
                 clean_base_name = secure_filename(Path(output_filename).stem).replace("_", " ") or "watermarked-image"
 
                 normalized_format = "jpg" if output_format == "jpeg" else output_format
 
-                with Image.open(source_path) as source_image, Image.open(logo_path) as logo_image:
+                with Image.open(source_path) as source_image:
                     working_image = source_image.convert("RGBA")
-                    working_image = snap_image_to_ratio(working_image, snap_ratio)
-                    resized_width, resized_height = calculate_resized_dimensions(
-                        working_image.width,
-                        working_image.height,
-                        resize_mode,
+                    working_image = crop_image_to_box(
+                        working_image,
+                        crop_x,
+                        crop_y,
+                        crop_width,
+                        crop_height,
+                    )
+                    output_width, output_height = calculate_output_dimensions(
                         pixel_width,
                         pixel_height,
-                        scale_percent,
+                        snap_ratio,
+                        working_image.width,
+                        working_image.height,
                     )
-                    working_image = working_image.resize(
-                        (resized_width, resized_height),
-                        resample=Image.Resampling.LANCZOS,
-                    )
-                    working_image = apply_logo_watermark(
-                        working_image,
-                        logo_image,
-                        watermark_position,
-                        watermark_opacity,
-                        logo_scale,
-                    )
+                    if (working_image.width, working_image.height) != (output_width, output_height):
+                        working_image = working_image.resize(
+                            (output_width, output_height),
+                            resample=Image.Resampling.LANCZOS,
+                        )
+                    if use_watermark:
+                        logo_path = UPLOAD_ROOT / brand_record["logo_path"]
+                        with Image.open(logo_path) as logo_image:
+                            working_image = apply_logo_watermark(
+                                working_image,
+                                logo_image,
+                                watermark_position,
+                                watermark_opacity,
+                                logo_scale,
+                                watermark_x,
+                                watermark_y,
+                                watermark_rotation,
+                            )
 
                     if normalized_format in {"jpg", "webp"}:
                         working_image = working_image.convert("RGB")
@@ -718,15 +807,24 @@ def image_tools():
         brand_names=brand_names,
         brand=brand,
         brand_logo_url=brand_logo_url,
+        source_image_url=source_image_url,
+        source_image_name=source_image_name,
         result_image_url=result_image_url,
         result_download_name=result_download_name,
         error=error,
         success=success,
-        resize_mode=resize_mode,
         pixel_width=pixel_width,
         pixel_height=pixel_height,
-        scale_percent=scale_percent,
         snap_ratio=snap_ratio,
+        crop_x=crop_x,
+        crop_y=crop_y,
+        crop_width=crop_width,
+        crop_height=crop_height,
+        crop_scale=crop_scale,
+        watermark_x=watermark_x,
+        watermark_y=watermark_y,
+        watermark_rotation=watermark_rotation,
+        use_watermark=use_watermark,
         watermark_position=watermark_position,
         watermark_opacity=watermark_opacity,
         logo_scale=logo_scale,

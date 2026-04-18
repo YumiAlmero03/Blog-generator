@@ -1,0 +1,24 @@
+# Add one banned word or phrase per line.
+# Lines starting with # are treated as comments.
+
+# delve
+# game-changer
+
+guaranteed
+sure win
+100% win
+fixed
+rigged
+instant
+hack
+exploit
+cheat
+bypass
+fake
+glitch
+free money
+unlimited bonus
+illegal
+underground
+unlicensed
+secret betting

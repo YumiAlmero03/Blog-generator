@@ -2,9 +2,14 @@ import json
 import random
 import re
 
+from generators.content_generator import count_html_words
 from logger import logger
 from prompts import build_page_prompt
 from utils import extract_json_string
+from word_bank import find_banned_terms_in_text
+
+MIN_PAGE_WORDS = 900
+MAX_GENERATION_ATTEMPTS = 3
 
 
 PLACEHOLDER_PALETTE = [
@@ -59,27 +64,77 @@ def generate_page(
         brand=brand,
         brand_context=brand_context,
     )
-    raw = provider.generate_json(prompt)
 
-    try:
-        json_text = extract_json_string(raw)
-        data = json.loads(json_text)
-        title = data.get("title", "").strip()
-        meta_description = data.get("meta_description", "").strip()
-        content = data.get("content", "").strip()
-        content, injected_count = inject_image_placeholders(content)
+    last_error = None
+    last_word_count = 0
 
-        logger.info(
-            "Page generated successfully for keyword '%s' with %d image placeholders",
-            keyword,
-            injected_count,
-        )
-        return {
-            "title": title,
-            "meta_description": meta_description,
-            "content": content,
-            "image_count": injected_count,
-        }
-    except Exception as exc:
-        logger.exception("generate_page failed. Raw response: %s", raw)
-        raise ValueError("Could not parse JSON from model output.") from exc
+    for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+        retry_instruction = ""
+        if attempt > 1:
+            retry_instruction = (
+                f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
+                f"- Your previous page was too short.\n"
+                f"- Keep the same keyword intent and return valid JSON only.\n"
+                f"- The page content must be at least {MIN_PAGE_WORDS} words.\n"
+                f"- Expand the body with more useful detail, examples, FAQs, benefits, and section depth.\n"
+            )
+
+        raw = provider.generate_json(prompt + retry_instruction)
+
+        try:
+            json_text = extract_json_string(raw)
+            data = json.loads(json_text)
+            title = data.get("title", "").strip()
+            meta_description = data.get("meta_description", "").strip()
+            content = data.get("content", "").strip()
+            word_count = count_html_words(content)
+            last_word_count = word_count
+            banned_terms = find_banned_terms_in_text("\n".join([title, meta_description, content]))
+
+            if banned_terms:
+                logger.warning(
+                    "Page output used banned terms %s for keyword '%s' on attempt %d/%d",
+                    ", ".join(banned_terms),
+                    keyword,
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
+
+            if word_count < MIN_PAGE_WORDS:
+                logger.warning(
+                    "Page word count is %d (minimum: %d) for keyword '%s' on attempt %d/%d",
+                    word_count,
+                    MIN_PAGE_WORDS,
+                    keyword,
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
+
+            content, injected_count = inject_image_placeholders(content)
+            logger.info(
+                "Page generated successfully for keyword '%s' with %d words and %d image placeholders on attempt %d/%d",
+                keyword,
+                word_count,
+                injected_count,
+                attempt,
+                MAX_GENERATION_ATTEMPTS,
+            )
+            return {
+                "title": title,
+                "meta_description": meta_description,
+                "content": content,
+                "image_count": injected_count,
+            }
+        except Exception as exc:
+            last_error = exc
+            logger.exception("generate_page failed on attempt %d. Raw response: %s", attempt, raw)
+
+    if last_error is not None:
+        raise ValueError("Could not parse JSON from model output.") from last_error
+
+    raise ValueError(
+        f"Generated page could not satisfy the rules after {MAX_GENERATION_ATTEMPTS} attempts. "
+        f"Last attempt was {last_word_count} words."
+    )

@@ -90,6 +90,125 @@
         background: #fff;
         border: 1px solid #d0d5dd;
       }
+      .crop-stage {
+        position: relative;
+        width: 100%;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid #d0d5dd;
+        background:
+          linear-gradient(45deg, #eef2f6 25%, transparent 25%, transparent 75%, #eef2f6 75%, #eef2f6),
+          linear-gradient(45deg, #eef2f6 25%, transparent 25%, transparent 75%, #eef2f6 75%, #eef2f6);
+        background-size: 24px 24px;
+        background-position: 0 0, 12px 12px;
+        touch-action: none;
+        user-select: none;
+      }
+      .crop-stage img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .crop-stage.empty {
+        min-height: 260px;
+        display: grid;
+        place-items: center;
+        color: #667085;
+        padding: 20px;
+      }
+      .crop-stage.empty img {
+        display: none;
+      }
+      .crop-placeholder {
+        max-width: 320px;
+        text-align: center;
+        line-height: 1.5;
+      }
+      .crop-box {
+        position: absolute;
+        border: 2px solid #f97316;
+        border-radius: 16px;
+        box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.42);
+        cursor: grab;
+      }
+      .watermark-preview {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 24%;
+        min-width: 48px;
+        max-width: 50%;
+        transform: translate(-50%, -50%);
+        transform-origin: center;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        pointer-events: auto;
+      }
+      .watermark-preview.dragging {
+        cursor: grabbing;
+      }
+      .watermark-preview img {
+        display: block;
+        width: 100%;
+        height: auto;
+        pointer-events: none;
+      }
+      .crop-handle {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: #f97316;
+        border: 2px solid #fff;
+        right: -9px;
+        bottom: -9px;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
+        cursor: nwse-resize;
+      }
+      .crop-box.dragging {
+        cursor: grabbing;
+      }
+      .crop-box::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 14px;
+        border: 1px dashed rgba(255, 255, 255, 0.9);
+      }
+      .crop-meta {
+        margin-top: 12px;
+        color: #475467;
+        font-size: 0.95rem;
+      }
+      .slider-row {
+        margin-bottom: 16px;
+      }
+      .slider-row input[type="range"] {
+        margin-bottom: 8px;
+      }
+      .slider-value {
+        margin: 0;
+        color: #475467;
+        font-size: 0.92rem;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #f8fbff;
+        border: 1px solid #d0d5dd;
+      }
+      .toggle-row input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+      }
+      .watermark-controls.is-hidden {
+        display: none;
+      }
       .logo-thumb {
         width: 120px;
         height: 120px;
@@ -139,7 +258,7 @@
 
       <section class="hero">
         <h1>Image Tools</h1>
-        <p>Upload an image, pull the saved brand logo from your brand record, and generate a resized watermarked version in one step.</p>
+        <p>Crop with a locked ratio, set the final export size, and generate a watermarked image without leaving the page.</p>
         <div class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></div>
       </section>
 
@@ -152,35 +271,32 @@
             <div class="success">{{ success }}</div>
           {% endif %}
 
-          <p class="hint">Pick a saved brand with a logo, upload your base image, then choose resize behavior, snap ratio, and watermark placement.</p>
+          <p class="hint">Upload an image, choose a crop ratio, resize the crop box with the slider, drag it into place, then export to the final pixel size you want. Turn watermark on only when you want to use a brand logo.</p>
 
           <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="saved_source_image" value="{{ source_image_name }}" />
+            <input type="hidden" id="crop_x" name="crop_x" value="{{ crop_x }}" />
+            <input type="hidden" id="crop_y" name="crop_y" value="{{ crop_y }}" />
+            <input type="hidden" id="crop_width" name="crop_width" value="{{ crop_width }}" />
+            <input type="hidden" id="crop_height" name="crop_height" value="{{ crop_height }}" />
+            <input type="hidden" id="crop_scale" name="crop_scale" value="{{ crop_scale }}" />
+            <input type="hidden" id="watermark_x" name="watermark_x" value="{{ watermark_x }}" />
+            <input type="hidden" id="watermark_y" name="watermark_y" value="{{ watermark_y }}" />
+            <input type="hidden" id="watermark_rotation" name="watermark_rotation" value="{{ watermark_rotation }}" />
+
+            <div class="toggle-row">
+              <input id="use_watermark" name="use_watermark" type="checkbox" value="1" {% if use_watermark %}checked{% endif %} />
+              <label for="use_watermark" style="margin:0;">Add watermark</label>
+            </div>
+
             <label for="brand">Brand</label>
-            <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Select a saved brand" />
+            <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Optional unless watermark is enabled" />
 
             <label for="image_file">Image upload</label>
             <input id="image_file" name="image_file" type="file" accept=".png,.jpg,.jpeg,.webp" />
-
-            <label for="resize_mode">Resize mode</label>
-            <select id="resize_mode" name="resize_mode">
-              <option value="pixels" {% if resize_mode == 'pixels' %}selected{% endif %}>Specific pixels</option>
-              <option value="ratio" {% if resize_mode == 'ratio' %}selected{% endif %}>Scale ratio percent</option>
-              <option value="none" {% if resize_mode == 'none' %}selected{% endif %}>Keep original size</option>
-            </select>
-
-            <div class="form-grid">
-              <div>
-                <label for="pixel_width">Width in px</label>
-                <input id="pixel_width" name="pixel_width" type="number" min="1" value="{{ pixel_width }}" placeholder="e.g. 1200" />
-              </div>
-              <div>
-                <label for="pixel_height">Height in px</label>
-                <input id="pixel_height" name="pixel_height" type="number" min="1" value="{{ pixel_height }}" placeholder="e.g. 630" />
-              </div>
-            </div>
-
-            <label for="scale_percent">Scale percent</label>
-            <input id="scale_percent" name="scale_percent" type="number" min="1" value="{{ scale_percent }}" placeholder="e.g. 50 for half size" />
+            {% if source_image_name %}
+              <p class="hint">Reusing last uploaded image: <strong>{{ source_image_name }}</strong>. Choose a new file anytime to replace it.</p>
+            {% endif %}
 
             <label for="snap_ratio">Snap ratio</label>
             <select id="snap_ratio" name="snap_ratio">
@@ -192,24 +308,50 @@
               <option value="3:2" {% if snap_ratio == '3:2' %}selected{% endif %}>3:2 classic</option>
             </select>
 
-            <label for="watermark_position">Watermark position</label>
-            <select id="watermark_position" name="watermark_position">
-              <option value="bottom-right" {% if watermark_position == 'bottom-right' %}selected{% endif %}>Bottom right</option>
-              <option value="bottom-left" {% if watermark_position == 'bottom-left' %}selected{% endif %}>Bottom left</option>
-              <option value="top-right" {% if watermark_position == 'top-right' %}selected{% endif %}>Top right</option>
-              <option value="top-left" {% if watermark_position == 'top-left' %}selected{% endif %}>Top left</option>
-              <option value="center" {% if watermark_position == 'center' %}selected{% endif %}>Center</option>
-            </select>
+            <div class="slider-row">
+              <label for="cropScaleSlider">Crop box size</label>
+              <input id="cropScaleSlider" type="range" min="20" max="100" step="1" value="{{ crop_scale }}" />
+              <p id="cropScaleValue" class="slider-value">Crop box size: {{ crop_scale }}%</p>
+            </div>
 
             <div class="form-grid">
               <div>
-                <label for="watermark_opacity">Logo opacity percent</label>
-                <input id="watermark_opacity" name="watermark_opacity" type="number" min="0" max="100" value="{{ watermark_opacity }}" />
+                <label for="pixel_width">Final width in px</label>
+                <input id="pixel_width" name="pixel_width" type="number" min="1" value="{{ pixel_width }}" placeholder="e.g. 1200" />
               </div>
               <div>
-                <label for="logo_scale">Logo width percent</label>
-                <input id="logo_scale" name="logo_scale" type="number" min="1" max="100" value="{{ logo_scale }}" />
+                <label for="pixel_height">Final height in px</label>
+                <input id="pixel_height" name="pixel_height" type="number" min="1" value="{{ pixel_height }}" placeholder="e.g. 630" />
               </div>
+            </div>
+            <p class="hint">The final width and height stay snapped to the selected ratio. Change either one and the other updates automatically.</p>
+
+            <div id="watermarkControls" class="watermark-controls{% if not use_watermark %} is-hidden{% endif %}">
+              <label for="watermark_position">Watermark position</label>
+              <select id="watermark_position" name="watermark_position">
+                <option value="bottom-right" {% if watermark_position == 'bottom-right' %}selected{% endif %}>Bottom right</option>
+                <option value="bottom-left" {% if watermark_position == 'bottom-left' %}selected{% endif %}>Bottom left</option>
+                <option value="top-right" {% if watermark_position == 'top-right' %}selected{% endif %}>Top right</option>
+                <option value="top-left" {% if watermark_position == 'top-left' %}selected{% endif %}>Top left</option>
+                <option value="center" {% if watermark_position == 'center' %}selected{% endif %}>Center</option>
+              </select>
+
+              <div class="form-grid">
+                <div>
+                  <label for="watermark_opacity">Logo opacity percent</label>
+                  <input id="watermark_opacity" name="watermark_opacity" type="number" min="0" max="100" value="{{ watermark_opacity }}" />
+                </div>
+                <div>
+                  <label for="logo_scale">Logo width percent</label>
+                  <input id="logo_scale" name="logo_scale" type="number" min="1" max="100" value="{{ logo_scale }}" />
+                </div>
+              </div>
+              <div class="slider-row">
+                <label for="watermarkRotationSlider">Watermark rotation</label>
+                <input id="watermarkRotationSlider" type="range" min="-180" max="180" step="1" value="{{ watermark_rotation }}" />
+                <p id="watermarkRotationValue" class="slider-value">Rotation: {{ watermark_rotation }} deg</p>
+              </div>
+              <p class="hint">Choose a starting watermark position if you want, then drag the logo on the crop preview and rotate it with the slider.</p>
             </div>
 
             <div class="form-grid">
@@ -234,12 +376,34 @@
 
         <section class="panel">
           <div class="preview-wrap">
-            {% if brand_logo_url %}
+            {% if brand_logo_url and use_watermark %}
               <div class="preview-card">
                 <h3>Saved brand logo</h3>
                 <img src="{{ brand_logo_url }}" alt="Brand logo" class="logo-thumb" />
               </div>
             {% endif %}
+
+            <div class="preview-card">
+              <h3>Source image and crop area</h3>
+              <div id="cropStage" class="crop-stage{% if not source_image_url %} empty{% endif %}" data-source-url="{{ source_image_url }}">
+                <img id="cropImage" src="{{ source_image_url }}" alt="Source image preview" class="preview-image" {% if not source_image_url %}hidden{% endif %} />
+                <div id="cropBox" class="crop-box" hidden>
+                  {% if brand_logo_url %}
+                    <div id="watermarkPreview" class="watermark-preview">
+                      <img src="{{ brand_logo_url }}" alt="Watermark preview" />
+                    </div>
+                  {% endif %}
+                  <div class="crop-handle" aria-hidden="true"></div>
+                </div>
+                <div id="cropPlaceholder" class="crop-placeholder" {% if source_image_url %}hidden{% endif %}>
+                  Upload an image to preview it here. The crop frame will lock to your chosen ratio, resize with the slider, and drag to the exact area you want to keep.
+                </div>
+              </div>
+              {% if source_image_name %}
+                <p style="margin-bottom: 0;">Using: <strong>{{ source_image_name }}</strong></p>
+              {% endif %}
+              <p id="cropMeta" class="crop-meta">Choose a ratio, resize the crop box, and drag it to frame the image.</p>
+            </div>
 
             {% if result_image_url %}
               <div class="preview-card">
@@ -270,5 +434,481 @@
         <option value="{{ item }}"></option>
       {% endfor %}
     </datalist>
+    <script>
+      (function () {
+        const ratioInput = document.getElementById("snap_ratio");
+        const pixelWidthInput = document.getElementById("pixel_width");
+        const pixelHeightInput = document.getElementById("pixel_height");
+        const imageFileInput = document.getElementById("image_file");
+        const cropScaleSlider = document.getElementById("cropScaleSlider");
+        const cropScaleValue = document.getElementById("cropScaleValue");
+        const useWatermarkInput = document.getElementById("use_watermark");
+        const watermarkControls = document.getElementById("watermarkControls");
+        const watermarkPositionInput = document.getElementById("watermark_position");
+        const watermarkOpacityInput = document.getElementById("watermark_opacity");
+        const logoScaleInput = document.getElementById("logo_scale");
+        const watermarkRotationSlider = document.getElementById("watermarkRotationSlider");
+        const watermarkRotationValue = document.getElementById("watermarkRotationValue");
+        const cropStage = document.getElementById("cropStage");
+        const cropImage = document.getElementById("cropImage");
+        const cropBox = document.getElementById("cropBox");
+        const cropHandle = cropBox ? cropBox.querySelector(".crop-handle") : null;
+        const watermarkPreview = document.getElementById("watermarkPreview");
+        const cropPlaceholder = document.getElementById("cropPlaceholder");
+        const cropMeta = document.getElementById("cropMeta");
+        const cropXInput = document.getElementById("crop_x");
+        const cropYInput = document.getElementById("crop_y");
+        const cropWidthInput = document.getElementById("crop_width");
+        const cropHeightInput = document.getElementById("crop_height");
+        const cropScaleInput = document.getElementById("crop_scale");
+        const watermarkXInput = document.getElementById("watermark_x");
+        const watermarkYInput = document.getElementById("watermark_y");
+        const watermarkRotationInput = document.getElementById("watermark_rotation");
+        if (!ratioInput || !pixelWidthInput || !pixelHeightInput || !cropStage || !cropImage || !cropBox || !cropScaleSlider || !cropScaleInput) {
+          return;
+        }
+
+        const ratioMap = {
+          "1:1": [1, 1],
+          "4:5": [4, 5],
+          "16:9": [16, 9],
+          "9:16": [9, 16],
+          "3:2": [3, 2],
+        };
+
+        const state = {
+          naturalWidth: 0,
+          naturalHeight: 0,
+          scale: 1,
+          boxLeft: 0,
+          boxTop: 0,
+          boxWidth: 0,
+          boxHeight: 0,
+          dragging: false,
+          resizing: false,
+          dragOffsetX: 0,
+          dragOffsetY: 0,
+          resizeAnchorX: 0,
+          resizeAnchorY: 0,
+          objectUrl: null,
+          activeDimension: "width",
+          watermarkLeft: 0,
+          watermarkTop: 0,
+          watermarkWidth: 0,
+          watermarkHeight: 0,
+          watermarkDragging: false,
+          watermarkOffsetX: 0,
+          watermarkOffsetY: 0,
+        };
+
+        function setMeta(message) {
+          if (cropMeta) {
+            cropMeta.textContent = message;
+          }
+        }
+
+        function getCurrentRatio() {
+          if (ratioInput.value === "original") {
+            return [state.naturalWidth || 1, state.naturalHeight || 1];
+          }
+          return ratioMap[ratioInput.value] || [state.naturalWidth || 1, state.naturalHeight || 1];
+        }
+
+        function syncOutputDimensions(changedField) {
+          const width = parseInt(pixelWidthInput.value || "0", 10);
+          const height = parseInt(pixelHeightInput.value || "0", 10);
+          const ratio = getCurrentRatio();
+          const ratioWidth = ratio[0];
+          const ratioHeight = ratio[1];
+          state.activeDimension = changedField || state.activeDimension;
+
+          if (state.activeDimension === "height") {
+            if (height > 0) {
+              pixelWidthInput.value = String(Math.max(1, Math.round(height * (ratioWidth / ratioHeight))));
+            }
+          } else if (width > 0) {
+            pixelHeightInput.value = String(Math.max(1, Math.round(width * (ratioHeight / ratioWidth))));
+          }
+        }
+
+        function updateHiddenFields() {
+          if (!state.scale || state.boxWidth <= 0 || state.boxHeight <= 0) {
+            cropXInput.value = "0";
+            cropYInput.value = "0";
+            cropWidthInput.value = "";
+            cropHeightInput.value = "";
+            return;
+          }
+
+          cropXInput.value = String(Math.round(state.boxLeft / state.scale));
+          cropYInput.value = String(Math.round(state.boxTop / state.scale));
+          cropWidthInput.value = String(Math.round(state.boxWidth / state.scale));
+          cropHeightInput.value = String(Math.round(state.boxHeight / state.scale));
+          cropScaleInput.value = cropScaleSlider.value;
+          if (watermarkPreview && watermarkXInput && watermarkYInput) {
+            const centerX = state.watermarkLeft + (state.watermarkWidth / 2);
+            const centerY = state.watermarkTop + (state.watermarkHeight / 2);
+            watermarkXInput.value = String(Math.round((centerX / state.boxWidth) * 1000) / 10);
+            watermarkYInput.value = String(Math.round((centerY / state.boxHeight) * 1000) / 10);
+          }
+          if (watermarkRotationInput && watermarkRotationSlider) {
+            watermarkRotationInput.value = watermarkRotationSlider.value;
+          }
+        }
+
+        function clampWatermarkPosition(left, top) {
+          if (!watermarkPreview) {
+            return;
+          }
+          const maxLeft = Math.max(0, state.boxWidth - state.watermarkWidth);
+          const maxTop = Math.max(0, state.boxHeight - state.watermarkHeight);
+          state.watermarkLeft = Math.min(Math.max(0, left), maxLeft);
+          state.watermarkTop = Math.min(Math.max(0, top), maxTop);
+        }
+
+        function applyWatermarkPreset() {
+          if (!watermarkPreview || !watermarkPositionInput || (useWatermarkInput && !useWatermarkInput.checked)) {
+            return;
+          }
+          const presets = {
+            "top-left": [15, 15],
+            "top-right": [85, 15],
+            "bottom-left": [15, 85],
+            "center": [50, 50],
+            "bottom-right": [85, 85],
+          };
+          const selected = presets[watermarkPositionInput.value] || presets["bottom-right"];
+          watermarkXInput.value = String(selected[0]);
+          watermarkYInput.value = String(selected[1]);
+          initializeWatermark(false);
+        }
+
+        function renderWatermark() {
+          if (!watermarkPreview) {
+            return;
+          }
+          if (useWatermarkInput && !useWatermarkInput.checked) {
+            watermarkPreview.style.display = "none";
+            return;
+          }
+          watermarkPreview.style.display = "block";
+          watermarkPreview.style.width = `${state.watermarkWidth}px`;
+          watermarkPreview.style.left = `${state.watermarkLeft + (state.watermarkWidth / 2)}px`;
+          watermarkPreview.style.top = `${state.watermarkTop + (state.watermarkHeight / 2)}px`;
+          watermarkPreview.style.opacity = `${Math.max(0, Math.min(100, parseInt(watermarkOpacityInput ? watermarkOpacityInput.value || "100" : "100", 10))) / 100}`;
+          const rotation = watermarkRotationSlider ? watermarkRotationSlider.value : "0";
+          watermarkPreview.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+          if (watermarkRotationValue) {
+            watermarkRotationValue.textContent = `Rotation: ${rotation} deg`;
+          }
+        }
+
+        function initializeWatermark(useSavedPosition = true) {
+          if (!watermarkPreview || !state.boxWidth || !state.boxHeight) {
+            return;
+          }
+          if (useWatermarkInput && !useWatermarkInput.checked) {
+            watermarkPreview.style.display = "none";
+            return;
+          }
+          const scalePercent = Math.max(1, Math.min(100, parseInt(logoScaleInput ? logoScaleInput.value || "20" : "20", 10)));
+          state.watermarkWidth = Math.max(32, state.boxWidth * (scalePercent / 100));
+          const previewImage = watermarkPreview.querySelector("img");
+          const previewRatio = previewImage && previewImage.naturalWidth && previewImage.naturalHeight
+            ? previewImage.naturalHeight / previewImage.naturalWidth
+            : 1;
+          state.watermarkHeight = Math.max(24, state.watermarkWidth * previewRatio);
+
+          let centerXPercent = 85;
+          let centerYPercent = 85;
+          if (useSavedPosition && watermarkXInput && watermarkYInput) {
+            centerXPercent = parseFloat(watermarkXInput.value || "85");
+            centerYPercent = parseFloat(watermarkYInput.value || "85");
+          }
+          state.watermarkLeft = (state.boxWidth * (centerXPercent / 100)) - (state.watermarkWidth / 2);
+          state.watermarkTop = (state.boxHeight * (centerYPercent / 100)) - (state.watermarkHeight / 2);
+          clampWatermarkPosition(state.watermarkLeft, state.watermarkTop);
+          renderWatermark();
+          updateHiddenFields();
+        }
+
+        function renderBox() {
+          cropBox.style.left = `${state.boxLeft}px`;
+          cropBox.style.top = `${state.boxTop}px`;
+          cropBox.style.width = `${state.boxWidth}px`;
+          cropBox.style.height = `${state.boxHeight}px`;
+          initializeWatermark(true);
+          updateHiddenFields();
+          if (cropScaleValue) {
+            cropScaleValue.textContent = `Crop box size: ${cropScaleSlider.value}%`;
+          }
+          setMeta(`Crop area: ${cropWidthInput.value || 0} x ${cropHeightInput.value || 0}px. Drag to reposition it.`);
+        }
+
+        function disableCrop(message) {
+          cropBox.hidden = true;
+          updateHiddenFields();
+          if (message) {
+            setMeta(message);
+          }
+        }
+
+        function clampPosition(left, top) {
+          const maxLeft = Math.max(0, cropImage.clientWidth - state.boxWidth);
+          const maxTop = Math.max(0, cropImage.clientHeight - state.boxHeight);
+          state.boxLeft = Math.min(Math.max(0, left), maxLeft);
+          state.boxTop = Math.min(Math.max(0, top), maxTop);
+        }
+
+        function initializeCropBox() {
+          if (!state.naturalWidth || !state.naturalHeight || !cropImage.clientWidth || !cropImage.clientHeight) {
+            disableCrop("Load an image to start framing the crop.");
+            return;
+          }
+          state.scale = cropImage.clientWidth / state.naturalWidth;
+          const ratio = getCurrentRatio();
+          const stageWidth = cropImage.clientWidth;
+          const stageHeight = cropImage.clientHeight;
+          const sliderScale = Math.max(20, Math.min(100, parseInt(cropScaleSlider.value || cropScaleInput.value || "70", 10)));
+          const previousCenterX = state.boxLeft + (state.boxWidth / 2);
+          const previousCenterY = state.boxTop + (state.boxHeight / 2);
+
+          let widthByStage = stageWidth * (sliderScale / 100);
+          let heightByStage = widthByStage * (ratio[1] / ratio[0]);
+          if (heightByStage > stageHeight * (sliderScale / 100)) {
+            heightByStage = stageHeight * (sliderScale / 100);
+            widthByStage = heightByStage * (ratio[0] / ratio[1]);
+          }
+
+          widthByStage = Math.min(widthByStage, stageWidth);
+          heightByStage = Math.min(heightByStage, stageHeight);
+
+          state.boxWidth = widthByStage;
+          state.boxHeight = heightByStage;
+          if (previousCenterX > 0 && previousCenterY > 0) {
+            state.boxLeft = previousCenterX - (state.boxWidth / 2);
+            state.boxTop = previousCenterY - (state.boxHeight / 2);
+          } else {
+            state.boxLeft = (stageWidth - state.boxWidth) / 2;
+            state.boxTop = (stageHeight - state.boxHeight) / 2;
+          }
+          clampPosition(state.boxLeft, state.boxTop);
+          cropBox.hidden = false;
+          syncOutputDimensions(state.activeDimension);
+          renderBox();
+        }
+
+        function loadPreview(url) {
+          cropStage.classList.remove("empty");
+          cropImage.hidden = false;
+          if (cropPlaceholder) {
+            cropPlaceholder.hidden = true;
+          }
+          cropImage.src = url;
+        }
+
+        function handleImageLoad() {
+          state.naturalWidth = cropImage.naturalWidth;
+          state.naturalHeight = cropImage.naturalHeight;
+          initializeCropBox();
+        }
+
+        cropImage.addEventListener("load", handleImageLoad);
+        if (cropImage.complete && cropImage.naturalWidth) {
+          handleImageLoad();
+        }
+
+        function getPointerPosition(event) {
+          const rect = cropStage.getBoundingClientRect();
+          return {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+          };
+        }
+
+        cropBox.addEventListener("pointerdown", function (event) {
+          if (event.target === cropHandle || event.target === watermarkPreview || (watermarkPreview && watermarkPreview.contains(event.target))) {
+            return;
+          }
+          if (cropBox.hidden) {
+            return;
+          }
+          state.dragging = true;
+          cropBox.classList.add("dragging");
+          const position = getPointerPosition(event);
+          state.dragOffsetX = position.x - state.boxLeft;
+          state.dragOffsetY = position.y - state.boxTop;
+          cropBox.setPointerCapture(event.pointerId);
+        });
+
+        cropBox.addEventListener("pointermove", function (event) {
+          if (!state.dragging) {
+            return;
+          }
+          const position = getPointerPosition(event);
+          clampPosition(position.x - state.dragOffsetX, position.y - state.dragOffsetY);
+          renderBox();
+        });
+
+        if (cropHandle) {
+          cropHandle.addEventListener("pointerdown", function (event) {
+            if (cropBox.hidden) {
+              return;
+            }
+            state.resizing = true;
+            cropBox.classList.add("dragging");
+            state.resizeAnchorX = state.boxLeft;
+            state.resizeAnchorY = state.boxTop;
+            cropHandle.setPointerCapture(event.pointerId);
+            event.stopPropagation();
+          });
+
+          cropHandle.addEventListener("pointermove", function (event) {
+            if (!state.resizing) {
+              return;
+            }
+            const position = getPointerPosition(event);
+            const ratio = getCurrentRatio();
+            const maxWidth = cropImage.clientWidth - state.resizeAnchorX;
+            const maxHeight = cropImage.clientHeight - state.resizeAnchorY;
+            let nextWidth = Math.max(40, position.x - state.resizeAnchorX);
+            let nextHeight = nextWidth * (ratio[1] / ratio[0]);
+            if (nextHeight > maxHeight) {
+              nextHeight = maxHeight;
+              nextWidth = nextHeight * (ratio[0] / ratio[1]);
+            }
+            if (nextWidth > maxWidth) {
+              nextWidth = maxWidth;
+              nextHeight = nextWidth * (ratio[1] / ratio[0]);
+            }
+            state.boxWidth = nextWidth;
+            state.boxHeight = nextHeight;
+            const scaleByWidth = (state.boxWidth / cropImage.clientWidth) * 100;
+            const scaleByHeight = (state.boxHeight / cropImage.clientHeight) * 100;
+            cropScaleSlider.value = String(Math.max(20, Math.min(100, Math.round(Math.max(scaleByWidth, scaleByHeight)))));
+            renderBox();
+          });
+        }
+
+        if (watermarkPreview) {
+          watermarkPreview.addEventListener("pointerdown", function (event) {
+            if (cropBox.hidden || (useWatermarkInput && !useWatermarkInput.checked)) {
+              return;
+            }
+            state.watermarkDragging = true;
+            watermarkPreview.classList.add("dragging");
+            const position = getPointerPosition(event);
+            state.watermarkOffsetX = position.x - state.boxLeft - state.watermarkLeft;
+            state.watermarkOffsetY = position.y - state.boxTop - state.watermarkTop;
+            watermarkPreview.setPointerCapture(event.pointerId);
+            event.stopPropagation();
+          });
+
+          watermarkPreview.addEventListener("pointermove", function (event) {
+            if (!state.watermarkDragging) {
+              return;
+            }
+            const position = getPointerPosition(event);
+            clampWatermarkPosition(
+              position.x - state.boxLeft - state.watermarkOffsetX,
+              position.y - state.boxTop - state.watermarkOffsetY,
+            );
+            renderWatermark();
+            updateHiddenFields();
+          });
+        }
+
+        function stopDragging(event) {
+          if (!state.dragging) {
+            if (!state.resizing && !state.watermarkDragging) {
+              return;
+            }
+          }
+          state.dragging = false;
+          state.resizing = false;
+          state.watermarkDragging = false;
+          cropBox.classList.remove("dragging");
+          if (watermarkPreview) {
+            watermarkPreview.classList.remove("dragging");
+          }
+          if (event && cropBox.hasPointerCapture(event.pointerId)) {
+            cropBox.releasePointerCapture(event.pointerId);
+          }
+          if (event && cropHandle && cropHandle.hasPointerCapture(event.pointerId)) {
+            cropHandle.releasePointerCapture(event.pointerId);
+          }
+          if (event && watermarkPreview && watermarkPreview.hasPointerCapture(event.pointerId)) {
+            watermarkPreview.releasePointerCapture(event.pointerId);
+          }
+        }
+
+        cropBox.addEventListener("pointerup", stopDragging);
+        cropBox.addEventListener("pointercancel", stopDragging);
+        if (cropHandle) {
+          cropHandle.addEventListener("pointerup", stopDragging);
+          cropHandle.addEventListener("pointercancel", stopDragging);
+        }
+        if (watermarkPreview) {
+          watermarkPreview.addEventListener("pointerup", stopDragging);
+          watermarkPreview.addEventListener("pointercancel", stopDragging);
+        }
+
+        ratioInput.addEventListener("change", function () {
+          syncOutputDimensions(state.activeDimension);
+          initializeCropBox();
+        });
+        cropScaleSlider.addEventListener("input", initializeCropBox);
+        if (useWatermarkInput) {
+          useWatermarkInput.addEventListener("change", function () {
+            if (watermarkControls) {
+              watermarkControls.classList.toggle("is-hidden", !useWatermarkInput.checked);
+            }
+            if (watermarkPreview) {
+              renderWatermark();
+            }
+          });
+        }
+        if (watermarkPositionInput) {
+          watermarkPositionInput.addEventListener("change", applyWatermarkPreset);
+        }
+        if (logoScaleInput) {
+          logoScaleInput.addEventListener("input", function () {
+            initializeWatermark(true);
+          });
+        }
+        if (watermarkOpacityInput) {
+          watermarkOpacityInput.addEventListener("input", renderWatermark);
+        }
+        if (watermarkRotationSlider) {
+          watermarkRotationSlider.addEventListener("input", function () {
+            renderWatermark();
+            updateHiddenFields();
+          });
+        }
+        pixelWidthInput.addEventListener("input", function () {
+          state.activeDimension = "width";
+          syncOutputDimensions("width");
+        });
+        pixelHeightInput.addEventListener("input", function () {
+          state.activeDimension = "height";
+          syncOutputDimensions("height");
+        });
+        window.addEventListener("resize", initializeCropBox);
+
+        imageFileInput.addEventListener("change", function () {
+          const file = imageFileInput.files && imageFileInput.files[0];
+          if (!file) {
+            return;
+          }
+          if (state.objectUrl) {
+            URL.revokeObjectURL(state.objectUrl);
+          }
+          state.objectUrl = URL.createObjectURL(file);
+          loadPreview(state.objectUrl);
+        });
+
+        syncOutputDimensions("width");
+      })();
+    </script>
   </body>
 </html>
