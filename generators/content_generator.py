@@ -31,6 +31,7 @@ def generate_content(
     supporting_keyword: str = "",
     tone: str = "natural",
     links: list = None,
+    money_site_url: str = "",
     brand: str = "",
     brand_context: str = "",
 ):
@@ -40,6 +41,7 @@ def generate_content(
         supporting_keyword=supporting_keyword,
         tone=tone,
         links=links,
+        money_site_url=money_site_url,
         brand=brand,
         brand_context=brand_context,
     )

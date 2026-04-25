@@ -4,4 +4,3 @@ ollama
 openai
 pillow
 python-docx
-tinydb

@@ -1,303 +1,158 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Brands</title>
-    <style>
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        font-family: Georgia, serif;
-        background:
-          radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 26%),
-          linear-gradient(135deg, #f8fafc 0%, #eef2ff 52%, #f9fafb 100%);
-        color: #111827;
-      }
-      .page { max-width: 1160px; margin: 0 auto; padding: 32px 20px 48px; }
-      .topbar { display: flex; gap: 14px; margin-bottom: 18px; }
-      .topbar a {
-        text-decoration: none;
-        padding: 10px 16px;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.72);
-        color: #475467;
-        font-weight: 700;
-      }
-      .topbar a.active { background: #111827; color: #fff; }
-      .hero, .panel {
-        background: rgba(255,255,255,0.9);
-        border-radius: 28px;
-        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-      }
-      .hero { padding: 28px; margin-bottom: 24px; }
-      .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1; }
-      .hero p { margin: 0; color: #475467; max-width: 780px; font-size: 1.05rem; }
-      .meta { margin-top: 16px; color: #667085; font-size: 0.95rem; }
-      .layout { display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start; }
-      .stack { display: grid; gap: 24px; }
-      .panel { padding: 24px; }
-      label { display: block; margin-bottom: 8px; font-weight: 700; }
-      input, textarea {
-        width: 100%;
-        padding: 13px 14px;
-        border-radius: 14px;
-        border: 1px solid #d0d5dd;
-        font: inherit;
-        margin-bottom: 16px;
-        background: #fff;
-      }
-      textarea { min-height: 120px; resize: vertical; }
-      button {
-        border: none;
-        border-radius: 999px;
-        padding: 13px 18px;
-        background: #1d4ed8;
-        color: #fff;
-        font: inherit;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .hint, .success, .error {
-        margin: 0 0 18px;
-        padding: 14px 16px;
-        border-radius: 16px;
-        font-size: 0.96rem;
-      }
-      .hint { background: #eff6ff; color: #1d4ed8; }
-      .success { background: #ecfdf3; color: #166534; }
-      .error { background: #fef2f2; color: #b42318; }
-      .brand-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-      .brand-card {
-        padding: 18px;
-        border-radius: 20px;
-        background: #f8fafc;
-        border: 1px solid #e4e7ec;
-      }
-      .brand-logo {
-        width: 96px;
-        height: 96px;
-        object-fit: contain;
-        display: block;
-        margin-bottom: 12px;
-        border-radius: 16px;
-        background: #fff;
-        border: 1px solid #e4e7ec;
-        padding: 10px;
-      }
-      .brand-card h3 { margin: 0 0 10px; }
-      .field { margin-bottom: 8px; color: #475467; line-height: 1.55; }
-      .field strong { color: #111827; }
-      .card-actions {
-        margin-top: 14px;
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-      .chip-link {
-        display: inline-block;
-        text-decoration: none;
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: #dbeafe;
-        color: #1d4ed8;
-        font-weight: 700;
-        font-size: 0.92rem;
-      }
-      .result-box {
-        margin-top: 16px;
-        padding: 18px;
-        border-radius: 18px;
-        background: #f8fafc;
-        border: 1px solid #e4e7ec;
-      }
-      .result-box.success-state {
-        background: #ecfdf3;
-        border-color: #a6f4c5;
-      }
-      .result-box.warning-state {
-        background: #fff7ed;
-        border-color: #fed7aa;
-      }
-      .mini-list {
-        margin: 12px 0 0;
-        padding-left: 18px;
-        color: #475467;
-      }
-      .mini-list li { margin-bottom: 8px; }
-      .empty-state {
-        border: 2px dashed #d0d5dd;
-        border-radius: 24px;
-        padding: 32px;
-        text-align: center;
-        color: #667085;
-      }
-      @media (max-width: 920px) {
-        .layout { grid-template-columns: 1fr; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="page">
-      <div class="topbar">
-        <a href="/">Blog Generator</a>
-        <a href="/page-generator">Page Generator</a>
-        <a href="/simple-page-generator">Simple Pages</a>
-        <a href="/text-tools">Text Tools</a>
-        <a href="/image-tools">Image Tools</a>
-        <a href="/brands" class="active">Brands</a>
-      </div>
+{% extends "base.html" %}
+{% set active_page = "brands" %}
 
-      <section class="hero">
-        <h1>Brands</h1>
-        <p>Save brand details once and let the generators reuse them. These records help keep your writing consistent and give the AI more useful context about each business.</p>
-        <div class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></div>
+{% block title %}Brands{% endblock %}
+{% block eyebrow %}Brand Library{% endblock %}
+{% block hero_title %}Brands{% endblock %}
+{% block hero_text %}Save brand details once and reuse them across generators. The full brand workspace now sits on the same Tailwind-based design system as the rest of the application.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]">
+    <div class="grid gap-6">
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        {% if error %}
+          <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+          <div class="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ success }}</div>
+        {% endif %}
+
+        <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">
+          {% if brand_name %}
+            You are editing an existing brand. Update any fields you want, then save again.
+          {% else %}
+            Add a brand name first. Niche, main keywords, and notes will help the generators stay more consistent.
+          {% endif %}
+        </p>
+
+        <form method="post" enctype="multipart/form-data" class="grid gap-1">
+          <input type="hidden" name="action" value="save_brand" />
+
+          <label for="brand_name" class="mb-2 block text-sm font-bold text-sand-900">Brand name</label>
+          <input id="brand_name" name="brand_name" type="text" value="{{ brand_name }}" placeholder="e.g. Phoenix Home Services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <label for="website" class="mb-2 block text-sm font-bold text-sand-900">Website</label>
+          <input id="website" name="website" type="text" value="{{ website }}" placeholder="e.g. https://phoenixhomeservices.com" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <label for="money_site" class="mb-2 block text-sm font-bold text-sand-900">Money site</label>
+          <input id="money_site" name="money_site" type="text" value="{{ money_site }}" placeholder="e.g. https://phoenixhomeservices.com/services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <label for="niche" class="mb-2 block text-sm font-bold text-sand-900">Niche</label>
+          <input id="niche" name="niche" type="text" value="{{ niche }}" placeholder="e.g. plumbing, home services, dental clinic" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <label for="main_keywords" class="mb-2 block text-sm font-bold text-sand-900">Main keywords</label>
+          <textarea id="main_keywords" name="main_keywords" placeholder="e.g. emergency plumber phoenix, drain cleaning phoenix, leak repair phoenix" class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ main_keywords }}</textarea>
+
+          <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Preferred tone</label>
+          <input id="tone" name="tone" type="text" value="{{ tone }}" placeholder="e.g. friendly, expert, premium, straightforward" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <label for="notes" class="mb-2 block text-sm font-bold text-sand-900">Brand notes</label>
+          <textarea id="notes" name="notes" placeholder="e.g. family-owned, serves Phoenix metro, focuses on emergency plumbing and same-day repairs" class="mb-4 min-h-[120px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ notes }}</textarea>
+
+          <label for="logo_file" class="mb-2 block text-sm font-bold text-sand-900">Logo upload</label>
+          <input id="logo_file" name="logo_file" type="file" accept=".png,.jpg,.jpeg,.webp" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none" />
+          {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Saved brand logo" class="mb-4 h-28 w-28 rounded-[18px] border border-sand-200 bg-white p-2 object-contain" />
+          {% endif %}
+
+          <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if brand_name %}Update Brand{% else %}Save Brand{% endif %}</button>
+        </form>
       </section>
 
-      <div class="layout">
-        <div class="stack">
-          <section class="panel">
-            {% if error %}
-              <div class="error">{{ error }}</div>
-            {% endif %}
-            {% if success %}
-              <div class="success">{{ success }}</div>
-            {% endif %}
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Check if a keyword has already been used for a saved brand. The checker looks at both generated pages and keyword history from blog and page outputs.</p>
 
-            <p class="hint">
-              {% if brand_name %}
-                You are editing an existing brand. Update any fields you want, then save again.
-              {% else %}
-                Add a brand name first. Niche, main keywords, and notes will help the generators stay more consistent.
+        <form method="post" class="grid gap-1">
+          <input type="hidden" name="action" value="check_keyword" />
+
+          <label for="check_brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
+          <input id="check_brand" name="check_brand" type="text" value="{{ check_brand }}" list="brandSuggestions" placeholder="Select or type a saved brand" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <label for="check_keyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword to check</label>
+          <input id="check_keyword" name="check_keyword" type="text" value="{{ check_keyword }}" placeholder="e.g. emergency plumber phoenix" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Check Keyword</button>
+        </form>
+
+        {% if keyword_check_result %}
+          {% if keyword_check_result.used %}
+            <div class="mt-5 rounded-[22px] border border-amber-200 bg-amber-50/80 p-5 text-sm leading-6 text-sand-800">
+              <strong>Keyword already used:</strong> {{ keyword_check_result.keyword }}
+              {% if keyword_check_result.page_matches %}
+                <ul class="mt-3 list-disc space-y-2 pl-5">
+                  {% for item in keyword_check_result.page_matches %}
+                    <li>Page: {{ item.page_title or "Untitled" }}{% if item.page_type %} · {{ item.page_type }}{% endif %}</li>
+                  {% endfor %}
+                </ul>
               {% endif %}
-            </p>
-
-            <form method="post" enctype="multipart/form-data">
-              <input type="hidden" name="action" value="save_brand" />
-
-              <label for="brand_name">Brand name</label>
-              <input id="brand_name" name="brand_name" type="text" value="{{ brand_name }}" placeholder="e.g. Phoenix Home Services" />
-
-              <label for="website">Website</label>
-              <input id="website" name="website" type="text" value="{{ website }}" placeholder="e.g. https://phoenixhomeservices.com" />
-
-              <label for="niche">Niche</label>
-              <input id="niche" name="niche" type="text" value="{{ niche }}" placeholder="e.g. plumbing, home services, dental clinic" />
-
-              <label for="main_keywords">Main keywords</label>
-              <textarea id="main_keywords" name="main_keywords" placeholder="e.g. emergency plumber phoenix, drain cleaning phoenix, leak repair phoenix">{{ main_keywords }}</textarea>
-
-              <label for="tone">Preferred tone</label>
-              <input id="tone" name="tone" type="text" value="{{ tone }}" placeholder="e.g. friendly, expert, premium, straightforward" />
-
-              <label for="notes">Brand notes</label>
-              <textarea id="notes" name="notes" placeholder="e.g. family-owned, serves Phoenix metro, focuses on emergency plumbing and same-day repairs">{{ notes }}</textarea>
-
-              <label for="logo_file">Logo upload</label>
-              <input id="logo_file" name="logo_file" type="file" accept=".png,.jpg,.jpeg,.webp" />
-              {% if logo_url %}
-                <img src="{{ logo_url }}" alt="Saved brand logo" class="brand-logo" />
+              {% if keyword_check_result.blog_matches %}
+                <ul class="mt-3 list-disc space-y-2 pl-5">
+                  {% for item in keyword_check_result.blog_matches %}
+                    <li>Blog: {{ item.title or "Untitled" }}</li>
+                  {% endfor %}
+                </ul>
               {% endif %}
-
-              <button type="submit">{% if brand_name %}Update Brand{% else %}Save Brand{% endif %}</button>
-            </form>
-          </section>
-
-          <section class="panel">
-            <p class="hint">Check if a keyword has already been used for a saved brand. The checker looks at both generated pages and keyword history from blog/page outputs.</p>
-
-            <form method="post">
-              <input type="hidden" name="action" value="check_keyword" />
-
-              <label for="check_brand">Brand</label>
-              <input id="check_brand" name="check_brand" type="text" value="{{ check_brand }}" list="brandSuggestions" placeholder="Select or type a saved brand" />
-
-              <label for="check_keyword">Keyword to check</label>
-              <input id="check_keyword" name="check_keyword" type="text" value="{{ check_keyword }}" placeholder="e.g. emergency plumber phoenix" />
-
-              <button type="submit">Check Keyword</button>
-            </form>
-
-            {% if keyword_check_result %}
-              {% if keyword_check_result.used %}
-                <div class="result-box warning-state">
-                  <strong>Keyword already used:</strong> {{ keyword_check_result.keyword }}
-
-                  {% if keyword_check_result.page_matches %}
-                    <ul class="mini-list">
-                      {% for item in keyword_check_result.page_matches %}
-                        <li>Page: {{ item.page_title or "Untitled" }}{% if item.page_type %} · {{ item.page_type }}{% endif %}</li>
-                      {% endfor %}
-                    </ul>
-                  {% endif %}
-
-                  {% if keyword_check_result.blog_matches %}
-                    <ul class="mini-list">
-                      {% for item in keyword_check_result.blog_matches %}
-                        <li>Blog: {{ item.title or "Untitled" }}</li>
-                      {% endfor %}
-                    </ul>
-                  {% endif %}
-                </div>
-              {% else %}
-                <div class="result-box success-state">
-                  {% if keyword_check_result.brand_found %}
-                    <strong>Keyword is available:</strong> {{ keyword_check_result.keyword }} has not been used yet for this brand.
-                  {% else %}
-                    <strong>Brand not found:</strong> save the brand first, then run the checker again.
-                  {% endif %}
-                </div>
-              {% endif %}
-            {% endif %}
-          </section>
-        </div>
-
-        <section class="panel">
-          {% if brands %}
-            <div class="brand-grid">
-              {% for brand in brands %}
-                <article class="brand-card">
-                  {% if brand.logo_path %}
-                    <img src="/uploads/{{ brand.logo_path }}" alt="{{ brand.name }} logo" class="brand-logo" />
-                  {% endif %}
-                  <h3>{{ brand.name }}</h3>
-                  {% if brand.website %}
-                    <div class="field"><strong>Website:</strong> {{ brand.website }}</div>
-                  {% endif %}
-                  {% if brand.niche %}
-                    <div class="field"><strong>Niche:</strong> {{ brand.niche }}</div>
-                  {% endif %}
-                  {% if brand.main_keywords %}
-                    <div class="field"><strong>Main keywords:</strong> {{ brand.main_keywords }}</div>
-                  {% endif %}
-                  {% if brand.tone %}
-                    <div class="field"><strong>Tone:</strong> {{ brand.tone }}</div>
-                  {% endif %}
-                  {% if brand.notes %}
-                    <div class="field"><strong>Notes:</strong> {{ brand.notes }}</div>
-                  {% endif %}
-                  {% if not brand.website and not brand.niche and not brand.main_keywords and not brand.tone and not brand.notes and not brand.logo_path %}
-                    <div class="field">No extra details saved yet.</div>
-                  {% endif %}
-                  <div class="card-actions">
-                    <a class="chip-link" href="/brands?edit={{ brand.name|urlencode }}">Edit</a>
-                  </div>
-                </article>
-              {% endfor %}
             </div>
           {% else %}
-            <div class="empty-state">
-              No brands saved yet. Add your first brand on the left.
+            <div class="mt-5 rounded-[22px] border border-emerald-200 bg-emerald-50/80 p-5 text-sm leading-6 text-emerald-800">
+              {% if keyword_check_result.brand_found %}
+                <strong>Keyword is available:</strong> {{ keyword_check_result.keyword }} has not been used yet for this brand.
+              {% else %}
+                <strong>Brand not found:</strong> save the brand first, then run the checker again.
+              {% endif %}
             </div>
           {% endif %}
-        </section>
-      </div>
+        {% endif %}
+      </section>
     </div>
 
-    <datalist id="brandSuggestions">
-      {% for item in brands %}
-        <option value="{{ item.name }}"></option>
-      {% endfor %}
-    </datalist>
-  </body>
-</html>
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if brands %}
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {% for brand in brands %}
+            <article class="rounded-[22px] border border-sand-200 bg-white/80 p-5">
+              {% if brand.logo_path %}
+                <img src="/uploads/{{ brand.logo_path }}" alt="{{ brand.name }} logo" class="mb-4 h-28 w-28 rounded-[18px] border border-sand-200 bg-white p-2 object-contain" />
+              {% endif %}
+              <h3 class="font-display text-2xl text-sand-950">{{ brand.name }}</h3>
+              {% if brand.website %}
+                <div class="mt-3 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Website:</strong> {{ brand.website }}</div>
+              {% endif %}
+              {% if brand.money_site %}
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Money site:</strong> {{ brand.money_site }}</div>
+              {% endif %}
+              {% if brand.niche %}
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Niche:</strong> {{ brand.niche }}</div>
+              {% endif %}
+              {% if brand.main_keywords %}
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Main keywords:</strong> {{ brand.main_keywords }}</div>
+              {% endif %}
+              {% if brand.tone %}
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Tone:</strong> {{ brand.tone }}</div>
+              {% endif %}
+              {% if brand.notes %}
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Notes:</strong> {{ brand.notes }}</div>
+              {% endif %}
+              {% if not brand.website and not brand.money_site and not brand.niche and not brand.main_keywords and not brand.tone and not brand.notes and not brand.logo_path %}
+                <div class="mt-2 text-sm leading-6 text-sand-700">No extra details saved yet.</div>
+              {% endif %}
+              <div class="mt-4 flex flex-wrap gap-2">
+                <a class="inline-flex items-center rounded-full bg-sand-100 px-3 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-200 hover:text-sand-900" href="/brands?edit={{ brand.name|urlencode }}">Edit</a>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          No brands saved yet. Add your first brand on the left.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <datalist id="brandSuggestions">
+    {% for item in brands %}
+      <option value="{{ item.name }}"></option>
+    {% endfor %}
+  </datalist>
+{% endblock %}

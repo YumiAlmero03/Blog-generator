@@ -1,171 +1,33 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Text Tools</title>
-    <style>
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        font-family: Georgia, serif;
-        background:
-          radial-gradient(circle at top left, rgba(249, 115, 22, 0.16), transparent 28%),
-          linear-gradient(135deg, #fffaf5 0%, #f8fafc 48%, #fffbeb 100%);
-        color: #1f2937;
-      }
-      .page { max-width: 1100px; margin: 0 auto; padding: 32px 20px 48px; }
-      .topbar { display: flex; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
-      .topbar a {
-        text-decoration: none;
-        padding: 10px 16px;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.78);
-        color: #475467;
-        font-weight: 700;
-      }
-      .topbar a.active { background: #c2410c; color: #fff; }
-      .hero, .panel {
-        background: rgba(255,255,255,0.9);
-        border-radius: 28px;
-        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-      }
-      .hero { padding: 28px; margin-bottom: 24px; }
-      .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1; }
-      .hero p { margin: 0; color: #475467; max-width: 760px; font-size: 1.05rem; }
-      .meta { margin-top: 16px; color: #667085; font-size: 0.95rem; }
-      .panel { padding: 24px; }
-      .hint {
-        margin: 0 0 18px;
-        padding: 14px 16px;
-        border-radius: 16px;
-        background: #fff7ed;
-        color: #c2410c;
-        font-size: 0.96rem;
-      }
-      textarea {
-        width: 100%;
-        min-height: 360px;
-        padding: 16px 18px;
-        border-radius: 18px;
-        border: 1px solid #d0d5dd;
-        font: inherit;
-        font-size: 1rem;
-        line-height: 1.65;
-        resize: vertical;
-        background: #fff;
-        color: #111827;
-      }
-      .button-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin: 18px 0;
-      }
-      button {
-        border: none;
-        border-radius: 999px;
-        padding: 13px 18px;
-        background: #c2410c;
-        color: #fff;
-        font: inherit;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      button.secondary { background: #1f2937; }
-      .status {
-        min-height: 24px;
-        color: #667085;
-        font-size: 0.95rem;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="page">
-      <div class="topbar">
-        <a href="/">Blog Generator</a>
-        <a href="/page-generator">Page Generator</a>
-        <a href="/simple-page-generator">Simple Pages</a>
-        <a href="/text-tools" class="active">Text Tools</a>
-        <a href="/image-tools">Image Tools</a>
-        <a href="/brands">Brands</a>
-      </div>
+{% extends "base.html" %}
+{% set active_page = "text" %}
 
-      <section class="hero">
-        <h1>Text Tools</h1>
-        <p>Paste text into the box, then click a button to instantly clean up spacing or change the letter case.</p>
-        <div class="meta">Running on provider: <strong>{{ provider }}</strong> · model: <strong>{{ model }}</strong></div>
-      </section>
+{% block title %}Text Tools{% endblock %}
+{% block eyebrow %}Text Cleanup{% endblock %}
+{% block hero_title %}Text Tools{% endblock %}
+{% block hero_text %}Paste text into the editor, then clean formatting or switch letter case instantly with the same Tailwind-driven controls used across the rest of the app.{% endblock %}
 
-      <section class="panel">
-        <p class="hint">Use <strong>Unhyphen</strong> to replace hyphens with spaces, then apply any case format you want.</p>
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use <strong>Unhyphen</strong> to replace hyphens with spaces, then apply any case format you want.</p>
 
-        <label for="textInput" style="display:block; margin-bottom: 10px; font-weight: 700;">Text</label>
-        <textarea id="textInput" placeholder="Paste or type your text here..."></textarea>
+    <label for="textInput" class="mb-2 block text-sm font-bold text-sand-900">Text</label>
+    <textarea id="textInput" placeholder="Paste or type your text here..." class="min-h-[360px] w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-4 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"></textarea>
 
-        <div class="button-grid">
-          <button type="button" onclick="applyTransform(unhyphenText, 'Hyphens replaced with spaces.')">Unhyphen</button>
-          <button type="button" onclick="applyTransform(unsnakeText, 'Underscores replaced with spaces.')">Unsnake</button>
-          <button type="button" onclick="applyTransform(capitalizeText, 'First letter capitalized.')">Capitalize</button>
-          <button type="button" onclick="applyTransform((value) => value.toUpperCase(), 'Changed to upper case.')">Upper Case</button>
-          <button type="button" onclick="applyTransform((value) => value.toLowerCase(), 'Changed to lower case.')">Lower Case</button>
-          <button type="button" onclick="applyTransform(titleCaseText, 'Changed to title case.')">Title Case</button>
-          <button type="button" onclick="applyTransform(sentenceCaseText, 'Changed to sentence case.')">Sentence Case</button>
-          <button type="button" class="secondary" onclick="copyText()">Copy Text</button>
-        </div>
-
-        <div class="status" id="statusText"></div>
-      </section>
+    <div class="mt-5 flex flex-wrap gap-3">
+      <button type="button" data-transform="unhyphen" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Unhyphen</button>
+      <button type="button" data-transform="unsnake" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Unsnake</button>
+      <button type="button" data-transform="capitalize" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Capitalize</button>
+      <button type="button" data-transform="upper" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Upper Case</button>
+      <button type="button" data-transform="lower" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Lower Case</button>
+      <button type="button" data-transform="title" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Title Case</button>
+      <button type="button" data-transform="sentence" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Sentence Case</button>
+      <button type="button" id="copyTextButton" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black">Copy Text</button>
     </div>
 
-    <script>
-      const textInput = document.getElementById('textInput');
-      const statusText = document.getElementById('statusText');
+    <div class="mt-4 min-h-6 text-sm text-sand-700" id="statusText"></div>
+  </section>
+{% endblock %}
 
-      function setStatus(message) {
-        statusText.textContent = message;
-      }
-
-      function applyTransform(transformer, message) {
-        textInput.value = transformer(textInput.value);
-        setStatus(message);
-        textInput.focus();
-      }
-
-      function unhyphenText(value) {
-        return value.replace(/-/g, ' ');
-      }
-
-      function unsnakeText(value) {
-        return value.replace(/_/g, ' ');
-      }
-
-      function capitalizeText(value) {
-        const trimmedStart = value.match(/^\s*/)[0];
-        const rest = value.slice(trimmedStart.length);
-        if (!rest) return value;
-        return trimmedStart + rest.charAt(0).toUpperCase() + rest.slice(1);
-      }
-
-      function titleCaseText(value) {
-        return value.toLowerCase().replace(/\b([a-z])/g, (match) => match.toUpperCase());
-      }
-
-      function sentenceCaseText(value) {
-        const lower = value.toLowerCase();
-        return lower.replace(/(^\s*[a-z])|([.!?]\s+[a-z])/g, (match) => match.toUpperCase());
-      }
-
-      function copyText() {
-        const value = textInput.value;
-        navigator.clipboard.writeText(value).then(() => {
-          setStatus('Text copied.');
-        }).catch(() => {
-          textInput.select();
-          document.execCommand('copy');
-          setStatus('Text copied.');
-        });
-      }
-    </script>
-  </body>
-</html>
+{% block scripts %}
+  <script src="{{ url_for('static', filename='assets/js/text_tools.js') }}"></script>
+{% endblock %}

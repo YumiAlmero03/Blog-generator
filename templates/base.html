@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Auto Blog Generator{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              sand: {
+                50: "#fdf8f3",
+                100: "#f7eee4",
+                200: "#ead8c3",
+                300: "#d8b999",
+                400: "#c39369",
+                500: "#b07042",
+                600: "#9a4f22",
+                700: "#7f3f1a",
+                800: "#683419",
+                900: "#552d18"
+              },
+              moss: {
+                100: "#eef5e8",
+                500: "#6b8a4d",
+                700: "#486034"
+              }
+            },
+            boxShadow: {
+              soft: "0 24px 64px rgba(58, 36, 17, 0.12)"
+            },
+            fontFamily: {
+              display: ["Georgia", "Times New Roman", "serif"],
+              sans: ["Trebuchet MS", "Avenir Next", "Segoe UI", "sans-serif"]
+            }
+          }
+        }
+      };
+    </script>
+    {% block head_extras %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/app.css') }}" />
+  </head>
+  <body class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(154,79,34,0.14),transparent_28%),radial-gradient(circle_at_top_right,rgba(135,161,109,0.12),transparent_24%),linear-gradient(180deg,#fbf7f2_0%,#f4efe7_52%,#f8f2ea_100%)] font-sans text-sand-900">
+    {% block overlay %}{% endblock %}
+
+    <div class="px-4 pb-12 pt-7 sm:px-5">
+      {% block shell_header %}
+        <header class="mx-auto mb-6 grid max-w-6xl gap-4">
+          <a href="/" class="font-display text-2xl font-bold tracking-[0.03em] text-sand-900 sm:text-3xl">Auto Blog Generator</a>
+          <nav class="flex flex-wrap gap-2.5" aria-label="Main navigation">
+            <a
+              href="/"
+              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'blog' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
+            >Blog Generator</a>
+            <a
+              href="/page-generator"
+              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'page' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
+            >Page Generator</a>
+            <a
+              href="/simple-page-generator"
+              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'simple' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
+            >Simple Pages</a>
+            <a
+              href="/text-tools"
+              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'text' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
+            >Text Tools</a>
+            <a
+              href="/image-tools"
+              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'image' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
+            >Image Tools</a>
+            <a
+              href="/brands"
+              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'brands' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
+            >Brands</a>
+          </nav>
+        </header>
+      {% endblock %}
+
+      <main class="mx-auto max-w-6xl">
+        {% block hero %}
+          <section class="mb-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+            <div class="grid gap-5">
+              <div>
+                <p class="mb-2.5 text-xs font-extrabold uppercase tracking-[0.18em] text-sand-600">{% block eyebrow %}Workspace{% endblock %}</p>
+                <h1 class="mb-3 font-display text-4xl font-bold leading-none text-sand-950 sm:text-5xl md:text-6xl">{% block hero_title %}Auto Blog Generator{% endblock %}</h1>
+                <p class="max-w-3xl text-base leading-7 text-sand-700 sm:text-lg">{% block hero_text %}{% endblock %}</p>
+              </div>
+              {% if provider is defined and model is defined %}
+                <div class="flex flex-wrap gap-3">
+                  <span class="inline-flex items-center gap-1 rounded-full bg-sand-100/80 px-4 py-2 text-sm text-sand-700">Provider <strong class="text-sand-900">{{ provider }}</strong></span>
+                  <span class="inline-flex items-center gap-1 rounded-full bg-sand-100/80 px-4 py-2 text-sm text-sand-700">Model <strong class="text-sand-900">{{ model }}</strong></span>
+                </div>
+              {% endif %}
+            </div>
+          </section>
+        {% endblock %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='assets/js/common.js') }}"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
