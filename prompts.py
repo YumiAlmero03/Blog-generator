@@ -12,7 +12,7 @@ Known brand database context:
 {cleaned}
 """
 
-
+# for blog title
 def build_title_prompt(
     keyword: str,
     supporting_keyword: str = "",
@@ -69,6 +69,7 @@ Return valid JSON only in this format:
 Tone: {tone}
 """
 
+
 def build_meta_description_prompt(
     title: str,
     keyword: str = "",
@@ -119,7 +120,7 @@ Return valid JSON only in this format:
 }}
 """
 
-# Prompts for content generation with optional links section
+# Prompts for blog content 
 def build_content_prompt(
     title: str,
     keyword: str = "",
@@ -152,6 +153,9 @@ Instructions for including links:
 - Use single quotes in href attributes so the JSON stays valid
 - Add links naturally; do not force them if they do not fit
 - if they dont fit naturally, add them at the end of the article in a 'References:' with proper formatting or check this link or this one (link) for more info. make it natural and human sounding
+- For external links, brand-name anchor text is allowed when natural.
+- For internal and money site links, do not use the brand name, website name, or domain as anchor text.
+- For internal and money site links, use natural descriptive anchor text that fits the sentence and page topic.
 """
 
     money_site_section = ""
@@ -166,6 +170,9 @@ Instructions for the money site:
 - Format it as <a href='{cleaned_money_site_url}' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>
 - Do not use generic anchor text like 'click here'
 - Place it naturally where it helps the reader and matches the surrounding content
+- For external links, brand-name anchor text is allowed when natural.
+- For internal and money site links, do not use the brand name, website name, or domain as anchor text.
+- For internal and money site links, use natural descriptive anchor text that fits the sentence and page topic.
 """
 
     return f"""

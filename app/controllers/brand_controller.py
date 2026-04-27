@@ -11,7 +11,6 @@ def brands():
     state = {
         "brand_name": "",
         "website": "",
-        "money_site": "",
         "niche": "",
         "main_keywords": "",
         "tone": "",
@@ -40,7 +39,7 @@ def brands():
         **base_template_context(),
         **state,
         logo_url=image_url(state["logo_path"]),
-        brands=list_brand_records(),
+        brands=_build_brand_view_models(),
     )
 
 
@@ -51,7 +50,6 @@ def _populate_brand_for_edit(state: dict, brand_name: str):
 
     state["brand_name"] = brand_record.get("name", "")
     state["website"] = brand_record.get("website", "")
-    state["money_site"] = brand_record.get("money_site", "")
     state["niche"] = brand_record.get("niche", "")
     state["main_keywords"] = brand_record.get("main_keywords", "")
     state["tone"] = brand_record.get("tone", "")
@@ -62,7 +60,6 @@ def _populate_brand_for_edit(state: dict, brand_name: str):
 def _handle_save_brand(state: dict):
     state["brand_name"] = request.form.get("brand_name", "").strip()
     state["website"] = request.form.get("website", "").strip()
-    state["money_site"] = request.form.get("money_site", "").strip()
     state["niche"] = request.form.get("niche", "").strip()
     state["main_keywords"] = request.form.get("main_keywords", "").strip()
     state["tone"] = request.form.get("tone", "").strip()
@@ -80,7 +77,6 @@ def _handle_save_brand(state: dict):
         upsert_brand(
             state["brand_name"],
             website=state["website"],
-            money_site=state["money_site"],
             tone=state["tone"],
             notes=state["notes"],
             niche=state["niche"],
@@ -92,7 +88,6 @@ def _handle_save_brand(state: dict):
             {
                 "brand_name": "",
                 "website": "",
-                "money_site": "",
                 "niche": "",
                 "main_keywords": "",
                 "tone": "",
@@ -121,3 +116,12 @@ def _handle_check_keyword(state: dict):
     except Exception:
         logger.exception("brands check_keyword action failed")
         state["error"] = "An error occurred while checking the keyword. Check logs/app.log for details."
+
+
+def _build_brand_view_models() -> list[dict]:
+    brands = []
+    for brand in list_brand_records():
+        item = dict(brand)
+        item["logo_url"] = image_url(item.get("logo_path", ""))
+        brands.append(item)
+    return brands

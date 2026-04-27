@@ -211,3 +211,154 @@ ValueError: Generated page could not satisfy the rules after 3 attempts. Last at
 2026-04-18 15:11:36,675 INFO blog_generator content_generator.py:88 generate_content() - Content generated successfully with 986 words on attempt 2/3
 2026-04-18 15:20:29,502 WARNING blog_generator content_generator.py:78 generate_content() - Content word count is 659 (minimum: 800) on attempt 1/3. Raw response length: 4619 chars
 2026-04-18 15:22:03,649 INFO blog_generator content_generator.py:88 generate_content() - Content generated successfully with 807 words on attempt 2/3
+2026-04-27 12:14:27,600 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 371 (minimum: 800) on attempt 1/3. Raw response length: 3232 chars
+2026-04-27 12:16:08,445 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 776 (minimum: 800) on attempt 2/3. Raw response length: 5735 chars
+2026-04-27 12:17:43,575 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 614 (minimum: 800) on attempt 3/3. Raw response length: 4668 chars
+2026-04-27 12:17:43,577 ERROR blog_generator blog_controller.py:146 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 127, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        brand_context=brand_context,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 104, in generate_content
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 614 words.
+2026-04-27 12:24:06,613 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 591 (minimum: 800) on attempt 1/3. Raw response length: 4702 chars
+2026-04-27 12:25:40,686 WARNING blog_generator content_generator.py:71 generate_content() - Content used banned terms exploit on attempt 2/3
+2026-04-27 12:27:32,658 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 756 (minimum: 800) on attempt 3/3. Raw response length: 5832 chars
+2026-04-27 12:27:32,661 ERROR blog_generator blog_controller.py:143 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 124, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        brand_context=brand_context,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 104, in generate_content
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 756 words.
+2026-04-27 12:31:35,989 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 483 (minimum: 800) on attempt 1/3. Raw response length: 3714 chars
+2026-04-27 12:33:01,044 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 644 (minimum: 800) on attempt 2/3. Raw response length: 5022 chars
+2026-04-27 12:34:43,635 WARNING blog_generator content_generator.py:71 generate_content() - Content used banned terms guaranteed on attempt 3/3
+2026-04-27 12:34:43,639 ERROR blog_generator blog_controller.py:143 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 124, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        brand_context=brand_context,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 104, in generate_content
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 785 words.
+2026-04-27 12:52:38,191 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 468 (minimum: 800) on attempt 1/3. Raw response length: 3695 chars
+2026-04-27 12:53:46,387 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 468 (minimum: 800) on attempt 2/3. Raw response length: 3655 chars
+2026-04-27 12:55:36,743 INFO blog_generator content_generator.py:90 generate_content() - Content generated successfully with 962 words on attempt 3/3
+2026-04-27 12:59:46,569 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 610 (minimum: 800) on attempt 1/3. Raw response length: 4481 chars
+2026-04-27 13:01:30,164 WARNING blog_generator content_generator.py:71 generate_content() - Content used banned terms exploit on attempt 2/3
+2026-04-27 13:03:02,035 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 610 (minimum: 800) on attempt 3/3. Raw response length: 4584 chars
+2026-04-27 13:03:02,037 ERROR blog_generator blog_controller.py:143 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 124, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        brand_context=brand_context,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 104, in generate_content
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 610 words.
+2026-04-27 14:04:18,658 WARNING blog_generator content_generator.py:71 generate_content() - Content used banned terms guaranteed on attempt 1/3
+2026-04-27 14:06:05,201 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 795 (minimum: 800) on attempt 2/3. Raw response length: 5848 chars
+2026-04-27 14:07:46,601 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 585 (minimum: 800) on attempt 3/3. Raw response length: 4663 chars
+2026-04-27 14:07:46,602 ERROR blog_generator blog_controller.py:143 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 124, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        brand_context=brand_context,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 104, in generate_content
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 585 words.
+2026-04-27 14:11:52,028 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 508 (minimum: 800) on attempt 1/3. Raw response length: 3754 chars
+2026-04-27 14:13:46,037 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 724 (minimum: 800) on attempt 2/3. Raw response length: 5740 chars
+2026-04-27 14:14:59,105 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 501 (minimum: 800) on attempt 3/3. Raw response length: 3857 chars
+2026-04-27 14:14:59,108 ERROR blog_generator blog_controller.py:143 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 124, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        brand_context=brand_context,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 104, in generate_content
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 501 words.
+2026-04-27 14:17:27,207 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 597 (minimum: 800) on attempt 1/3. Raw response length: 4555 chars
+2026-04-27 14:19:11,858 WARNING blog_generator content_generator.py:71 generate_content() - Content used banned terms fixed on attempt 2/3
+2026-04-27 14:21:22,888 INFO blog_generator content_generator.py:90 generate_content() - Content generated successfully with 1136 words on attempt 3/3
+2026-04-27 16:04:42,108 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 445 (minimum: 800) on attempt 1/3. Raw response length: 3409 chars
+2026-04-27 16:06:06,648 INFO blog_generator content_generator.py:90 generate_content() - Content generated successfully with 837 words on attempt 2/3
+2026-04-27 16:55:43,880 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 467 (minimum: 800) on attempt 1/3. Raw response length: 3825 chars
+2026-04-27 16:57:56,509 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 716 (minimum: 800) on attempt 2/3. Raw response length: 5406 chars
+2026-04-27 16:59:13,590 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 412 (minimum: 800) on attempt 3/3. Raw response length: 3493 chars
+2026-04-27 16:59:13,595 ERROR blog_generator blog_controller.py:143 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 124, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        brand_context=brand_context,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 104, in generate_content
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 412 words.
+2026-04-27 17:06:38,273 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 686 (minimum: 800) on attempt 1/3. Raw response length: 5099 chars
+2026-04-27 17:08:23,657 WARNING blog_generator content_generator.py:80 generate_content() - Content word count is 568 (minimum: 800) on attempt 2/3. Raw response length: 4242 chars
+2026-04-27 17:10:34,556 INFO blog_generator content_generator.py:90 generate_content() - Content generated successfully with 832 words on attempt 3/3

@@ -2,7 +2,7 @@ import json
 
 from flask import render_template, request
 
-from database import get_brand_context, get_brand_record, list_brand_names, record_blog, upsert_brand
+from database import get_brand_context, get_setting, list_brand_names, record_blog, upsert_brand
 from generators.content_generator import generate_content
 from generators.meta_description_generator import generate_meta_descriptions
 from generators.title_generator import generate_titles
@@ -39,10 +39,8 @@ def index():
         elif action == "generate_content":
             _handle_generate_content(state)
 
-    if state["brand"] and not state["money_site_url"]:
-        brand_record = get_brand_record(state["brand"])
-        if brand_record:
-            state["money_site_url"] = brand_record.get("money_site", "").strip()
+    if not state["money_site_url"]:
+        state["money_site_url"] = get_setting("money_site", "")
 
     return render_template("index.html", **base_template_context(), **state)
 
@@ -107,8 +105,7 @@ def _handle_generate_content(state: dict):
         provider = get_provider()
         if state["brand"]:
             upsert_brand(state["brand"])
-        brand_record = get_brand_record(state["brand"]) if state["brand"] else None
-        state["money_site_url"] = (brand_record or {}).get("money_site", "").strip()
+        state["money_site_url"] = get_setting("money_site", "")
         brand_context = get_brand_context(state["brand"])
         state["meta_descriptions"] = generate_meta_descriptions(
             provider,

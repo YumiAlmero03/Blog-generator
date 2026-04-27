@@ -34,9 +34,6 @@
           <label for="website" class="mb-2 block text-sm font-bold text-sand-900">Website</label>
           <input id="website" name="website" type="text" value="{{ website }}" placeholder="e.g. https://phoenixhomeservices.com" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
-          <label for="money_site" class="mb-2 block text-sm font-bold text-sand-900">Money site</label>
-          <input id="money_site" name="money_site" type="text" value="{{ money_site }}" placeholder="e.g. https://phoenixhomeservices.com/services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
-
           <label for="niche" class="mb-2 block text-sm font-bold text-sand-900">Niche</label>
           <input id="niche" name="niche" type="text" value="{{ niche }}" placeholder="e.g. plumbing, home services, dental clinic" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
@@ -52,7 +49,10 @@
           <label for="logo_file" class="mb-2 block text-sm font-bold text-sand-900">Logo upload</label>
           <input id="logo_file" name="logo_file" type="file" accept=".png,.jpg,.jpeg,.webp" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none" />
           {% if logo_url %}
-            <img src="{{ logo_url }}" alt="Saved brand logo" class="mb-4 h-28 w-28 rounded-[18px] border border-sand-200 bg-white p-2 object-contain" />
+            <div class="mb-4 flex flex-wrap items-center gap-3">
+              <img src="{{ logo_url }}" alt="Saved brand logo" class="h-28 w-28 rounded-[18px] border border-sand-200 bg-white p-2 object-contain" />
+              <a href="{{ logo_url }}" download class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black">Download Logo</a>
+            </div>
           {% endif %}
 
           <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if brand_name %}Update Brand{% else %}Save Brand{% endif %}</button>
@@ -112,14 +112,14 @@
           {% for brand in brands %}
             <article class="rounded-[22px] border border-sand-200 bg-white/80 p-5">
               {% if brand.logo_path %}
-                <img src="/uploads/{{ brand.logo_path }}" alt="{{ brand.name }} logo" class="mb-4 h-28 w-28 rounded-[18px] border border-sand-200 bg-white p-2 object-contain" />
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                  <img src="{{ brand.logo_url }}" alt="{{ brand.name }} logo" class="h-28 w-28 rounded-[18px] border border-sand-200 bg-white p-2 object-contain" />
+                  <a href="{{ brand.logo_url }}" download class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black">Download Logo</a>
+                </div>
               {% endif %}
               <h3 class="font-display text-2xl text-sand-950">{{ brand.name }}</h3>
               {% if brand.website %}
                 <div class="mt-3 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Website:</strong> {{ brand.website }}</div>
-              {% endif %}
-              {% if brand.money_site %}
-                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Money site:</strong> {{ brand.money_site }}</div>
               {% endif %}
               {% if brand.niche %}
                 <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Niche:</strong> {{ brand.niche }}</div>
@@ -133,7 +133,7 @@
               {% if brand.notes %}
                 <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Notes:</strong> {{ brand.notes }}</div>
               {% endif %}
-              {% if not brand.website and not brand.money_site and not brand.niche and not brand.main_keywords and not brand.tone and not brand.notes and not brand.logo_path %}
+              {% if not brand.website and not brand.niche and not brand.main_keywords and not brand.tone and not brand.notes and not brand.logo_path %}
                 <div class="mt-2 text-sm leading-6 text-sand-700">No extra details saved yet.</div>
               {% endif %}
               <div class="mt-4 flex flex-wrap gap-2">

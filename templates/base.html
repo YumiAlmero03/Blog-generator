@@ -34,7 +34,23 @@
             fontFamily: {
               display: ["Georgia", "Times New Roman", "serif"],
               sans: ["Trebuchet MS", "Avenir Next", "Segoe UI", "sans-serif"]
-            }
+            },
+            fontStyle: {
+              normal: "normal",
+              italic: "italic"
+            },
+            fontSize: {
+              xs: "0.75rem",
+              sm: "0.875rem",
+              base: "1rem",
+              lg: "1.125rem",
+              xl: "1.25rem",
+              "2xl": "1.5rem",
+              "3xl": "1.875rem",
+              "4xl": "2.25rem",
+              "5xl": "3rem",
+              "6xl": "3.75rem",
+            },
           }
         }
       };
@@ -74,6 +90,10 @@
               href="/brands"
               class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'brands' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
             >Brands</a>
+            <a
+              href="/settings"
+              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'settings' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
+            >Settings</a>
           </nav>
         </header>
       {% endblock %}

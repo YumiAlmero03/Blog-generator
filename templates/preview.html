@@ -19,7 +19,7 @@
 
       <article class="rounded-[22px] border border-sand-200 bg-white px-6 py-6 text-sand-900">
         <h1 class="mb-5 font-display text-4xl text-sand-950">{{ title }}</h1>
-        <div class="section">{{ content_html }}</div>
+        <div class="section">{{ content_html | safe }}</div>
       </article>
     </div>
   </section>

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set active_page = "settings" %}
+
+{% block title %}Settings{% endblock %}
+{% block eyebrow %}Global Settings{% endblock %}
+{% block hero_title %}Settings{% endblock %}
+{% block hero_text %}Manage global app values here. The money site setting is now shared across article generation instead of living inside individual brand records.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    {% if error %}
+      <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+      <div class="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ success }}</div>
+    {% endif %}
+
+    <form method="post" class="grid max-w-3xl gap-1">
+      <label for="money_site" class="mb-2 block text-sm font-bold text-sand-900">Money site URL</label>
+      <input
+        id="money_site"
+        name="money_site"
+        type="text"
+        value="{{ money_site }}"
+        placeholder="e.g. https://phoenixhomeservices.com/services"
+        class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+      />
+
+      <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Save Settings</button>
+    </form>
+  </section>
+{% endblock %}

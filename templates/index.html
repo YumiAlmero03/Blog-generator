@@ -64,13 +64,6 @@
               <h2 class="font-display text-3xl text-sand-950">Generate Article Content</h2>
               <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose a title, then generate the article. Meta descriptions are generated automatically with the article and kept as 5 choices below.</p>
             </div>
-            <div class="flex flex-wrap gap-3">
-              <button type="button" id="generateContentButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Full Article</button>
-              {% if content %}
-                <button type="button" id="previewDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Print Preview</button>
-                <button type="button" id="downloadDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Download .doc</button>
-              {% endif %}
-            </div>
           </div>
 
           <div class="grid gap-6">
@@ -134,9 +127,15 @@
 
           {% if content %}
             <div class="grid gap-4">
-              <div>
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
                 <h3 class="font-display text-2xl text-sand-950">Article Content</h3>
-                <p class="mt-2 text-sm leading-6 text-sand-700">Edit the generated HTML directly in the editor before previewing or downloading.</p>
+                  <p class="mt-2 text-sm leading-6 text-sand-700">Edit the generated HTML directly in the editor before previewing or downloading.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <button type="button" id="previewDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Print Preview</button>
+                  <button type="button" id="downloadDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Download .doc</button>
+                </div>
               </div>
               <div id="editorContainer">
                 <div id="contentEditor" class="quill-editor rounded-b-2xl">{{ content }}</div>
@@ -144,6 +143,10 @@
               <div id="editorWordCount" class="text-sm font-medium text-sand-700">Word count: 0</div>
             </div>
           {% endif %}
+
+          <div class="flex justify-start pt-2">
+            <button type="button" id="generateContentButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Full Article</button>
+          </div>
 
           <input type="hidden" name="keyword" value="{{ keyword }}" />
           <input type="hidden" name="brand" value="{{ brand }}" />
