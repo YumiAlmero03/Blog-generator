@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% set active_page = "backlink-blog" %}
+
+{% block title %}Backlink Blog Generator{% endblock %}
+
+{% block head_extras %}
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+{% endblock %}
+
+{% block overlay %}
+  <div class="loading-overlay" id="loadingOverlay" data-loading-overlay>
+    <div class="w-full max-w-sm rounded-[22px] bg-white/95 px-7 py-7 text-center shadow-2xl">
+      <div class="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-4 border-sand-200 border-t-sand-600"></div>
+      <div class="text-base font-bold text-sand-700" id="loadingText" data-loading-text>Generating content...</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block eyebrow %}Backlink Workflow{% endblock %}
+{% block hero_title %}Backlink Blog Generator{% endblock %}
+{% block hero_text %}Generate backlink-friendly blog content using the same flow as the main blog generator, but choose the target website or account directly from your saved backlink list.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" id="titlesForm" data-loading-message="Generating titles..." class="grid gap-1">
+        <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 1</span>
+        <h2 class="mb-4 font-display text-3xl text-sand-950">Generate Backlink Blog Titles</h2>
+
+        <label for="selected_backlink_id" class="mb-2 block text-sm font-bold text-sand-900">Backlink Site / Medium</label>
+        <select id="selected_backlink_id" name="selected_backlink_id" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="">Choose a saved backlink target</option>
+          {% for backlink in backlinks %}
+            <option value="{{ backlink.id }}" {% if selected_backlink_id|string == backlink.id|string %}selected{% endif %}>
+              {{ backlink.website_name }}{% if backlink.account_name %} · {{ backlink.account_name }}{% endif %} · {{ backlink.tier_level }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
+        <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Enter your brand or business name" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="keyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword(s)</label>
+        <textarea id="keyword" name="keyword" rows="2" placeholder="Enter one or more keywords separated by commas" class="mb-4 min-h-[92px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ keyword }}</textarea>
+
+        <label for="supporting_keyword" class="mb-2 block text-sm font-bold text-sand-900">Supporting keyword</label>
+        <input id="supporting_keyword" name="supporting_keyword" type="text" value="{{ supporting_keyword }}" placeholder="Add a supporting keyword" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Tone</label>
+        <select id="tone" name="tone" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="natural" {% if tone == 'natural' %}selected{% endif %}>Natural</option>
+          <option value="professional" {% if tone == 'professional' %}selected{% endif %}>Professional</option>
+          <option value="friendly" {% if tone == 'friendly' %}selected{% endif %}>Friendly</option>
+        </select>
+
+        <label for="count" class="mb-2 block text-sm font-bold text-sand-900">Number of Titles</label>
+        <input id="count" name="count" type="number" min="1" max="20" value="{{ count }}" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <input type="hidden" name="action" value="generate_titles" />
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Titles</button>
+      </form>
+    </section>
+
+    {% if titles %}
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        <form method="post" id="contentForm" data-loading-message="Generating article content..." class="grid gap-6">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 2</span>
+              <h2 class="font-display text-3xl text-sand-950">Generate Backlink Article Content</h2>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose a title, then generate the article. Meta descriptions are generated automatically and the selected backlink target is used as context for the content.</p>
+            </div>
+          </div>
+
+          {% if selected_backlink %}
+            <div class="rounded-[24px] border border-moss-200 bg-moss-100/60 p-5">
+              <h3 class="font-display text-2xl text-sand-950">Selected Backlink Target</h3>
+              <div class="mt-3 grid gap-2 text-sm leading-6 text-sand-800">
+                <div><strong class="text-sand-900">Website:</strong> {{ selected_backlink.website_name }}</div>
+                {% if selected_backlink.account_name %}
+                  <div><strong class="text-sand-900">Account:</strong> {{ selected_backlink.account_name }}</div>
+                {% endif %}
+                <div><strong class="text-sand-900">Tier:</strong> {{ selected_backlink.tier_level }}</div>
+                <div><strong class="text-sand-900">URL:</strong> {{ selected_backlink.blog_url }}</div>
+                {% if brand_website_url %}
+                  <div><strong class="text-sand-900">Required brand link:</strong> {{ brand_website_url }}</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="grid gap-6">
+            <div>
+              <h3 class="mb-4 font-display text-2xl text-sand-950">Select Title</h3>
+              <ul class="grid gap-3">
+                {% for title in titles %}
+                  <li>
+                    <label for="title_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
+                      <input id="title_{{ loop.index }}" name="selected_title" type="radio" value="{{ title }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if selected_title == title or (not selected_title and loop.first) %}checked{% endif %} />
+                      <span class="text-sm font-semibold leading-6 text-sand-900">{{ title }}</span>
+                    </label>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+
+            {% if meta_descriptions %}
+              <div>
+                <div class="mb-4 flex items-center justify-between gap-3">
+                  <h3 class="font-display text-2xl text-sand-950">Choose a Meta Description</h3>
+                  <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">5 Options</span>
+                </div>
+                <ul class="grid gap-3">
+                  {% for meta_desc in meta_descriptions %}
+                    <li>
+                      <label for="meta_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
+                        <input type="radio" id="meta_{{ loop.index }}" name="meta_description_choice" value="{{ meta_desc.text }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if meta_description == meta_desc.text or (not meta_description and loop.first) %}checked{% endif %} />
+                        <span class="block">
+                          <span class="block text-sm font-semibold leading-6 text-sand-900">{{ meta_desc.text }}</span>
+                          <span class="mt-1 block text-xs font-medium uppercase tracking-[0.06em] text-sand-600">Character count: {{ meta_desc.character_count }}</span>
+                        </span>
+                      </label>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="rounded-[24px] border border-sand-200 bg-sand-50/80 p-5">
+            <h3 class="font-display text-2xl text-sand-950">Required Brand Link</h3>
+            <p class="mt-2 text-sm leading-6 text-sand-700">This generator uses exactly one required link: the selected brand website. Extra manual links are disabled here so the output stays focused on backlink-style content.</p>
+            {% if brand_website_url %}
+              <p class="mt-3 text-sm text-sand-700">Brand website URL: <code class="rounded bg-white px-2 py-1 text-xs text-sand-800">{{ brand_website_url }}</code></p>
+            {% else %}
+              <p class="mt-3 text-sm text-red-700">Save a website for this brand in Brands first so the article can include the required brand link.</p>
+            {% endif %}
+          </div>
+
+          {% if content %}
+            <div class="grid gap-4">
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h3 class="font-display text-2xl text-sand-950">Article Content</h3>
+                  <p class="mt-2 text-sm leading-6 text-sand-700">Edit the generated HTML directly in the editor before previewing or downloading.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <button type="button" id="previewDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Print Preview</button>
+                  <button type="button" id="downloadDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Download .doc</button>
+                </div>
+              </div>
+              <div id="editorContainer">
+                <div id="contentEditor" class="quill-editor rounded-b-2xl">{{ content }}</div>
+              </div>
+              <div id="editorWordCount" class="text-sm font-medium text-sand-700">Word count: 0</div>
+            </div>
+          {% endif %}
+
+          <div class="flex justify-start pt-2">
+            <button type="button" id="generateContentButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Full Article</button>
+          </div>
+
+          <input type="hidden" name="selected_backlink_id" value="{{ selected_backlink_id }}" />
+          <input type="hidden" name="keyword" value="{{ keyword }}" />
+          <input type="hidden" name="brand" value="{{ brand }}" />
+          <input type="hidden" name="brand_website_url" value="{{ brand_website_url }}" />
+          <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+          <input type="hidden" name="tone" value="{{ tone }}" />
+          <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
+          <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
+          <input type="hidden" name="action" value="generate_content" />
+        </form>
+      </section>
+
+      <form id="previewForm" method="post" action="/preview" class="hidden-form" aria-hidden="true">
+        <input type="hidden" id="previewSelectedTitle" name="selected_title" value="{{ selected_title }}" />
+        <input type="hidden" name="keyword" value="{{ keyword }}" />
+        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+        <input type="hidden" id="previewMetaDescription" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="previewContentHtml" name="content_html" value="" />
+      </form>
+
+      <form id="downloadForm" method="post" action="/download_doc" class="hidden-form" aria-hidden="true">
+        <input type="hidden" id="downloadSelectedTitle" name="selected_title" value="{{ selected_title }}" />
+        <input type="hidden" name="keyword" value="{{ keyword }}" />
+        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+        <input type="hidden" id="downloadMetaDescription" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="downloadContentHtml" name="content_html" value="" />
+      </form>
+    {% endif %}
+
+    <div class="text-sm text-sand-700">
+      Manage backlink targets in <a href="/backlinks" class="font-bold text-sand-800 underline decoration-sand-300 underline-offset-2">Backlinks</a>, then come back here to generate content for a selected site or account.
+    </div>
+  </div>
+
+  <datalist id="brandSuggestions">
+    {% for item in brand_names %}
+      <option value="{{ item }}"></option>
+    {% endfor %}
+  </datalist>
+
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script src="{{ url_for('static', filename='assets/js/index.js') }}"></script>
+{% endblock %}

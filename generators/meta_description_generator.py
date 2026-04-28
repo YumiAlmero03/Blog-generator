@@ -1,27 +1,12 @@
 import json
-from prompts import build_meta_description_prompt
+from prompts import build_backlink_meta_description_prompt, build_meta_description_prompt
 from utils import extract_json_string
 from logger import logger
 from word_bank import find_banned_terms_in_text
 
 MAX_GENERATION_ATTEMPTS = 3
 
-def generate_meta_descriptions(
-    provider,
-    title: str,
-    keyword: str = "",
-    count: int = 3,
-    brand: str = "",
-    brand_context: str = "",
-):
-    prompt = build_meta_description_prompt(
-        title=title,
-        keyword=keyword,
-        count=count,
-        brand=brand,
-        brand_context=brand_context,
-    )
-
+def _generate_meta_descriptions_from_prompt(provider, prompt: str):
     last_error = None
 
     for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
@@ -61,6 +46,24 @@ def generate_meta_descriptions(
 
     raise ValueError("Generated meta descriptions kept using banned words after multiple attempts.")
 
+
+def generate_meta_descriptions(
+    provider,
+    title: str,
+    keyword: str = "",
+    count: int = 3,
+    brand: str = "",
+    brand_context: str = "",
+):
+    prompt = build_meta_description_prompt(
+        title=title,
+        keyword=keyword,
+        count=count,
+        brand=brand,
+        brand_context=brand_context,
+    )
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+
 def generate_meta_description(
     provider,
     title: str,
@@ -78,3 +81,29 @@ def generate_meta_description(
         brand_context=brand_context,
     )
     return descriptions[0]["text"] if descriptions else ""
+
+
+def generate_backlink_meta_descriptions(
+    provider,
+    title: str,
+    keyword: str = "",
+    count: int = 3,
+    brand: str = "",
+    brand_context: str = "",
+    backlink_website_name: str = "",
+    backlink_blog_url: str = "",
+    backlink_tier_level: str = "",
+    backlink_account_name: str = "",
+):
+    prompt = build_backlink_meta_description_prompt(
+        title=title,
+        keyword=keyword,
+        count=count,
+        brand=brand,
+        brand_context=brand_context,
+        backlink_website_name=backlink_website_name,
+        backlink_blog_url=backlink_blog_url,
+        backlink_tier_level=backlink_tier_level,
+        backlink_account_name=backlink_account_name,
+    )
+    return _generate_meta_descriptions_from_prompt(provider, prompt)

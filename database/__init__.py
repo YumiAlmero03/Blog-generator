@@ -1,3 +1,4 @@
+from database.backlinks import get_backlink, list_backlinks, save_backlink
 from database.brands import get_brand_context, get_brand_record, list_brand_names, list_brand_records, upsert_brand
 from database.common import DB_PATH, LEGACY_DB_PATH, normalize_brand_name, normalize_keyword, split_keywords
 from database.keywords import get_or_create_keyword

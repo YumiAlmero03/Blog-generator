@@ -12,7 +12,40 @@ Known brand database context:
 {cleaned}
 """
 
-# for blog title
+
+def build_backlink_context_section(
+    backlink_website_name: str = "",
+    backlink_blog_url: str = "",
+    backlink_tier_level: str = "",
+    backlink_account_name: str = "",
+) -> str:
+    website_name = (backlink_website_name or "").strip()
+    blog_url = (backlink_blog_url or "").strip()
+    tier_level = (backlink_tier_level or "").strip()
+    account_name = (backlink_account_name or "").strip()
+
+    if not any((website_name, blog_url, tier_level, account_name)):
+        return ""
+
+    lines = ["Backlink placement target:"]
+    if website_name:
+        lines.append(f"- Website/blog name: {website_name}")
+    if account_name:
+        lines.append(f"- Account name: {account_name}")
+    if blog_url:
+        lines.append(f"- Blog URL: {blog_url}")
+    if tier_level:
+        lines.append(f"- Tier level: {tier_level}")
+
+    lines.extend(
+        [
+            "- The article should feel appropriate for this publishing target.",
+            "- Keep the tone and examples broad enough to fit an external backlink article or guest-post style placement.",
+            "- Do not over-promote the brand. Keep it informative and natural first.",
+        ]
+    )
+    return "\n" + "\n".join(lines) + "\n"
+
 def build_title_prompt(
     keyword: str,
     supporting_keyword: str = "",
@@ -56,6 +89,77 @@ Rules:
 - No explanations
 - Do not add any extra text before or after the JSON
 - Start your response with '{' and end with '}'
+
+Return valid JSON only in this format:
+{{
+  "titles": [
+    "Title 1",
+    "Title 2",
+    "Title 3"
+  ]
+}}
+
+Tone: {tone}
+"""
+
+
+def build_backlink_title_prompt(
+    keyword: str,
+    supporting_keyword: str = "",
+    tone: str = "natural",
+    count: int = 10,
+    brand: str = "",
+    brand_context: str = "",
+    backlink_website_name: str = "",
+    backlink_blog_url: str = "",
+    backlink_tier_level: str = "",
+    backlink_account_name: str = "",
+) -> str:
+    context_section = build_brand_context_section(brand_context)
+    backlink_section = build_backlink_context_section(
+        backlink_website_name=backlink_website_name,
+        backlink_blog_url=backlink_blog_url,
+        backlink_tier_level=backlink_tier_level,
+        backlink_account_name=backlink_account_name,
+    )
+    banned_words_section = build_banned_words_prompt_section()
+    return f"""
+You are an SEO blog title generator for backlink and guest-post content.
+
+Generate exactly {count} blog title variants for this keyword/topic:
+{keyword}
+
+Supporting ideas: {supporting_keyword}
+Brand: {brand}
+{context_section}
+{backlink_section}
+{banned_words_section}
+
+Rules:
+- Return exactly {count} titles
+- Dont seperate keyword with punctuation, use it naturally in the title
+- Make them natural and human sounding
+- Make them SEO-friendly
+- Clear and clickable
+- Make the title feel appropriate for an external publisher or guest-post style article
+- If a brand is provided, let the titles fit the brand naturally without forcing the brand name into every title
+- If a backlink account name is provided, let some title options reflect that account or publisher context naturally when it improves fit
+- When both brand and account name are provided, use them naturally and sparingly; do not stuff both into every title
+- Avoid repeating titles or keyword angles that were already used for this brand when the context shows previous usage
+- Avoid robotic wording
+- Avoid duplicates
+- Mix styles:
+  - how-to
+  - guide
+  - beginner-friendly
+  - problem/solution
+  - benefits
+  - list style if appropriate
+- Keep titles around 45 to 55 characters when possible
+- Use the keyword naturally
+- No explanations
+- Do not add any extra text before or after the JSON
+- Start your response with '{{' and end with '}}'
 
 Return valid JSON only in this format:
 {{
@@ -120,7 +224,70 @@ Return valid JSON only in this format:
 }}
 """
 
-# Prompts for blog content 
+
+def build_backlink_meta_description_prompt(
+    title: str,
+    keyword: str = "",
+    count: int = 3,
+    brand: str = "",
+    brand_context: str = "",
+    backlink_website_name: str = "",
+    backlink_blog_url: str = "",
+    backlink_tier_level: str = "",
+    backlink_account_name: str = "",
+) -> str:
+    context_section = build_brand_context_section(brand_context)
+    backlink_section = build_backlink_context_section(
+        backlink_website_name=backlink_website_name,
+        backlink_blog_url=backlink_blog_url,
+        backlink_tier_level=backlink_tier_level,
+        backlink_account_name=backlink_account_name,
+    )
+    banned_words_section = build_banned_words_prompt_section()
+    return f"""
+You are an SEO meta description writer for backlink and guest-post content.
+
+Generate exactly {count} compelling meta description variants for this blog post title:
+"{title}"
+
+Keyword: {keyword}
+Brand: {brand}
+{context_section}
+{backlink_section}
+{banned_words_section}
+
+Rules:
+- Each meta description must be between 160 and 170 characters long.
+- Count characters carefully before finishing.
+- Include the main keyword naturally.
+- Make it compelling and encourage clicks.
+- Avoid keyword stuffing.
+- Use active voice.
+- Include a call-to-action or value proposition when it fits naturally.
+- Make it sound human and natural.
+- If a brand is provided, align the wording with the brand and mention the brand only if it fits naturally.
+- If a backlink account name is provided, you may reflect that publishing context naturally, but do not force it.
+- Vary the approach for each variant.
+- Do not add any extra text before or after the JSON.
+- Ensure each meta description is complete, natural, and within the 160–170 character limit.
+- Start your response with '{{' and end with '}}'
+
+Return valid JSON only in this format:
+{{
+  "meta_descriptions": [
+    {{
+      "text": "Your first meta description here",
+      "character_count": 155
+    }},
+    {{
+      "text": "Your second meta description here",
+      "character_count": 158
+    }}
+  ]
+}}
+"""
+
+
 def build_content_prompt(
     title: str,
     keyword: str = "",
@@ -231,6 +398,112 @@ Rules:
 - If a money site URL is provided, include it once in a natural way with relevant anchor text.
 - External links and the money site URL must use rel='nofollow noopener noreferrer' and target='_blank'.
 - Internal links must not use nofollow unless explicitly requested.
+- Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
+- Do not use these sections together in the same page.
+- Choose the ending section that best matches the page type and search intent.
+- Ensure the final article is complete and within the "{MIN_BLOG_WORDS}"-"{MAX_BLOG_WORDS}" word range before finishing.
+
+Return valid JSON only in this format:
+{{
+  "content": "<h2>Your HTML content here</h2><p>...</p>",
+  "word_count": 850
+}}
+"""
+
+
+def build_backlink_content_prompt(
+    title: str,
+    keyword: str = "",
+    supporting_keyword: str = "",
+    tone: str = "natural",
+    money_site_url: str = "",
+    brand: str = "",
+    brand_context: str = "",
+    backlink_website_name: str = "",
+    backlink_blog_url: str = "",
+    backlink_tier_level: str = "",
+    backlink_account_name: str = "",
+) -> str:
+    context_section = build_brand_context_section(brand_context)
+    backlink_section = build_backlink_context_section(
+        backlink_website_name=backlink_website_name,
+        backlink_blog_url=backlink_blog_url,
+        backlink_tier_level=backlink_tier_level,
+        backlink_account_name=backlink_account_name,
+    )
+    banned_words_section = build_banned_words_prompt_section()
+
+    money_site_section = ""
+    cleaned_money_site_url = (money_site_url or "").strip()
+    if cleaned_money_site_url:
+        money_site_section = f"""
+Required Brand Link:
+- {cleaned_money_site_url}
+
+Instructions for the required brand link:
+- Include this URL exactly once in the article
+- Format it as <a href='{cleaned_money_site_url}' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>
+- Use natural descriptive anchor text that fits the sentence and topic
+- Do not use generic anchor text like 'click here'
+- Do not use the brand name, website name, or domain as anchor text
+- This is the only required link in the article
+"""
+
+    return f"""
+You are a professional blog writer who creates SEO-friendly, human-sounding backlink and guest-post content.
+
+Write a complete blog article for this title:
+"{title}"
+
+Keyword: {keyword}
+Supporting keyword: {supporting_keyword}
+Brand: {brand}
+{context_section}
+{backlink_section}
+{banned_words_section}
+
+{money_site_section}
+
+Rules:
+- Write a blog article between "{MIN_BLOG_WORDS}" and "{MAX_BLOG_WORDS}" words.
+- Start with an engaging introduction of 60–80 words that explains the reader's problem or need.
+- Make the article feel appropriate for an external publisher or guest-post style placement.
+- Do not repeat the exact article title in the body unless absolutely necessary. However, keep the content closely aligned with the title and main topic.
+- Sentences must be less than 21 words.
+- Use the primary keyword naturally 2–4 times throughout the article. Include it in the introduction, and include it again in the conclusion only if it fits naturally.
+- Include the supporting keyword naturally where appropriate.
+- Avoid keyword stuffing and never force keywords into awkward sentences.
+- Use the main keyword no more than once per paragraph.
+- Do not repeat the same keyword multiple times in a single paragraph.
+- Use <b> only for emphasis on important non-keyword words or phrases.
+- Do not use <strong>.
+- Never bold the primary keyword or supporting keywords.
+- Do not wrap keywords in <b> or <strong> tags.
+- Use a natural, human, conversational tone.
+- Write in active voice with short, clear sentences.
+- Write for readability using short paragraphs.
+- Add detailed explanations, useful examples, and practical context in each section to support the word count naturally.
+- Structure the article in this order: introduction, 3–4 main sections with subheadings, then exactly one ending section that best fits the page intent.
+- Use HTML only, not Markdown.
+- Use <h2> for main sections and <h3> for subsections.
+- Use <p> for paragraphs.
+- Use <ul><li> for bullet lists where helpful.
+- If a brand is provided, reflect the brand voice, positioning, and audience naturally throughout the article.
+- If a brand is provided, mention the brand naturally in the article without overusing it.
+- If a backlink account name is provided, mention it naturally when relevant, but do not force it repeatedly.
+- Do not stuff the brand name or account name into every heading or paragraph.
+- When both a brand and backlink account are provided, make them feel intentional and editorially natural.
+- If brand database context is provided, avoid repeating existing keyword angles and keep the content aligned with current brand pages.
+- Include the required brand link once in a natural way with relevant anchor text.
+- Return only valid JSON with this format: {{"content":"<p>...</p>"}}.
+- The value of "content" must contain complete, valid HTML.
+- Do not add any explanation, notes, or text before or after the JSON object.
+- Start the response with "{{" and end it with "}}".
+- Close every HTML tag and every quotation mark properly.
+- Do not truncate, abbreviate, or cut off the article.
+- Check the internet when needed to verify brand, product, platform, or topic details before writing.
+- Do not guess what a brand, game, or platform is.
+- External links and the required brand link must use rel='nofollow noopener noreferrer' and target='_blank'.
 - Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
 - Do not use these sections together in the same page.
 - Choose the ending section that best matches the page type and search intent.

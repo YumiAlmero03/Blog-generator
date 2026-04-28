@@ -76,5 +76,28 @@ def init_db():
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL DEFAULT ''
             );
+
+            CREATE TABLE IF NOT EXISTS backlinks (
+                id INTEGER PRIMARY KEY,
+                website_name TEXT NOT NULL DEFAULT '',
+                account_name TEXT NOT NULL DEFAULT '',
+                blog_url TEXT NOT NULL DEFAULT '',
+                tier_level TEXT NOT NULL DEFAULT 'Tier 1',
+                notes TEXT NOT NULL DEFAULT ''
+            );
             """
         )
+        _ensure_column(connection, "backlinks", "account_name", "TEXT NOT NULL DEFAULT ''")
+
+
+def _ensure_column(connection, table_name: str, column_name: str, column_definition: str):
+    existing_columns = {
+        row["name"]
+        for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    }
+    if column_name in existing_columns:
+        return
+
+    connection.execute(
+        f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+    )

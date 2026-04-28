@@ -1,6 +1,6 @@
 import json
 import re
-from prompts import build_content_prompt
+from prompts import build_backlink_content_prompt, build_content_prompt
 from utils import extract_json_string
 from logger import logger
 from word_bank import find_banned_terms_in_text
@@ -24,28 +24,7 @@ def parse_generated_content(raw: str) -> tuple[str, int]:
     return content, word_count
 
 
-def generate_content(
-    provider,
-    title: str,
-    keyword: str = "",
-    supporting_keyword: str = "",
-    tone: str = "natural",
-    links: list = None,
-    money_site_url: str = "",
-    brand: str = "",
-    brand_context: str = "",
-):
-    prompt = build_content_prompt(
-        title=title,
-        keyword=keyword,
-        supporting_keyword=supporting_keyword,
-        tone=tone,
-        links=links,
-        money_site_url=money_site_url,
-        brand=brand,
-        brand_context=brand_context,
-    )
-
+def _generate_content_from_prompt(provider, prompt: str):
     last_error = None
     last_word_count = 0
 
@@ -105,3 +84,57 @@ def generate_content(
         f"Generated article could not satisfy the rules after {MAX_GENERATION_ATTEMPTS} attempts. "
         f"Last attempt was {last_word_count} words."
     )
+
+
+def generate_content(
+    provider,
+    title: str,
+    keyword: str = "",
+    supporting_keyword: str = "",
+    tone: str = "natural",
+    links: list = None,
+    money_site_url: str = "",
+    brand: str = "",
+    brand_context: str = "",
+):
+    prompt = build_content_prompt(
+        title=title,
+        keyword=keyword,
+        supporting_keyword=supporting_keyword,
+        tone=tone,
+        links=links,
+        money_site_url=money_site_url,
+        brand=brand,
+        brand_context=brand_context,
+    )
+    return _generate_content_from_prompt(provider, prompt)
+
+
+def generate_backlink_content(
+    provider,
+    title: str,
+    keyword: str = "",
+    supporting_keyword: str = "",
+    tone: str = "natural",
+    money_site_url: str = "",
+    brand: str = "",
+    brand_context: str = "",
+    backlink_website_name: str = "",
+    backlink_blog_url: str = "",
+    backlink_tier_level: str = "",
+    backlink_account_name: str = "",
+):
+    prompt = build_backlink_content_prompt(
+        title=title,
+        keyword=keyword,
+        supporting_keyword=supporting_keyword,
+        tone=tone,
+        money_site_url=money_site_url,
+        brand=brand,
+        brand_context=brand_context,
+        backlink_website_name=backlink_website_name,
+        backlink_blog_url=backlink_blog_url,
+        backlink_tier_level=backlink_tier_level,
+        backlink_account_name=backlink_account_name,
+    )
+    return _generate_content_from_prompt(provider, prompt)
