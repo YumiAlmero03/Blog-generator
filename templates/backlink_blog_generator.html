@@ -36,7 +36,7 @@
           <option value="">Choose a saved backlink target</option>
           {% for backlink in backlinks %}
             <option value="{{ backlink.id }}" {% if selected_backlink_id|string == backlink.id|string %}selected{% endif %}>
-              {{ backlink.website_name }}{% if backlink.account_name %} · {{ backlink.account_name }}{% endif %} · {{ backlink.tier_level }}
+              {{ backlink.website_name }}{% if backlink.blog_name %} · {{ backlink.blog_name }}{% endif %} · {{ backlink.website_type.replace('_', ' ')|title }} · {{ backlink.tier_level }}
             </option>
           {% endfor %}
         </select>
@@ -81,8 +81,17 @@
               <h3 class="font-display text-2xl text-sand-950">Selected Backlink Target</h3>
               <div class="mt-3 grid gap-2 text-sm leading-6 text-sand-800">
                 <div><strong class="text-sand-900">Website:</strong> {{ selected_backlink.website_name }}</div>
-                {% if selected_backlink.account_name %}
-                  <div><strong class="text-sand-900">Account:</strong> {{ selected_backlink.account_name }}</div>
+                {% if selected_backlink.blog_name %}
+                  <div><strong class="text-sand-900">Blog:</strong> {{ selected_backlink.blog_name }}</div>
+                {% endif %}
+                {% if selected_backlink.writer_name %}
+                  <div><strong class="text-sand-900">Writer:</strong> {{ selected_backlink.writer_name }}</div>
+                {% endif %}
+                {% if selected_backlink.website_type %}
+                  <div><strong class="text-sand-900">Type:</strong> {{ selected_backlink.website_type.replace('_', ' ')|title }}</div>
+                {% endif %}
+                {% if selected_backlink.max_characters %}
+                  <div><strong class="text-sand-900">Max characters:</strong> {{ selected_backlink.max_characters }}</div>
                 {% endif %}
                 <div><strong class="text-sand-900">Tier:</strong> {{ selected_backlink.tier_level }}</div>
                 <div><strong class="text-sand-900">URL:</strong> {{ selected_backlink.blog_url }}</div>

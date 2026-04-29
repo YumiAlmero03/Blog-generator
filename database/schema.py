@@ -81,6 +81,10 @@ def init_db():
                 id INTEGER PRIMARY KEY,
                 website_name TEXT NOT NULL DEFAULT '',
                 account_name TEXT NOT NULL DEFAULT '',
+                blog_name TEXT NOT NULL DEFAULT '',
+                writer_name TEXT NOT NULL DEFAULT '',
+                website_type TEXT NOT NULL DEFAULT 'blog',
+                max_characters INTEGER NOT NULL DEFAULT 0,
                 blog_url TEXT NOT NULL DEFAULT '',
                 tier_level TEXT NOT NULL DEFAULT 'Tier 1',
                 notes TEXT NOT NULL DEFAULT ''
@@ -88,6 +92,18 @@ def init_db():
             """
         )
         _ensure_column(connection, "backlinks", "account_name", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "backlinks", "blog_name", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "backlinks", "writer_name", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "backlinks", "website_type", "TEXT NOT NULL DEFAULT 'blog'")
+        _ensure_column(connection, "backlinks", "max_characters", "INTEGER NOT NULL DEFAULT 0")
+        connection.execute(
+            """
+            UPDATE backlinks
+            SET blog_name = account_name
+            WHERE TRIM(COALESCE(blog_name, '')) = ''
+              AND TRIM(COALESCE(account_name, '')) <> ''
+            """
+        )
 
 
 def _ensure_column(connection, table_name: str, column_name: str, column_definition: str):

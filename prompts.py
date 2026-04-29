@@ -16,24 +16,39 @@ Known brand database context:
 def build_backlink_context_section(
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
+    backlink_website_type: str = "",
+    backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
-    backlink_account_name: str = "",
+    backlink_blog_name: str = "",
+    backlink_writer_name: str = "",
 ) -> str:
     website_name = (backlink_website_name or "").strip()
     blog_url = (backlink_blog_url or "").strip()
+    website_type = (backlink_website_type or "").strip().lower()
+    try:
+        max_characters = max(0, int(backlink_max_characters or 0))
+    except (TypeError, ValueError):
+        max_characters = 0
     tier_level = (backlink_tier_level or "").strip()
-    account_name = (backlink_account_name or "").strip()
+    blog_name = (backlink_blog_name or "").strip()
+    writer_name = (backlink_writer_name or "").strip()
 
-    if not any((website_name, blog_url, tier_level, account_name)):
+    if not any((website_name, blog_url, website_type, max_characters, tier_level, blog_name, writer_name)):
         return ""
 
     lines = ["Backlink placement target:"]
     if website_name:
         lines.append(f"- Website/blog name: {website_name}")
-    if account_name:
-        lines.append(f"- Account name: {account_name}")
+    if blog_name:
+        lines.append(f"- Blog name: {blog_name}")
+    if writer_name:
+        lines.append(f"- Writer name: {writer_name}")
     if blog_url:
         lines.append(f"- Blog URL: {blog_url}")
+    if website_type:
+        lines.append(f"- Website type: {website_type.replace('_', ' ')}")
+    if max_characters:
+        lines.append(f"- Max characters: {max_characters}")
     if tier_level:
         lines.append(f"- Tier level: {tier_level}")
 
@@ -42,8 +57,58 @@ def build_backlink_context_section(
             "- The article should feel appropriate for this publishing target.",
             "- Keep the tone and examples broad enough to fit an external backlink article or guest-post style placement.",
             "- Do not over-promote the brand. Keep it informative and natural first.",
+            "- If the tier level is Tier 1, write as a blogger or publisher reviewing or discussing the selected brand in a natural editorial way.",
+            "- If a blog name is provided, treat it as the blog or publication name.",
+            "- If a writer name is provided, treat it as the byline or author name.",
+            "- If no blog name or writer name is provided, do not invent them.",
         ]
     )
+    if max_characters:
+        lines.extend(
+            [
+                f"- Keep the full output within about {max_characters} characters.",
+                "- Prioritize a tighter format, shorter sections, and concise delivery when a max character limit is provided.",
+            ]
+        )
+    if website_type == "forum":
+        lines.extend(
+            [
+                "- Write in a discussion-friendly, community-style voice.",
+                "- Make the content feel like a helpful forum contribution or post, not a polished corporate article.",
+            ]
+        )
+    elif website_type == "social_media":
+        lines.extend(
+            [
+                "- Keep the content punchier, more conversational, and easier to skim.",
+                "- Make the structure feel suitable for a social post, thread, or social-first article format.",
+            ]
+        )
+    elif website_type == "review":
+        lines.extend(
+            [
+                "- Lean into an editorial review style with balanced observations, pros, use cases, or experience-driven commentary.",
+            ]
+        )
+    elif website_type == "news":
+        lines.extend(
+            [
+                "- Use a more publication-style tone with clear, informative framing and neutral presentation.",
+            ]
+        )
+    elif website_type == "directory":
+        lines.extend(
+            [
+                "- Keep the content concise, clear, and utility-focused, like a listing or short profile with useful context.",
+            ]
+        )
+    elif website_type == "community":
+        lines.extend(
+            [
+                "- Make the writing feel approachable and community-oriented, with helpful shared insights.",
+            ]
+        )
+
     return "\n" + "\n".join(lines) + "\n"
 
 def build_title_prompt(
@@ -112,15 +177,21 @@ def build_backlink_title_prompt(
     brand_context: str = "",
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
+    backlink_website_type: str = "",
+    backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
-    backlink_account_name: str = "",
+    backlink_blog_name: str = "",
+    backlink_writer_name: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     backlink_section = build_backlink_context_section(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
+        backlink_website_type=backlink_website_type,
+        backlink_max_characters=backlink_max_characters,
         backlink_tier_level=backlink_tier_level,
-        backlink_account_name=backlink_account_name,
+        backlink_blog_name=backlink_blog_name,
+        backlink_writer_name=backlink_writer_name,
     )
     banned_words_section = build_banned_words_prompt_section()
     return f"""
@@ -142,9 +213,11 @@ Rules:
 - Make them SEO-friendly
 - Clear and clickable
 - Make the title feel appropriate for an external publisher or guest-post style article
+- Let the title style match the website type when one is provided, such as more discussion-oriented for forums or more editorial for review sites
 - If a brand is provided, let the titles fit the brand naturally without forcing the brand name into every title
-- If a backlink account name is provided, let some title options reflect that account or publisher context naturally when it improves fit
-- When both brand and account name are provided, use them naturally and sparingly; do not stuff both into every title
+- If a backlink blog name is provided, let some title options reflect that blog or publisher context naturally when it improves fit
+- If the backlink tier is Tier 1 and a blog name is provided, make some title options feel like they belong on that blog or publication
+- When both brand and blog name are provided, use them naturally and sparingly; do not stuff both into every title
 - Avoid repeating titles or keyword angles that were already used for this brand when the context shows previous usage
 - Avoid robotic wording
 - Avoid duplicates
@@ -233,15 +306,21 @@ def build_backlink_meta_description_prompt(
     brand_context: str = "",
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
+    backlink_website_type: str = "",
+    backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
-    backlink_account_name: str = "",
+    backlink_blog_name: str = "",
+    backlink_writer_name: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     backlink_section = build_backlink_context_section(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
+        backlink_website_type=backlink_website_type,
+        backlink_max_characters=backlink_max_characters,
         backlink_tier_level=backlink_tier_level,
-        backlink_account_name=backlink_account_name,
+        backlink_blog_name=backlink_blog_name,
+        backlink_writer_name=backlink_writer_name,
     )
     banned_words_section = build_banned_words_prompt_section()
     return f"""
@@ -265,8 +344,10 @@ Rules:
 - Use active voice.
 - Include a call-to-action or value proposition when it fits naturally.
 - Make it sound human and natural.
+- Let the wording match the website type naturally.
 - If a brand is provided, align the wording with the brand and mention the brand only if it fits naturally.
-- If a backlink account name is provided, you may reflect that publishing context naturally, but do not force it.
+- If a backlink blog name is provided, you may reflect that publishing context naturally, but do not force it.
+- If the backlink tier is Tier 1 and a blog name is provided, the description may sound like it belongs on that blog or publication, but keep it natural.
 - Vary the approach for each variant.
 - Do not add any extra text before or after the JSON.
 - Ensure each meta description is complete, natural, and within the 160–170 character limit.
@@ -421,17 +502,27 @@ def build_backlink_content_prompt(
     brand_context: str = "",
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
+    backlink_website_type: str = "",
+    backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
-    backlink_account_name: str = "",
+    backlink_blog_name: str = "",
+    backlink_writer_name: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     backlink_section = build_backlink_context_section(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
+        backlink_website_type=backlink_website_type,
+        backlink_max_characters=backlink_max_characters,
         backlink_tier_level=backlink_tier_level,
-        backlink_account_name=backlink_account_name,
+        backlink_blog_name=backlink_blog_name,
+        backlink_writer_name=backlink_writer_name,
     )
     banned_words_section = build_banned_words_prompt_section()
+    try:
+        max_characters = max(0, int(backlink_max_characters or 0))
+    except (TypeError, ValueError):
+        max_characters = 0
 
     money_site_section = ""
     cleaned_money_site_url = (money_site_url or "").strip()
@@ -450,7 +541,7 @@ Instructions for the required brand link:
 """
 
     return f"""
-You are a professional blog writer who creates SEO-friendly, human-sounding backlink and guest-post content.
+You are a professional blogger and reviewer who creates SEO-friendly, human-sounding backlink and guest-post content.
 
 Write a complete blog article for this title:
 "{title}"
@@ -465,9 +556,11 @@ Brand: {brand}
 {money_site_section}
 
 Rules:
-- Write a blog article between "{MIN_BLOG_WORDS}" and "{MAX_BLOG_WORDS}" words.
+- Write a blog article between "{MIN_BLOG_WORDS}" and "{MAX_BLOG_WORDS}" words unless a smaller max character limit is provided for the selected medium.
 - Start with an engaging introduction of 60–80 words that explains the reader's problem or need.
 - Make the article feel appropriate for an external publisher or guest-post style placement.
+- Adapt the structure, tone, and delivery to the selected website type instead of forcing the same format for every medium.
+- For Tier 1 placements, write like a blogger or publication reviewing, exploring, or discussing the selected brand in a natural editorial voice.
 - Do not repeat the exact article title in the body unless absolutely necessary. However, keep the content closely aligned with the title and main topic.
 - Sentences must be less than 21 words.
 - Use the primary keyword naturally 2–4 times throughout the article. Include it in the introduction, and include it again in the conclusion only if it fits naturally.
@@ -490,11 +583,21 @@ Rules:
 - Use <ul><li> for bullet lists where helpful.
 - If a brand is provided, reflect the brand voice, positioning, and audience naturally throughout the article.
 - If a brand is provided, mention the brand naturally in the article without overusing it.
-- If a backlink account name is provided, mention it naturally when relevant, but do not force it repeatedly.
-- Do not stuff the brand name or account name into every heading or paragraph.
-- When both a brand and backlink account are provided, make them feel intentional and editorially natural.
+- If a backlink blog name is provided, treat it as the blog or publication name and mention it naturally when relevant, but do not force it repeatedly.
+- If a writer name is provided, use it naturally as the article byline or writer identity when it fits.
+- If the backlink tier is Tier 1 and a blog name is provided, include that blog name naturally in the article at least once.
+- Do not stuff the brand name, blog name, or writer name into every heading or paragraph.
+- When brand, blog name, and writer name are provided, make them feel intentional and editorially natural.
+- Match the writing style to the website type:
+  - forum: discussion-oriented, practical, community-style
+  - social_media: punchy, skimmable, conversational
+  - review: editorial, evaluative, experience-driven
+  - news: informative, publication-style, neutral
+  - directory: concise, utility-focused
+  - community: helpful, shared-insight tone
 - If brand database context is provided, avoid repeating existing keyword angles and keep the content aligned with current brand pages.
 - Include the required brand link once in a natural way with relevant anchor text.
+- If a max character limit is provided for the medium, keep the entire output within that limit and shorten the structure accordingly.
 - Return only valid JSON with this format: {{"content":"<p>...</p>"}}.
 - The value of "content" must contain complete, valid HTML.
 - Do not add any explanation, notes, or text before or after the JSON object.
@@ -507,7 +610,8 @@ Rules:
 - Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
 - Do not use these sections together in the same page.
 - Choose the ending section that best matches the page type and search intent.
-- Ensure the final article is complete and within the "{MIN_BLOG_WORDS}"-"{MAX_BLOG_WORDS}" word range before finishing.
+- If no max character limit is provided, ensure the final article is complete and within the "{MIN_BLOG_WORDS}"-"{MAX_BLOG_WORDS}" word range before finishing.
+- If a max character limit is provided, prioritize staying within that character limit over the normal long-form word target.
 
 Return valid JSON only in this format:
 {{

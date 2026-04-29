@@ -121,8 +121,11 @@ def generate_backlink_content(
     brand_context: str = "",
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
+    backlink_website_type: str = "",
+    backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
-    backlink_account_name: str = "",
+    backlink_blog_name: str = "",
+    backlink_writer_name: str = "",
 ):
     prompt = build_backlink_content_prompt(
         title=title,
@@ -134,7 +137,10 @@ def generate_backlink_content(
         brand_context=brand_context,
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
+        backlink_website_type=backlink_website_type,
+        backlink_max_characters=backlink_max_characters,
         backlink_tier_level=backlink_tier_level,
-        backlink_account_name=backlink_account_name,
+        backlink_blog_name=backlink_blog_name,
+        backlink_writer_name=backlink_writer_name,
     )
     return _generate_content_from_prompt(provider, prompt)

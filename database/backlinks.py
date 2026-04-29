@@ -17,14 +17,23 @@ def get_backlink(backlink_id: int) -> dict | None:
 
 def save_backlink(
     website_name: str,
-    account_name: str,
+    blog_name: str,
+    writer_name: str,
+    website_type: str,
+    max_characters: int | str,
     blog_url: str,
     tier_level: str,
     notes: str = "",
     backlink_id: int | None = None,
 ) -> dict:
     cleaned_name = (website_name or "").strip()
-    cleaned_account_name = (account_name or "").strip()
+    cleaned_blog_name = (blog_name or "").strip()
+    cleaned_writer_name = (writer_name or "").strip()
+    cleaned_website_type = (website_type or "").strip() or "blog"
+    try:
+        cleaned_max_characters = max(0, int(max_characters or 0))
+    except (TypeError, ValueError):
+        cleaned_max_characters = 0
     cleaned_url = (blog_url or "").strip()
     cleaned_tier = (tier_level or "").strip() or "Tier 1"
     cleaned_notes = (notes or "").strip()
@@ -34,10 +43,10 @@ def save_backlink(
             connection.execute(
                 """
                 UPDATE backlinks
-                SET website_name = ?, account_name = ?, blog_url = ?, tier_level = ?, notes = ?
+                SET website_name = ?, blog_name = ?, writer_name = ?, website_type = ?, max_characters = ?, blog_url = ?, tier_level = ?, notes = ?
                 WHERE id = ?
                 """,
-                (cleaned_name, cleaned_account_name, cleaned_url, cleaned_tier, cleaned_notes, backlink_id),
+                (cleaned_name, cleaned_blog_name, cleaned_writer_name, cleaned_website_type, cleaned_max_characters, cleaned_url, cleaned_tier, cleaned_notes, backlink_id),
             )
             row = connection.execute("SELECT * FROM backlinks WHERE id = ?", (backlink_id,)).fetchone()
             return row_to_dict(row) or {}
@@ -45,10 +54,10 @@ def save_backlink(
     with get_connection() as connection:
         cursor = connection.execute(
             """
-            INSERT INTO backlinks (website_name, account_name, blog_url, tier_level, notes)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO backlinks (website_name, blog_name, writer_name, website_type, max_characters, blog_url, tier_level, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (cleaned_name, cleaned_account_name, cleaned_url, cleaned_tier, cleaned_notes),
+            (cleaned_name, cleaned_blog_name, cleaned_writer_name, cleaned_website_type, cleaned_max_characters, cleaned_url, cleaned_tier, cleaned_notes),
         )
         row = connection.execute("SELECT * FROM backlinks WHERE id = ?", (cursor.lastrowid,)).fetchone()
         return row_to_dict(row) or {}

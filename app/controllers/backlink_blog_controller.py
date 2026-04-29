@@ -95,8 +95,11 @@ def _handle_generate_titles(state: dict):
             brand_context=brand_context,
             backlink_website_name=state["selected_backlink"].get("website_name", ""),
             backlink_blog_url=state["selected_backlink"].get("blog_url", ""),
+            backlink_website_type=state["selected_backlink"].get("website_type", "blog"),
+            backlink_max_characters=state["selected_backlink"].get("max_characters", 0) or 0,
             backlink_tier_level=state["selected_backlink"].get("tier_level", ""),
-            backlink_account_name=state["selected_backlink"].get("account_name", ""),
+            backlink_blog_name=state["selected_backlink"].get("blog_name", "") or state["selected_backlink"].get("account_name", ""),
+            backlink_writer_name=state["selected_backlink"].get("writer_name", ""),
         )
         state["step"] = "title"
     except Exception as exc:
@@ -151,8 +154,11 @@ def _handle_generate_content(state: dict):
         backlink_context = {
             "backlink_website_name": state["selected_backlink"].get("website_name", ""),
             "backlink_blog_url": state["selected_backlink"].get("blog_url", ""),
+            "backlink_website_type": state["selected_backlink"].get("website_type", "blog"),
+            "backlink_max_characters": state["selected_backlink"].get("max_characters", 0) or 0,
             "backlink_tier_level": state["selected_backlink"].get("tier_level", ""),
-            "backlink_account_name": state["selected_backlink"].get("account_name", ""),
+            "backlink_blog_name": state["selected_backlink"].get("blog_name", "") or state["selected_backlink"].get("account_name", ""),
+            "backlink_writer_name": state["selected_backlink"].get("writer_name", ""),
         }
         state["meta_descriptions"] = generate_backlink_meta_descriptions(
             provider,
