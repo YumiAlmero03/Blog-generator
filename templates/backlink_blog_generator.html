@@ -108,8 +108,14 @@
                 {% if selected_backlink.website_type %}
                   <div><strong class="text-sand-900">Type:</strong> {{ selected_backlink.website_type.replace('_', ' ')|title }}</div>
                 {% endif %}
+                {% if selected_backlink.post_type %}
+                  <div><strong class="text-sand-900">Post type:</strong> {{ selected_backlink.post_type|title }}</div>
+                {% endif %}
                 {% if selected_backlink.max_characters %}
-                  <div><strong class="text-sand-900">Content max:</strong> {{ selected_backlink.max_characters }}</div>
+                  <div><strong class="text-sand-900">Content max words:</strong> {{ selected_backlink.max_characters }}</div>
+                {% endif %}
+                {% if selected_backlink.min_words %}
+                  <div><strong class="text-sand-900">Content min words:</strong> {{ selected_backlink.min_words }}</div>
                 {% endif %}
                 {% if selected_backlink.title_max_characters %}
                   <div><strong class="text-sand-900">Title max:</strong> {{ selected_backlink.title_max_characters }}</div>

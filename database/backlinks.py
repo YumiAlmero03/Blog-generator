@@ -20,7 +20,9 @@ def save_backlink(
     blog_name: str,
     writer_name: str,
     website_type: str,
+    post_type: str,
     title_max_characters: int | str,
+    min_words: int | str,
     max_characters: int | str,
     blog_url: str,
     tier_level: str,
@@ -32,10 +34,17 @@ def save_backlink(
     cleaned_blog_name = (blog_name or "").strip()
     cleaned_writer_name = (writer_name or "").strip()
     cleaned_website_type = (website_type or "").strip() or "blog"
+    cleaned_post_type = (post_type or "").strip().lower() or "html"
+    if cleaned_post_type not in {"html", "markdown", "gutenberg", "text"}:
+        cleaned_post_type = "html"
     try:
         cleaned_title_max_characters = max(0, int(title_max_characters or 0))
     except (TypeError, ValueError):
         cleaned_title_max_characters = 0
+    try:
+        cleaned_min_words = max(0, int(min_words or 0))
+    except (TypeError, ValueError):
+        cleaned_min_words = 0
     try:
         cleaned_max_characters = max(0, int(max_characters or 0))
     except (TypeError, ValueError):
@@ -50,7 +59,7 @@ def save_backlink(
             connection.execute(
                 """
                 UPDATE backlinks
-                SET website_name = ?, blog_name = ?, writer_name = ?, website_type = ?, title_max_characters = ?, max_characters = ?, blog_url = ?, tier_level = ?, content_guidelines = ?, notes = ?
+                SET website_name = ?, blog_name = ?, writer_name = ?, website_type = ?, post_type = ?, title_max_characters = ?, min_words = ?, max_characters = ?, blog_url = ?, tier_level = ?, content_guidelines = ?, notes = ?
                 WHERE id = ?
                 """,
                 (
@@ -58,7 +67,9 @@ def save_backlink(
                     cleaned_blog_name,
                     cleaned_writer_name,
                     cleaned_website_type,
+                    cleaned_post_type,
                     cleaned_title_max_characters,
+                    cleaned_min_words,
                     cleaned_max_characters,
                     cleaned_url,
                     cleaned_tier,
@@ -73,15 +84,17 @@ def save_backlink(
     with get_connection() as connection:
         cursor = connection.execute(
             """
-            INSERT INTO backlinks (website_name, blog_name, writer_name, website_type, title_max_characters, max_characters, blog_url, tier_level, content_guidelines, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO backlinks (website_name, blog_name, writer_name, website_type, post_type, title_max_characters, min_words, max_characters, blog_url, tier_level, content_guidelines, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 cleaned_name,
                 cleaned_blog_name,
                 cleaned_writer_name,
                 cleaned_website_type,
+                cleaned_post_type,
                 cleaned_title_max_characters,
+                cleaned_min_words,
                 cleaned_max_characters,
                 cleaned_url,
                 cleaned_tier,

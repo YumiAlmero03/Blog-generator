@@ -115,10 +115,11 @@ def parse_generated_content(raw: str) -> tuple[str, int]:
     return content, word_count
 
 
-def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BLOG_WORDS, validator=None):
+def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BLOG_WORDS, max_words: int = 0, validator=None):
     last_error = None
     last_word_count = 0
     last_validation_error = ""
+    last_length_error = ""
 
     for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
         retry_instruction = ""
@@ -137,6 +138,12 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                     "- Return COMPLETE valid HTML content only inside JSON.\n"
                     "- Respect the selected medium's shorter content limit.\n"
                     "- Keep the output concise, complete, and suitable for the medium.\n"
+                )
+            if last_length_error:
+                retry_instruction += (
+                    "\nIMPORTANT RETRY REQUIREMENT:\n"
+                    f"- {last_length_error}\n"
+                    "- Return corrected valid HTML content only inside JSON.\n"
                 )
             if last_validation_error:
                 retry_instruction += (
@@ -166,6 +173,18 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                     "Content word count is %d (minimum: %d) on attempt %d/%d. Raw response length: %d chars",
                     word_count,
                     min_words,
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                    len(raw),
+                )
+                continue
+
+            if max_words and word_count > max_words:
+                last_length_error = f"Your previous response was too long at {word_count} words. Keep it at or below {max_words} words."
+                logger.warning(
+                    "Content word count is %d (maximum: %d) on attempt %d/%d. Raw response length: %d chars",
+                    word_count,
+                    max_words,
                     attempt,
                     MAX_GENERATION_ATTEMPTS,
                     len(raw),
@@ -266,15 +285,23 @@ def keep_required_url_once(content: str, required_url: str) -> str:
     return re.sub(escaped_url, replace_duplicate_plain_url, cleaned_content)
 
 
-def required_url_in_first_paragraph_error(content: str, required_url: str) -> str:
+def required_url_in_first_paragraph_error(content: str, required_url: str, post_type: str = "html") -> str:
     cleaned_url = (required_url or "").strip()
     if not cleaned_url:
         return ""
 
-    first_paragraph = re.search(r"<p\b[^>]*>.*?</p>", content or "", flags=re.IGNORECASE | re.DOTALL)
-    if not first_paragraph:
-        return "The generated content must start with a first <p> paragraph that contains the required brand link."
-    if cleaned_url not in first_paragraph.group(0):
+    cleaned_post_type = (post_type or "html").strip().lower()
+    if cleaned_post_type in {"html", "gutenberg"}:
+        first_paragraph = re.search(r"<p\b[^>]*>.*?</p>", content or "", flags=re.IGNORECASE | re.DOTALL)
+        if not first_paragraph:
+            return "The generated content must start with a first <p> paragraph that contains the required brand link."
+        first_paragraph_text = first_paragraph.group(0)
+    else:
+        first_paragraph_text = re.split(r"\n\s*\n", (content or "").strip(), maxsplit=1)[0]
+        if not first_paragraph_text:
+            return "The generated content must start with a first paragraph that contains the required brand link."
+
+    if cleaned_url not in first_paragraph_text:
         return "The required brand URL must be inserted inside the first paragraph and must not be placed later in the article."
     return ""
 
@@ -291,7 +318,9 @@ def generate_backlink_content(
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
     backlink_website_type: str = "",
+    backlink_post_type: str = "html",
     backlink_title_max_characters: int | str = 0,
+    backlink_min_words: int | str = 0,
     backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
     backlink_blog_name: str = "",
@@ -299,12 +328,16 @@ def generate_backlink_content(
     backlink_content_guidelines: str = "",
     change_request: str = "",
 ):
-    effective_max_characters = _effective_medium_max_characters(
+    effective_max_words = _effective_medium_max_words(
         backlink_website_name,
         backlink_blog_name,
         backlink_website_type,
         backlink_max_characters,
     )
+    effective_min_words = _effective_medium_min_words(backlink_min_words)
+    validation_min_words = effective_min_words
+    if effective_max_words and validation_min_words > effective_max_words:
+        validation_min_words = effective_max_words
     prompt = build_backlink_content_prompt(
         title=title,
         keyword=keyword,
@@ -316,8 +349,10 @@ def generate_backlink_content(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
         backlink_website_type=backlink_website_type,
+        backlink_post_type=backlink_post_type,
         backlink_title_max_characters=backlink_title_max_characters,
-        backlink_max_characters=effective_max_characters,
+        backlink_min_words=effective_min_words,
+        backlink_max_characters=effective_max_words,
         backlink_tier_level=backlink_tier_level,
         backlink_blog_name=backlink_blog_name,
         backlink_writer_name=backlink_writer_name,
@@ -326,24 +361,25 @@ def generate_backlink_content(
     )
     validator = None
     if (money_site_url or "").strip():
-        validator = lambda content: required_url_in_first_paragraph_error(content, money_site_url)
+        validator = lambda content: required_url_in_first_paragraph_error(content, money_site_url, backlink_post_type)
     content = _generate_content_from_prompt(
         provider,
         prompt,
-        min_words=0 if effective_max_characters else MIN_BLOG_WORDS,
+        min_words=validation_min_words or (0 if effective_max_words else MIN_BLOG_WORDS),
+        max_words=effective_max_words,
         validator=validator,
     )
     return keep_required_url_once(content, money_site_url)
 
 
-def _effective_medium_max_characters(
+def _effective_medium_max_words(
     website_name: str,
     blog_name: str,
     website_type: str,
-    max_characters: int | str,
+    max_words: int | str,
 ) -> int:
     try:
-        cleaned = max(0, int(max_characters or 0))
+        cleaned = max(0, int(max_words or 0))
     except (TypeError, ValueError):
         cleaned = 0
     if cleaned:
@@ -351,7 +387,14 @@ def _effective_medium_max_characters(
 
     target = f"{website_name or ''} {blog_name or ''} {website_type or ''}".lower()
     if "twitter" in target or "x.com" in target or target.strip() == "x":
-        return 280
+        return 40
     if "social_media" in target or "social media" in target:
-        return 700
+        return 120
     return 0
+
+
+def _effective_medium_min_words(min_words: int | str) -> int:
+    try:
+        return max(0, int(min_words or 0))
+    except (TypeError, ValueError):
+        return 0

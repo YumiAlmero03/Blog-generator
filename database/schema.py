@@ -85,7 +85,9 @@ def init_db():
                 blog_name TEXT NOT NULL DEFAULT '',
                 writer_name TEXT NOT NULL DEFAULT '',
                 website_type TEXT NOT NULL DEFAULT 'blog',
+                post_type TEXT NOT NULL DEFAULT 'html',
                 title_max_characters INTEGER NOT NULL DEFAULT 0,
+                min_words INTEGER NOT NULL DEFAULT 0,
                 max_characters INTEGER NOT NULL DEFAULT 0,
                 blog_url TEXT NOT NULL DEFAULT '',
                 tier_level TEXT NOT NULL DEFAULT 'Tier 1',
@@ -98,7 +100,9 @@ def init_db():
         _ensure_column(connection, "backlinks", "blog_name", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "backlinks", "writer_name", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "backlinks", "website_type", "TEXT NOT NULL DEFAULT 'blog'")
+        _ensure_column(connection, "backlinks", "post_type", "TEXT NOT NULL DEFAULT 'html'")
         _ensure_column(connection, "backlinks", "title_max_characters", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "backlinks", "min_words", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "backlinks", "max_characters", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "backlinks", "content_guidelines", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "brands", "brand_color", "TEXT NOT NULL DEFAULT ''")

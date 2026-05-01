@@ -17,7 +17,9 @@ def build_backlink_context_section(
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
     backlink_website_type: str = "",
+    backlink_post_type: str = "html",
     backlink_title_max_characters: int | str = 0,
+    backlink_min_words: int | str = 0,
     backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
     backlink_blog_name: str = "",
@@ -26,20 +28,27 @@ def build_backlink_context_section(
 ) -> str:
     website_name = (backlink_website_name or "").strip()
     website_type = (backlink_website_type or "").strip().lower()
+    post_type = (backlink_post_type or "html").strip().lower()
+    if post_type not in {"html", "markdown", "gutenberg", "text"}:
+        post_type = "html"
     try:
         title_max_characters = max(0, int(backlink_title_max_characters or 0))
     except (TypeError, ValueError):
         title_max_characters = 0
     try:
-        max_characters = max(0, int(backlink_max_characters or 0))
+        min_words = max(0, int(backlink_min_words or 0))
     except (TypeError, ValueError):
-        max_characters = 0
+        min_words = 0
+    try:
+        max_words = max(0, int(backlink_max_characters or 0))
+    except (TypeError, ValueError):
+        max_words = 0
     tier_level = (backlink_tier_level or "").strip()
     blog_name = (backlink_blog_name or "").strip()
     writer_name = (backlink_writer_name or "").strip()
     content_guidelines = (backlink_content_guidelines or "").strip()
 
-    if not any((website_name, website_type, title_max_characters, max_characters, tier_level, blog_name, writer_name, content_guidelines)):
+    if not any((website_name, website_type, post_type != "html", title_max_characters, min_words, max_words, tier_level, blog_name, writer_name, content_guidelines)):
         return ""
 
     lines = ["Publishing medium target:"]
@@ -51,10 +60,14 @@ def build_backlink_context_section(
         lines.append(f"- Writer name: {writer_name}")
     if website_type:
         lines.append(f"- Medium type: {website_type.replace('_', ' ')}")
+    if post_type:
+        lines.append(f"- Post type: {post_type}")
     if title_max_characters:
         lines.append(f"- Title max characters: {title_max_characters}")
-    if max_characters:
-        lines.append(f"- Content max characters: {max_characters}")
+    if min_words:
+        lines.append(f"- Content min words: {min_words}")
+    if max_words:
+        lines.append(f"- Content max words: {max_words}")
     if tier_level:
         lines.append(f"- Tier level: {tier_level}")
     if content_guidelines:
@@ -82,13 +95,17 @@ def build_backlink_context_section(
         )
     if title_max_characters:
         lines.append(f"- Keep every generated title at or below {title_max_characters} characters.")
-    if max_characters:
+    if max_words:
         lines.extend(
             [
-                f"- Keep the full output within about {max_characters} characters.",
-                "- Prioritize a tighter format, shorter sections, and concise delivery when a max character limit is provided.",
+                f"- Keep the full output at or below about {max_words} words.",
+                "- Prioritize a tighter format, shorter sections, and concise delivery when a max word count is provided.",
             ]
         )
+        if min_words:
+            lines.append("- If the min word count conflicts with the max word count, follow the max word count first.")
+    elif min_words:
+        lines.append(f"- Write at least {min_words} words for this medium.")
     if website_type == "forum":
         lines.extend(
             [
@@ -105,7 +122,7 @@ def build_backlink_context_section(
         )
         if website_type == "twitter" or "twitter" in lowered_target or "x.com" in lowered_target:
             lines.append("- For Twitter/X, write one very short post or a compact thread-style post. Avoid long article structure.")
-        elif not max_characters:
+        elif not max_words:
             lines.append("- For Twitter/X-style mediums, write very short post-style content instead of a long article.")
     elif website_type == "google_sites":
         lines.extend(

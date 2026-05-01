@@ -43,10 +43,20 @@
           {% endfor %}
         </select>
 
+        <label for="post_type" class="mb-2 block text-sm font-bold text-sand-900">Post Type</label>
+        <select id="post_type" name="post_type" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for value, label in post_type_options %}
+            <option value="{{ value }}" {% if post_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+
         <label for="title_max_characters" class="mb-2 block text-sm font-bold text-sand-900">Title Max Characters</label>
         <input id="title_max_characters" name="title_max_characters" type="number" min="0" value="{{ title_max_characters }}" placeholder="0 = auto by medium" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
-        <label for="max_characters" class="mb-2 block text-sm font-bold text-sand-900">Content Max Characters</label>
+        <label for="min_words" class="mb-2 block text-sm font-bold text-sand-900">Content Min Words</label>
+        <input id="min_words" name="min_words" type="number" min="0" value="{{ min_words }}" placeholder="0 = default by medium" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="max_characters" class="mb-2 block text-sm font-bold text-sand-900">Content Max Words</label>
         <input id="max_characters" name="max_characters" type="number" min="0" value="{{ max_characters }}" placeholder="0 = auto by medium" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
         <label for="blog_url" class="mb-2 block text-sm font-bold text-sand-900">Medium URL</label>
@@ -87,11 +97,17 @@
               {% if backlink.website_type %}
                 <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Medium type:</strong> {{ backlink.website_type.replace('_', ' ')|title }}</div>
               {% endif %}
+              {% if backlink.post_type %}
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Post type:</strong> {{ backlink.post_type|title }}</div>
+              {% endif %}
               {% if backlink.title_max_characters %}
                 <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Title max:</strong> {{ backlink.title_max_characters }}</div>
               {% endif %}
+              {% if backlink.min_words %}
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Content min words:</strong> {{ backlink.min_words }}</div>
+              {% endif %}
               {% if backlink.max_characters %}
-                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Content max:</strong> {{ backlink.max_characters }}</div>
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Content max words:</strong> {{ backlink.max_characters }}</div>
               {% endif %}
               {% if backlink.blog_url %}
                 <div class="mt-3 break-all text-sm leading-6 text-sand-700">

@@ -12,7 +12,9 @@ def build_backlink_title_prompt(
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
     backlink_website_type: str = "",
+    backlink_post_type: str = "html",
     backlink_title_max_characters: int | str = 0,
+    backlink_min_words: int | str = 0,
     backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
     backlink_blog_name: str = "",
@@ -24,7 +26,9 @@ def build_backlink_title_prompt(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
         backlink_website_type=backlink_website_type,
+        backlink_post_type=backlink_post_type,
         backlink_title_max_characters=backlink_title_max_characters,
+        backlink_min_words=backlink_min_words,
         backlink_max_characters=backlink_max_characters,
         backlink_tier_level=backlink_tier_level,
         backlink_blog_name=backlink_blog_name,
@@ -94,7 +98,9 @@ def build_backlink_meta_description_prompt(
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
     backlink_website_type: str = "",
+    backlink_post_type: str = "html",
     backlink_title_max_characters: int | str = 0,
+    backlink_min_words: int | str = 0,
     backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
     backlink_blog_name: str = "",
@@ -106,7 +112,9 @@ def build_backlink_meta_description_prompt(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
         backlink_website_type=backlink_website_type,
+        backlink_post_type=backlink_post_type,
         backlink_title_max_characters=backlink_title_max_characters,
+        backlink_min_words=backlink_min_words,
         backlink_max_characters=backlink_max_characters,
         backlink_tier_level=backlink_tier_level,
         backlink_blog_name=backlink_blog_name,
@@ -171,7 +179,9 @@ def build_backlink_content_prompt(
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
     backlink_website_type: str = "",
+    backlink_post_type: str = "html",
     backlink_title_max_characters: int | str = 0,
+    backlink_min_words: int | str = 0,
     backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
     backlink_blog_name: str = "",
@@ -184,7 +194,9 @@ def build_backlink_content_prompt(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
         backlink_website_type=backlink_website_type,
+        backlink_post_type=backlink_post_type,
         backlink_title_max_characters=backlink_title_max_characters,
+        backlink_min_words=backlink_min_words,
         backlink_max_characters=backlink_max_characters,
         backlink_tier_level=backlink_tier_level,
         backlink_blog_name=backlink_blog_name,
@@ -202,28 +214,80 @@ Minor change request from the user:
 Apply this request while keeping the medium content natural, complete, and aligned with all rules below.
 """
     try:
-        max_characters = max(0, int(backlink_max_characters or 0))
+        min_words = max(0, int(backlink_min_words or 0))
     except (TypeError, ValueError):
-        max_characters = 0
+        min_words = 0
+    try:
+        max_words = max(0, int(backlink_max_characters or 0))
+    except (TypeError, ValueError):
+        max_words = 0
+    if min_words and not max_words:
+        min_word_rule = f'- Write at least "{min_words}" words for this medium.'
+        completion_word_rule = f'- If no max word count is provided, ensure the final article is complete and at least "{min_words}" words before finishing.'
+    elif min_words and max_words:
+        min_word_rule = f'- Write between "{min_words}" and "{max_words}" words for this medium. If both cannot be satisfied, stay under the max word count.'
+        completion_word_rule = f'- Aim for at least "{min_words}" words when possible, but prioritize staying within "{max_words}" words.'
+    elif max_words:
+        min_word_rule = f'- Write no more than "{max_words}" words for this medium.'
+        completion_word_rule = f'- Ensure the final article is complete and at or below "{max_words}" words before finishing.'
+    else:
+        min_word_rule = f'- Write a blog article between "{MIN_BLOG_WORDS}" and "{MAX_BLOG_WORDS}" words unless a smaller max word count is provided for the selected medium.'
+        completion_word_rule = f'- If no max word count is provided, ensure the final article is complete and within the "{MIN_BLOG_WORDS}"-"{MAX_BLOG_WORDS}" word range before finishing.'
+    cleaned_money_site_url = (money_site_url or "").strip()
+    post_type = (backlink_post_type or "html").strip().lower()
+    if post_type not in {"html", "markdown", "gutenberg", "text"}:
+        post_type = "html"
+    if post_type == "markdown":
+        format_rules = f"""
+- Write the content value in Markdown, not HTML.
+- Use Markdown headings like ## and ###, Markdown lists, and short paragraphs.
+- Use this Markdown link format once in the first paragraph when a brand URL is provided: [anchor text](REQUIRED_URL).
+- Do not use HTML tags in the content value.
+"""
+        return_example = '"content": "Intro paragraph with [anchor text](https://example.com).\\n\\n## Heading\\n\\nBody text..."'
+    elif post_type == "gutenberg":
+        format_rules = f"""
+- Write the content value as WordPress Gutenberg block HTML.
+- Wrap paragraphs and headings with Gutenberg comments, such as <!-- wp:paragraph --><p>...</p><!-- /wp:paragraph --> and <!-- wp:heading --><h2>...</h2><!-- /wp:heading -->.
+- Use this HTML link format once inside the first Gutenberg paragraph block when a brand URL is provided: <a href='REQUIRED_URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
+"""
+        return_example = '"content": "<!-- wp:paragraph --><p>Intro with <a href=\'https://example.com\'>anchor text</a>.</p><!-- /wp:paragraph -->"'
+    elif post_type == "text":
+        format_rules = f"""
+- Write the content value as plain text only.
+- Do not use HTML tags or Markdown syntax.
+- Use clear section labels on their own lines when needed.
+- Include the brand URL exactly once in the first paragraph as plain text when a brand URL is provided.
+"""
+        return_example = '"content": "Intro paragraph with https://example.com included once.\\n\\nSection heading\\nBody text..."'
+    else:
+        format_rules = f"""
+- Write the content value in HTML.
+- Use <h2> for main sections and <h3> for subsections.
+- Use <p> for paragraphs.
+- Use <ul><li> for bullet lists where helpful.
+- Use this HTML link format once inside the first paragraph when a brand URL is provided: <a href='REQUIRED_URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
+"""
+        return_example = '"content": "<p>Intro with <a href=\'https://example.com\'>anchor text</a>.</p><h2>Heading</h2><p>Body text...</p>"'
 
     money_site_section = ""
-    cleaned_money_site_url = (money_site_url or "").strip()
     if cleaned_money_site_url:
         money_site_section = f"""
 Required Brand Link:
-- Use this exact HTML format once: <a href='{cleaned_money_site_url}' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>
+- Required URL: {cleaned_money_site_url}
+- Use the link format required by the selected post type exactly once.
 
 Instructions for the required brand link:
 - Include this URL exactly once in the article
 - Insert the required brand link in the first paragraph only.
-- The first <p> paragraph must contain the one and only link to this URL.
+- The first paragraph must contain the one and only link to this URL.
 - Do not include this URL in any other anchor tag, plain text, citation, source list, CTA, FAQ, conclusion, or reference section
-- Before returning, verify the exact URL appears one time only in the HTML
+- Before returning, verify the exact URL appears one time only in the content
 - Use natural descriptive anchor text that fits the sentence and topic
 - Do not use generic anchor text like 'click here'
 - Do not use the brand name, website name, or domain as anchor text
 - This is the only required link in the article
-- This saved brand URL is the only URL allowed in the HTML output
+- This saved brand URL is the only URL allowed in the content output
 """
 
     return f"""
@@ -242,7 +306,7 @@ Brand: {brand}
 {change_request_section}
 
 Rules:
-- Write a blog article between "{MIN_BLOG_WORDS}" and "{MAX_BLOG_WORDS}" words unless a smaller max character limit is provided for the selected medium.
+{min_word_rule}
 - Start with an engaging introduction of 60–80 words that explains the reader's problem or need.
 - Make the article feel appropriate for an external publisher or guest-post style placement.
 - Adapt the structure, tone, and delivery to the selected website type instead of forcing the same format for every medium.
@@ -265,10 +329,7 @@ Rules:
 - Write for readability using short paragraphs.
 - Add detailed explanations, useful examples, and practical context in each section to support the word count naturally.
 - Structure the article in this order: introduction, 3–4 main sections with subheadings, then exactly one ending section that best fits the page intent.
-- Use HTML only, not Markdown.
-- Use <h2> for main sections and <h3> for subsections.
-- Use <p> for paragraphs.
-- Use <ul><li> for bullet lists where helpful.
+{format_rules}
 - If a brand is provided, reflect the brand positioning and audience naturally without sounding promotional.
 - If a brand is provided, mention the brand sparingly and use third-person substitutes to avoid repetition.
 - If a medium publication name is provided, treat it as the blog or publication name and mention it naturally when relevant, but do not force it repeatedly.
@@ -286,27 +347,27 @@ Rules:
 - If brand database context is provided, avoid repeating existing keyword angles and keep the content aligned with current brand pages.
 - Include the required brand link once in a natural way with relevant anchor text.
 - Place the required brand link inside the first paragraph, not later in the article.
-- The required brand URL must appear exactly once total in the HTML output.
+- The required brand URL must appear exactly once total in the content output.
 - Do not include the medium URL or any other URL in the output.
-- If a max character limit is provided for the medium, keep the entire output within that limit and shorten the structure accordingly.
-- Return only valid JSON with this format: {{"content":"<p>...</p>"}}.
-- The value of "content" must contain complete, valid HTML.
+- If a max word count is provided for the medium, keep the entire output within that limit and shorten the structure accordingly.
+- Return only valid JSON with this format: {{"content":"..."}}.
+- The value of "content" must contain complete content in the selected post type format.
 - Do not add any explanation, notes, or text before or after the JSON object.
 - Start the response with "{{" and end it with "}}".
 - Close every HTML tag and every quotation mark properly.
 - Do not truncate, abbreviate, or cut off the article.
 - Check the internet when needed to verify brand, product, platform, or topic details before writing.
 - Do not guess what a brand, game, or platform is.
-- External links and the required brand link must use rel='nofollow noopener noreferrer' and target='_blank'.
+- When the selected post type supports HTML attributes, external links and the required brand link must use rel='nofollow noopener noreferrer' and target='_blank'.
 - Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
 - Do not use these sections together in the same page.
 - Choose the ending section that best matches the page type and search intent.
-- If no max character limit is provided, ensure the final article is complete and within the "{MIN_BLOG_WORDS}"-"{MAX_BLOG_WORDS}" word range before finishing.
-- If a max character limit is provided, prioritize staying within that character limit over the normal long-form word target.
+{completion_word_rule}
+- If a max word count is provided, prioritize staying within that word limit over the normal long-form word target.
 
 Return valid JSON only in this format:
 {{
-  "content": "<h2>Your HTML content here</h2><p>...</p>",
+  {return_example},
   "word_count": 850
 }}
 """

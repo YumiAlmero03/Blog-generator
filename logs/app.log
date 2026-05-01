@@ -2774,3 +2774,231 @@ Traceback (most recent call last):
     ...<2 lines>...
     )
 ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 959 words.
+2026-05-01 09:57:01,005 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 176 words on attempt 1/3
+2026-05-01 09:57:06,265 ERROR blog_generator backlink_blog_controller.py:209 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 201, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-01 09:59:00,757 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 260 words on attempt 1/3
+2026-05-01 09:59:05,993 ERROR blog_generator backlink_blog_controller.py:209 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 201, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-01 10:06:08,445 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 285 words on attempt 1/3
+2026-05-01 10:06:13,711 ERROR blog_generator backlink_blog_controller.py:209 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 201, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-01 10:06:38,475 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 221 words on attempt 1/3
+2026-05-01 10:06:43,709 ERROR blog_generator backlink_blog_controller.py:209 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 201, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-01 10:20:21,064 WARNING blog_generator content_generator.py:179 _generate_content_from_prompt() - Content validation failed on attempt 1/3: The required brand URL must be inserted inside the first paragraph and must not be placed later in the article.
+2026-05-01 10:21:19,632 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 262 words on attempt 2/3
+2026-05-01 10:21:24,859 ERROR blog_generator backlink_blog_controller.py:211 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 203, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-01 10:27:25,540 WARNING blog_generator content_generator.py:184 _generate_content_from_prompt() - Content word count is 20 (maximum: 10) on attempt 1/3. Raw response length: 121 chars
+2026-05-01 10:27:25,541 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 5 words on attempt 2/3
+2026-05-01 10:29:08,036 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 648 (minimum: 800) on attempt 1/3. Raw response length: 4967 chars
+2026-05-01 10:30:27,754 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 673 (minimum: 800) on attempt 2/3. Raw response length: 5095 chars
+2026-05-01 10:31:31,318 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 3/3
+2026-05-01 10:31:31,320 ERROR blog_generator backlink_blog_controller.py:211 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 185, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 355, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<3 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 220, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 554 words.
+2026-05-01 10:46:06,393 WARNING blog_generator meta_description_generator.py:32 _generate_meta_descriptions_from_prompt() - Generated meta descriptions used banned terms instant on attempt 1/3
+2026-05-01 10:48:36,422 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 1/3
+2026-05-01 10:50:46,542 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 1/3
+2026-05-01 10:52:05,748 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 2/3
+2026-05-01 10:54:00,379 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 681 (minimum: 800) on attempt 2/3. Raw response length: 5766 chars
+2026-05-01 10:55:09,165 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 809 words on attempt 3/3
+2026-05-01 10:55:14,446 ERROR blog_generator backlink_blog_controller.py:211 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 203, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-01 10:56:37,768 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 3/3
+2026-05-01 10:56:37,769 ERROR blog_generator backlink_blog_controller.py:211 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 185, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<7 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 355, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<3 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 220, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 849 words.
+2026-05-01 11:07:16,339 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 547 (minimum: 600) on attempt 1/3. Raw response length: 3852 chars
+2026-05-01 11:09:58,489 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 976 words on attempt 2/3
+2026-05-01 11:10:03,741 ERROR blog_generator backlink_blog_controller.py:211 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 203, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-01 11:10:47,618 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 604 (minimum: 900) on attempt 1/3. Raw response length: 4631 chars
+2026-05-01 11:12:18,059 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 923 words on attempt 2/3
+2026-05-01 11:12:23,282 ERROR blog_generator backlink_blog_controller.py:211 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 203, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
