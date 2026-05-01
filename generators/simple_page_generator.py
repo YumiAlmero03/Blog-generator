@@ -15,6 +15,7 @@ def generate_simple_page(
     brand: str = "",
     expectations: str = "",
     brand_context: str = "",
+    change_request: str = "",
 ):
     prompt = build_simple_page_prompt(
         page_title=page_title,
@@ -22,6 +23,7 @@ def generate_simple_page(
         brand=brand,
         expectations=expectations,
         brand_context=brand_context,
+        change_request=change_request,
     )
 
     last_error = None

@@ -55,6 +55,7 @@ def generate_page(
     expectations: str = "",
     brand: str = "",
     brand_context: str = "",
+    change_request: str = "",
 ):
     prompt = build_page_prompt(
         keyword=keyword,
@@ -63,6 +64,7 @@ def generate_page(
         expectations=expectations,
         brand=brand,
         brand_context=brand_context,
+        change_request=change_request,
     )
 
     last_error = None

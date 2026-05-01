@@ -1,4 +1,5 @@
 flask
+certifi
 google-genai
 ollama
 openai

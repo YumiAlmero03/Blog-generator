@@ -34,7 +34,7 @@
         <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
         <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Enter your brand or business name" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
-        <label for="keyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword(s)</label>
+        <label for="keyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword(s) <span class="text-red-600">*</span></label>
         <textarea id="keyword" name="keyword" rows="2" placeholder="Enter one or more keywords separated by commas" class="mb-4 min-h-[92px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ keyword }}</textarea>
 
         <label for="supporting_keyword" class="mb-2 block text-sm font-bold text-sand-900">Supporting keyword</label>
@@ -68,7 +68,7 @@
 
           <div class="grid gap-6">
             <div>
-              <h3 class="mb-4 font-display text-2xl text-sand-950">Select Title</h3>
+              <h3 class="mb-4 font-display text-2xl text-sand-950">Select Title <span class="text-red-600">*</span></h3>
               <ul class="grid gap-3">
                 {% for title in titles %}
                   <li>
@@ -142,7 +142,30 @@
               </div>
               <div id="editorWordCount" class="text-sm font-medium text-sand-700">Word count: 0</div>
             </div>
+
+            {% if tag_suggestions %}
+              <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                  <h3 class="font-display text-2xl text-sand-950">Suggested Tags</h3>
+                  <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ tag_suggestions|length }} Tags</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  {% for tag in tag_suggestions %}
+                    <span class="rounded-full border border-sand-200 bg-sand-50 px-3 py-2 text-sm font-bold text-sand-800">{{ tag }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
           {% endif %}
+
+          <div class="flex justify-start pt-2">
+            {% if content %}
+              <div class="w-full max-w-3xl">
+                <label for="change_request" class="mb-2 block text-sm font-bold text-sand-900">Minor change suggestions</label>
+                <textarea id="change_request" name="change_request" placeholder="e.g. make the intro warmer, add more examples, shorten the conclusion, mention pricing less" class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ change_request }}</textarea>
+              </div>
+            {% endif %}
+          </div>
 
           <div class="flex justify-start pt-2">
             <button type="button" id="generateContentButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Full Article</button>

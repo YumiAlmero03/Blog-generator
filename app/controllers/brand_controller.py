@@ -8,6 +8,7 @@ from app.services.image_service import BRAND_LOGO_DIR, save_uploaded_image
 
 
 def brands():
+    brand_color_palette = _brand_color_palette()
     state = {
         "brand_name": "",
         "website": "",
@@ -16,6 +17,7 @@ def brands():
         "tone": "",
         "notes": "",
         "logo_path": "",
+        "brand_color": "#b07042",
         "check_brand": "",
         "check_keyword": "",
         "keyword_check_result": None,
@@ -31,6 +33,8 @@ def brands():
         action = request.form.get("action", "save_brand").strip()
         if action == "save_brand":
             _handle_save_brand(state)
+        elif action == "save_brand_color":
+            _handle_save_brand_color(state)
         elif action == "check_keyword":
             _handle_check_keyword(state)
 
@@ -40,6 +44,7 @@ def brands():
         **state,
         logo_url=image_url(state["logo_path"]),
         brands=_build_brand_view_models(),
+        brand_color_palette=brand_color_palette,
     )
 
 
@@ -55,6 +60,7 @@ def _populate_brand_for_edit(state: dict, brand_name: str):
     state["tone"] = brand_record.get("tone", "")
     state["notes"] = brand_record.get("notes", "")
     state["logo_path"] = brand_record.get("logo_path", "")
+    state["brand_color"] = brand_record.get("brand_color", "") or _fallback_brand_color(state["brand_name"])
 
 
 def _handle_save_brand(state: dict):
@@ -64,6 +70,7 @@ def _handle_save_brand(state: dict):
     state["main_keywords"] = request.form.get("main_keywords", "").strip()
     state["tone"] = request.form.get("tone", "").strip()
     state["notes"] = request.form.get("notes", "").strip()
+    state["brand_color"] = _normalize_color_input(request.form.get("brand_color", ""))
     logo_upload = request.files.get("logo_file")
 
     if not state["brand_name"]:
@@ -82,6 +89,7 @@ def _handle_save_brand(state: dict):
             niche=state["niche"],
             main_keywords=state["main_keywords"],
             logo_path=state["logo_path"],
+            brand_color=state["brand_color"],
         )
         saved_name = state["brand_name"]
         state.update(
@@ -93,6 +101,7 @@ def _handle_save_brand(state: dict):
                 "tone": "",
                 "notes": "",
                 "logo_path": "",
+                "brand_color": "#b07042",
                 "success": f"Saved brand: {saved_name}",
             }
         )
@@ -118,10 +127,56 @@ def _handle_check_keyword(state: dict):
         state["error"] = "An error occurred while checking the keyword. Check logs/app.log for details."
 
 
+def _handle_save_brand_color(state: dict):
+    brand_name = request.form.get("brand_name", "").strip()
+    brand_color = _normalize_color_input(request.form.get("brand_color", ""))
+
+    if not brand_name:
+        state["error"] = "Please select a brand before saving a color."
+        return
+    if not brand_color:
+        state["error"] = "Please choose a valid brand color."
+        return
+
+    try:
+        upsert_brand(brand_name, brand_color=brand_color)
+        state["success"] = f"Updated color for {brand_name}"
+    except Exception:
+        logger.exception("brands save_brand_color action failed")
+        state["error"] = "An error occurred while saving the brand color. Check logs/app.log for details."
+
+
 def _build_brand_view_models() -> list[dict]:
     brands = []
     for brand in list_brand_records():
         item = dict(brand)
         item["logo_url"] = image_url(item.get("logo_path", ""))
+        item["brand_color"] = _normalize_color_input(item.get("brand_color", "")) or _fallback_brand_color(item.get("name", ""))
         brands.append(item)
     return brands
+
+
+def _normalize_color_input(color: str) -> str:
+    cleaned = (color or "").strip().lower()
+    if len(cleaned) == 7 and cleaned.startswith("#") and all(char in "0123456789abcdef" for char in cleaned[1:]):
+        return cleaned
+    return ""
+
+
+def _fallback_brand_color(brand_name: str) -> str:
+    palette = [item["value"] for item in _brand_color_palette()]
+    seed = sum(ord(char) for char in (brand_name or "").lower())
+    return palette[seed % len(palette)]
+
+
+def _brand_color_palette() -> list[dict]:
+    return [
+        {"name": "Green", "value": "#15803d"},
+        {"name": "Red", "value": "#be123c"},
+        {"name": "Blue", "value": "#2563eb"},
+        {"name": "Purple", "value": "#7c3aed"},
+        {"name": "Teal", "value": "#0f766e"},
+        {"name": "Orange", "value": "#c2410c"},
+        {"name": "Moss", "value": "#486034"},
+        {"name": "Sand", "value": "#b07042"},
+    ]

@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 from database.common import (
@@ -17,6 +18,7 @@ def upsert_brand(
     niche: str = "",
     main_keywords: str = "",
     logo_path: str = "",
+    brand_color: str = "",
 ) -> Optional[dict]:
     brand_name = (brand or "").strip()
     if not brand_name:
@@ -32,6 +34,7 @@ def upsert_brand(
         "niche": (niche or "").strip(),
         "main_keywords": (main_keywords or "").strip(),
         "logo_path": (logo_path or "").strip(),
+        "brand_color": normalize_brand_color(brand_color),
     }
 
     with get_connection() as connection:
@@ -51,11 +54,12 @@ def upsert_brand(
                 "niche": payload["niche"] or existing_dict.get("niche", ""),
                 "main_keywords": payload["main_keywords"] or existing_dict.get("main_keywords", ""),
                 "logo_path": payload["logo_path"] or existing_dict.get("logo_path", ""),
+                "brand_color": payload["brand_color"] or existing_dict.get("brand_color", ""),
             }
             connection.execute(
                 """
                 UPDATE brands
-                SET name = ?, normalized_name = ?, website = ?, tone = ?, notes = ?, niche = ?, main_keywords = ?, logo_path = ?
+                SET name = ?, normalized_name = ?, website = ?, tone = ?, notes = ?, niche = ?, main_keywords = ?, logo_path = ?, brand_color = ?
                 WHERE id = ?
                 """,
                 (
@@ -67,6 +71,7 @@ def upsert_brand(
                     merged["niche"],
                     merged["main_keywords"],
                     merged["logo_path"],
+                    merged["brand_color"],
                     existing_dict["id"],
                 ),
             )
@@ -76,8 +81,8 @@ def upsert_brand(
 
         cursor = connection.execute(
             """
-            INSERT INTO brands (name, normalized_name, website, tone, notes, niche, main_keywords, logo_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO brands (name, normalized_name, website, tone, notes, niche, main_keywords, logo_path, brand_color)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload["name"],
@@ -88,6 +93,7 @@ def upsert_brand(
                 payload["niche"],
                 payload["main_keywords"],
                 payload["logo_path"],
+                payload["brand_color"],
             ),
         )
         return row_to_dict(
@@ -174,3 +180,12 @@ def get_brand_context(brand: str) -> str:
         sections.append("Brand-related keywords from saved pages and blogs:\n" + "\n".join(f"- {item}" for item in related_keywords[:25]))
 
     return "\n\n".join(sections)
+
+
+def normalize_brand_color(color: str) -> str:
+    cleaned = (color or "").strip()
+    if not cleaned:
+        return ""
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", cleaned):
+        return cleaned.lower()
+    return ""

@@ -3,7 +3,7 @@ import json
 from flask import render_template, request
 
 from database import get_brand_context, get_setting, list_brand_names, record_blog, upsert_brand
-from generators.content_generator import generate_content
+from generators.content_generator import generate_content, suggest_content_tags
 from generators.meta_description_generator import generate_meta_descriptions
 from generators.title_generator import generate_titles
 from logger import logger
@@ -24,6 +24,8 @@ def index():
         "meta_descriptions": [],
         "meta_description": "",
         "content": "",
+        "tag_suggestions": [],
+        "change_request": "",
         "error": None,
         "step": "title",
         "include_money_site": False,
@@ -90,6 +92,7 @@ def _handle_generate_content(state: dict):
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
+    state["change_request"] = request.form.get("change_request", "").strip()
     state["include_money_site"] = request.form.get("include_money_site") == "1"
     titles_raw = request.form.get("titles_json", "").strip()
     selected_meta_description = request.form.get("meta_description_choice", "").strip()
@@ -131,6 +134,15 @@ def _handle_generate_content(state: dict):
             money_site_url=state["money_site_url"] if state["include_money_site"] else "",
             brand=state["brand"],
             brand_context=brand_context,
+            change_request=state["change_request"],
+        )
+        state["tag_suggestions"] = suggest_content_tags(
+            title=state["selected_title"],
+            keyword=state["keyword"],
+            supporting_keyword=state["supporting_keyword"],
+            brand=state["brand"],
+            content=state["content"],
+            minimum=10,
         )
         record_blog(
             brand=state["brand"],

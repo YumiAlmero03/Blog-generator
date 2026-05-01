@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% set active_page = "seo" %}
+
+{% block title %}Website SEO Checker{% endblock %}
+{% block eyebrow %}SEO Audit{% endblock %}
+{% block hero_title %}Website SEO Checker{% endblock %}
+{% block hero_text %}Check a page for missing alt text, meta title, meta description, content depth, headings, canonical tags, robots.txt, and sitemap availability. The score does not include Google Search Console or index status.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="post" class="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+      <div>
+        <label for="url" class="mb-2 block text-sm font-bold text-sand-900">Website URL <span class="text-red-600">*</span></label>
+        <input
+          id="url"
+          name="url"
+          type="text"
+          value="{{ url }}"
+          placeholder="https://example.com"
+          required
+          class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+        <label class="mt-3 flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800">
+          <input
+            type="checkbox"
+            name="ignore_ssl_errors"
+            value="1"
+            {% if ignore_ssl_errors %}checked{% endif %}
+            class="mt-1 h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500"
+          />
+          <span>Ignore SSL certificate errors for this check</span>
+        </label>
+      </div>
+      <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Run Check</button>
+    </form>
+
+    {% if error %}
+      <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+    {% endif %}
+  </section>
+
+  {% if result %}
+    <section class="mt-6 grid gap-5 lg:grid-cols-[260px_1fr]">
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">SEO Rating</p>
+        <div class="mt-4 flex items-end gap-3">
+          <span class="font-display text-7xl font-bold leading-none text-sand-950">{{ result.grade }}</span>
+          <span class="pb-2 text-2xl font-bold text-sand-700">{{ result.score }}/100</span>
+        </div>
+        <p class="mt-4 break-words text-sm leading-6 text-sand-700">{{ result.url }}</p>
+        <p class="mt-3 rounded-2xl bg-sand-100 px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">No GSC or index rating included</p>
+        {% if not result.stats.ssl_verified %}
+          <p class="mt-3 rounded-2xl bg-amber-100 px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">SSL verification ignored</p>
+        {% endif %}
+        {% if result.stats.ssl_warning %}
+          <p class="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">{{ result.stats.ssl_warning }}</p>
+        {% endif %}
+      </div>
+
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="font-display text-3xl font-bold text-sand-950">AI Notes</h2>
+          <span class="rounded-full bg-moss-100 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-moss-700">{{ result.ai_summary.source }}</span>
+        </div>
+        <p class="mt-3 text-base leading-7 text-sand-700">{{ result.ai_summary.summary }}</p>
+        <div class="mt-5 grid gap-3">
+          {% for action in result.ai_summary.priority_actions %}
+            <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sm font-bold leading-6 text-sand-800">{{ action }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <h2 class="mb-5 font-display text-3xl font-bold text-sand-950">Audit Checks</h2>
+      <div class="grid gap-3">
+        {% for check in result.checks %}
+          <article class="grid gap-3 rounded-2xl border border-sand-200 bg-white px-4 py-4 md:grid-cols-[160px_1fr]">
+            <div>
+              {% if check.status == "pass" %}
+                <span class="inline-flex rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Pass</span>
+              {% elif check.status == "warn" %}
+                <span class="inline-flex rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">Warning</span>
+              {% else %}
+                <span class="inline-flex rounded-full bg-red-100 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Fix</span>
+              {% endif %}
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-sand-950">{{ check.name }}</h3>
+              <p class="mt-1 text-sm leading-6 text-sand-700">{{ check.detail }}</p>
+              <p class="mt-2 text-sm font-bold leading-6 text-sand-800">{{ check.recommendation }}</p>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="mt-6 grid gap-5 lg:grid-cols-2">
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <h2 class="font-display text-3xl font-bold text-sand-950">Page Details</h2>
+        <dl class="mt-5 grid gap-3 text-sm">
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Title</dt><dd class="mt-1 break-words text-sand-700">{{ result.stats.title or "Missing" }} ({{ result.stats.title_length }} chars)</dd></div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Meta description</dt><dd class="mt-1 break-words text-sand-700">{{ result.stats.meta_description or "Missing" }} ({{ result.stats.meta_description_length }} chars)</dd></div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Content</dt><dd class="mt-1 text-sand-700">{{ result.stats.word_count }} words, {{ result.stats.h1_count }} H1, {{ result.stats.h2_count }} H2</dd></div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Images</dt><dd class="mt-1 text-sand-700">{{ result.stats.missing_alt_count }} missing alt text out of {{ result.stats.image_count }} images</dd></div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Canonical</dt><dd class="mt-1 break-words text-sand-700">{{ result.stats.canonical or "Missing" }}</dd></div>
+        </dl>
+      </div>
+
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <h2 class="font-display text-3xl font-bold text-sand-950">Sitemaps</h2>
+        <div class="mt-5 grid gap-3">
+          {% for sitemap in result.stats.sitemaps %}
+            <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
+              <div class="flex flex-wrap items-center gap-2">
+                {% if sitemap.found %}
+                  <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Found</span>
+                {% else %}
+                  <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">Not found</span>
+                {% endif %}
+                <span class="text-xs font-bold text-sand-600">HTTP {{ sitemap.status_code or "n/a" }}</span>
+              </div>
+              <p class="mt-2 break-words text-sm leading-6 text-sand-700">{{ sitemap.url }}</p>
+            </div>
+          {% else %}
+            <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No sitemap locations were discovered.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

@@ -17,6 +17,7 @@ def page_generator():
         "page_type": "",
         "expectations": "",
         "page_title": "",
+        "change_request": "",
         "meta_description": "",
         "page_content": "",
         "image_count": 0,
@@ -30,6 +31,7 @@ def page_generator():
         state["supporting_keywords"] = request.form.get("supporting_keywords", "").strip()
         state["page_type"] = request.form.get("page_type", "").strip()
         state["expectations"] = request.form.get("expectations", "").strip()
+        state["change_request"] = request.form.get("change_request", "").strip()
 
         if not state["keyword"]:
             state["error"] = "Please enter a keyword."
@@ -47,6 +49,7 @@ def page_generator():
                     page_type=state["page_type"],
                     expectations=state["expectations"],
                     brand_context=brand_context,
+                    change_request=state["change_request"],
                 )
                 state["page_title"] = result.get("title", "")
                 state["meta_description"] = result.get("meta_description", "")
@@ -78,6 +81,7 @@ def simple_page_generator():
         "expectations": "",
         "generated_title": "",
         "generated_content": "",
+        "change_request": "",
         "error": None,
         "brand_names": list_brand_names(),
     }
@@ -87,6 +91,7 @@ def simple_page_generator():
         state["page_title"] = request.form.get("page_title", "").strip()
         state["page_type"] = request.form.get("page_type", "").strip()
         state["expectations"] = request.form.get("expectations", "").strip()
+        state["change_request"] = request.form.get("change_request", "").strip()
 
         if not state["page_title"]:
             state["error"] = "Please enter the page title or page name."
@@ -103,6 +108,7 @@ def simple_page_generator():
                     brand=state["brand"],
                     expectations=state["expectations"],
                     brand_context=brand_context,
+                    change_request=state["change_request"],
                 )
                 state["generated_title"] = result.get("title", "")
                 state["generated_content"] = result.get("content", "")

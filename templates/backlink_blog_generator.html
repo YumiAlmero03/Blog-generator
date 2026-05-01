@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active_page = "backlink-blog" %}
 
-{% block title %}Backlink Blog Generator{% endblock %}
+{% block title %}Medium Blog Generator{% endblock %}
 
 {% block head_extras %}
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
@@ -16,9 +16,9 @@
   </div>
 {% endblock %}
 
-{% block eyebrow %}Backlink Workflow{% endblock %}
-{% block hero_title %}Backlink Blog Generator{% endblock %}
-{% block hero_text %}Generate backlink-friendly blog content using the same flow as the main blog generator, but choose the target website or account directly from your saved backlink list.{% endblock %}
+{% block eyebrow %}Medium Workflow{% endblock %}
+{% block hero_title %}Medium Blog Generator{% endblock %}
+{% block hero_text %}Generate brand-linked content that adapts to the selected publishing medium, from full guest posts to short social placements.{% endblock %}
 
 {% block content %}
   <div class="grid gap-6">
@@ -29,11 +29,11 @@
 
       <form method="post" id="titlesForm" data-loading-message="Generating titles..." class="grid gap-1">
         <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 1</span>
-        <h2 class="mb-4 font-display text-3xl text-sand-950">Generate Backlink Blog Titles</h2>
+        <h2 class="mb-4 font-display text-3xl text-sand-950">Generate Medium Blog Titles</h2>
 
-        <label for="selected_backlink_id" class="mb-2 block text-sm font-bold text-sand-900">Backlink Site / Medium</label>
+        <label for="selected_backlink_id" class="mb-2 block text-sm font-bold text-sand-900">Publishing Medium <span class="text-red-600">*</span></label>
         <select id="selected_backlink_id" name="selected_backlink_id" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
-          <option value="">Choose a saved backlink target</option>
+          <option value="">Choose a saved medium</option>
           {% for backlink in backlinks %}
             <option value="{{ backlink.id }}" {% if selected_backlink_id|string == backlink.id|string %}selected{% endif %}>
               {{ backlink.website_name }}{% if backlink.blog_name %} · {{ backlink.blog_name }}{% endif %} · {{ backlink.website_type.replace('_', ' ')|title }} · {{ backlink.tier_level }}
@@ -41,14 +41,9 @@
           {% endfor %}
         </select>
 
-        <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
+        <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand <span class="text-red-600">*</span></label>
         <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Enter your brand or business name" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
-
-        <label for="keyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword(s)</label>
-        <textarea id="keyword" name="keyword" rows="2" placeholder="Enter one or more keywords separated by commas" class="mb-4 min-h-[92px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ keyword }}</textarea>
-
-        <label for="supporting_keyword" class="mb-2 block text-sm font-bold text-sand-900">Supporting keyword</label>
-        <input id="supporting_keyword" name="supporting_keyword" type="text" value="{{ supporting_keyword }}" placeholder="Add a supporting keyword" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        <input type="hidden" name="keyword" value="{{ keyword }}" />
 
         <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Tone</label>
         <select id="tone" name="tone" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
@@ -71,18 +66,41 @@
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 2</span>
-              <h2 class="font-display text-3xl text-sand-950">Generate Backlink Article Content</h2>
-              <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose a title, then generate the article. Meta descriptions are generated automatically and the selected backlink target is used as context for the content.</p>
+              <h2 class="font-display text-3xl text-sand-950">Generate Medium Content</h2>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose a title, then generate content. The selected medium controls the title length, format, and content length.</p>
             </div>
           </div>
 
           {% if selected_backlink %}
+            <div class="medium-sticky-context sticky top-3 z-30 rounded-[22px] border border-sand-200 bg-white/95 p-4 shadow-soft backdrop-blur-md">
+              <div class="grid gap-3 md:grid-cols-2">
+                <div>
+                  <div class="text-xs font-extrabold uppercase tracking-[0.08em] text-sand-600">Publishing Medium</div>
+                  <div class="mt-1 text-sm font-bold text-sand-950">
+                    {{ selected_backlink.website_name }}{% if selected_backlink.blog_name %} · {{ selected_backlink.blog_name }}{% endif %}
+                  </div>
+                  <div class="mt-1 text-xs font-semibold text-sand-600">
+                    {{ selected_backlink.website_type.replace('_', ' ')|title }} · {{ selected_backlink.tier_level }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-xs font-extrabold uppercase tracking-[0.08em] text-sand-600">Brand</div>
+                  <div class="mt-1 text-sm font-bold text-sand-950">{{ brand }}</div>
+                  {% if brand_website_url %}
+                    <div class="mt-1 break-all text-xs font-semibold text-sand-600">{{ brand_website_url }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if selected_backlink %}
             <div class="rounded-[24px] border border-moss-200 bg-moss-100/60 p-5">
-              <h3 class="font-display text-2xl text-sand-950">Selected Backlink Target</h3>
+              <h3 class="font-display text-2xl text-sand-950">Selected Medium</h3>
               <div class="mt-3 grid gap-2 text-sm leading-6 text-sand-800">
-                <div><strong class="text-sand-900">Website:</strong> {{ selected_backlink.website_name }}</div>
+                <div><strong class="text-sand-900">Medium:</strong> {{ selected_backlink.website_name }}</div>
                 {% if selected_backlink.blog_name %}
-                  <div><strong class="text-sand-900">Blog:</strong> {{ selected_backlink.blog_name }}</div>
+                  <div><strong class="text-sand-900">Publication/account:</strong> {{ selected_backlink.blog_name }}</div>
                 {% endif %}
                 {% if selected_backlink.writer_name %}
                   <div><strong class="text-sand-900">Writer:</strong> {{ selected_backlink.writer_name }}</div>
@@ -91,10 +109,15 @@
                   <div><strong class="text-sand-900">Type:</strong> {{ selected_backlink.website_type.replace('_', ' ')|title }}</div>
                 {% endif %}
                 {% if selected_backlink.max_characters %}
-                  <div><strong class="text-sand-900">Max characters:</strong> {{ selected_backlink.max_characters }}</div>
+                  <div><strong class="text-sand-900">Content max:</strong> {{ selected_backlink.max_characters }}</div>
+                {% endif %}
+                {% if selected_backlink.title_max_characters %}
+                  <div><strong class="text-sand-900">Title max:</strong> {{ selected_backlink.title_max_characters }}</div>
                 {% endif %}
                 <div><strong class="text-sand-900">Tier:</strong> {{ selected_backlink.tier_level }}</div>
-                <div><strong class="text-sand-900">URL:</strong> {{ selected_backlink.blog_url }}</div>
+                {% if selected_backlink.content_guidelines %}
+                  <div><strong class="text-sand-900">Medium rules:</strong> {{ selected_backlink.content_guidelines }}</div>
+                {% endif %}
                 {% if brand_website_url %}
                   <div><strong class="text-sand-900">Required brand link:</strong> {{ brand_website_url }}</div>
                 {% endif %}
@@ -104,7 +127,7 @@
 
           <div class="grid gap-6">
             <div>
-              <h3 class="mb-4 font-display text-2xl text-sand-950">Select Title</h3>
+              <h3 class="mb-4 font-display text-2xl text-sand-950">Select Title <span class="text-red-600">*</span></h3>
               <ul class="grid gap-3">
                 {% for title in titles %}
                   <li>
@@ -142,7 +165,7 @@
 
           <div class="rounded-[24px] border border-sand-200 bg-sand-50/80 p-5">
             <h3 class="font-display text-2xl text-sand-950">Required Brand Link</h3>
-            <p class="mt-2 text-sm leading-6 text-sand-700">This generator uses exactly one required link: the selected brand website. Extra manual links are disabled here so the output stays focused on backlink-style content.</p>
+            <p class="mt-2 text-sm leading-6 text-sand-700">This generator uses exactly one URL in the output: the selected brand website. The medium URL is only used as placement context.</p>
             {% if brand_website_url %}
               <p class="mt-3 text-sm text-sand-700">Brand website URL: <code class="rounded bg-white px-2 py-1 text-xs text-sand-800">{{ brand_website_url }}</code></p>
             {% else %}
@@ -167,7 +190,30 @@
               </div>
               <div id="editorWordCount" class="text-sm font-medium text-sand-700">Word count: 0</div>
             </div>
+
+            {% if tag_suggestions %}
+              <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                  <h3 class="font-display text-2xl text-sand-950">Suggested Tags</h3>
+                  <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ tag_suggestions|length }} Tags</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  {% for tag in tag_suggestions %}
+                    <span class="rounded-full border border-sand-200 bg-sand-50 px-3 py-2 text-sm font-bold text-sand-800">{{ tag }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
           {% endif %}
+
+          <div class="flex justify-start pt-2">
+            {% if content %}
+              <div class="w-full max-w-3xl">
+                <label for="change_request" class="mb-2 block text-sm font-bold text-sand-900">Minor change suggestions</label>
+                <textarea id="change_request" name="change_request" placeholder="e.g. make it less promotional, add a softer brand mention, make the review more balanced" class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ change_request }}</textarea>
+              </div>
+            {% endif %}
+          </div>
 
           <div class="flex justify-start pt-2">
             <button type="button" id="generateContentButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Full Article</button>
@@ -177,7 +223,6 @@
           <input type="hidden" name="keyword" value="{{ keyword }}" />
           <input type="hidden" name="brand" value="{{ brand }}" />
           <input type="hidden" name="brand_website_url" value="{{ brand_website_url }}" />
-          <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
           <input type="hidden" name="tone" value="{{ tone }}" />
           <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
           <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
@@ -189,7 +234,8 @@
         <input type="hidden" id="previewSelectedTitle" name="selected_title" value="{{ selected_title }}" />
         <input type="hidden" name="keyword" value="{{ keyword }}" />
         <input type="hidden" name="brand" value="{{ brand }}" />
-        <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+        <input type="hidden" name="medium_name" value="{% if selected_backlink %}{{ selected_backlink.website_name }}{% endif %}" />
+        <input type="hidden" name="tags" value="{{ tag_suggestions|join(', ') }}" />
         <input type="hidden" id="previewMetaDescription" name="meta_description" value="{{ meta_description }}" />
         <input type="hidden" id="previewContentHtml" name="content_html" value="" />
       </form>
@@ -198,14 +244,15 @@
         <input type="hidden" id="downloadSelectedTitle" name="selected_title" value="{{ selected_title }}" />
         <input type="hidden" name="keyword" value="{{ keyword }}" />
         <input type="hidden" name="brand" value="{{ brand }}" />
-        <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+        <input type="hidden" name="medium_name" value="{% if selected_backlink %}{{ selected_backlink.website_name }}{% endif %}" />
+        <input type="hidden" name="tags" value="{{ tag_suggestions|join(', ') }}" />
         <input type="hidden" id="downloadMetaDescription" name="meta_description" value="{{ meta_description }}" />
         <input type="hidden" id="downloadContentHtml" name="content_html" value="" />
       </form>
     {% endif %}
 
     <div class="text-sm text-sand-700">
-      Manage backlink targets in <a href="/backlinks" class="font-bold text-sand-800 underline decoration-sand-300 underline-offset-2">Backlinks</a>, then come back here to generate content for a selected site or account.
+      Manage publishing mediums in <a href="/mediums" class="font-bold text-sand-800 underline decoration-sand-300 underline-offset-2">Mediums</a>, then come back here to generate content for a selected medium.
     </div>
   </div>
 

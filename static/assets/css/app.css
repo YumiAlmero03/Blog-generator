@@ -7,18 +7,22 @@ body {
   --text-xl: 1.5rem;
   --text-l: 1.25rem;
   --text-2xl: 2rem;
+  --h-weight:700;
 }
 
 @layer base {
   h1 {
     font-size: var(--text-2xl)!important;
+    font-weight: var(--h-weight)!important;
   }
 
   h2 {
     font-size: var(--text-xl)!important;
+    font-weight: var(--h-weight)!important;
   }
   h3 {
-    font-size: var(--text-xl)!important;
+    font-size: var(--text-l)!important;
+    font-weight: var(--h-weight)!important;
   }
 }
 .preview-page a{
@@ -54,6 +58,11 @@ img {
   height: 400px;
   margin-bottom: 16px;
   background: #fff;
+}
+
+.medium-sticky-context {
+  max-height: min(34vh, 220px);
+  overflow: auto;
 }
 
 .ql-toolbar.ql-snow {

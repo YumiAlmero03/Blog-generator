@@ -28,8 +28,30 @@
         <form method="post" enctype="multipart/form-data" class="grid gap-1">
           <input type="hidden" name="action" value="save_brand" />
 
-          <label for="brand_name" class="mb-2 block text-sm font-bold text-sand-900">Brand name</label>
+          <label for="brand_name" class="mb-2 block text-sm font-bold text-sand-900">Brand name <span class="text-red-600">*</span></label>
           <input id="brand_name" name="brand_name" type="text" value="{{ brand_name }}" placeholder="e.g. Phoenix Home Services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <label for="brand_color" class="mb-2 block text-sm font-bold text-sand-900">Brand color</label>
+          <div class="mb-4 flex items-center gap-3">
+            <input id="brand_color" name="brand_color" type="color" value="{{ brand_color }}" class="h-12 w-16 cursor-pointer rounded-2xl border border-sand-200 bg-white p-1" />
+            <span class="rounded-full bg-sand-100 px-3 py-2 text-sm font-bold text-sand-700">{{ brand_color }}</span>
+          </div>
+          <details class="mb-4 rounded-2xl bg-sand-100 px-4 py-3">
+            <summary class="cursor-pointer text-sm font-bold text-sand-800">Color presets</summary>
+            <div class="mt-3 flex flex-wrap gap-2">
+              {% for color in brand_color_palette %}
+                <button
+                  type="button"
+                  data-color-preset="{{ color.value }}"
+                  data-color-target="brand_color"
+                  class="inline-flex min-h-10 items-center gap-2 rounded-full border border-sand-200 bg-white px-3 py-2 text-xs font-bold text-sand-800 transition hover:border-sand-500"
+                >
+                  <span class="h-4 w-4 rounded-full" style="background-color: {{ color.value }};"></span>
+                  {{ color.name }}
+                </button>
+              {% endfor %}
+            </div>
+          </details>
 
           <label for="website" class="mb-2 block text-sm font-bold text-sand-900">Website</label>
           <input id="website" name="website" type="text" value="{{ website }}" placeholder="e.g. https://phoenixhomeservices.com" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
@@ -65,10 +87,10 @@
         <form method="post" class="grid gap-1">
           <input type="hidden" name="action" value="check_keyword" />
 
-          <label for="check_brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
+          <label for="check_brand" class="mb-2 block text-sm font-bold text-sand-900">Brand <span class="text-red-600">*</span></label>
           <input id="check_brand" name="check_brand" type="text" value="{{ check_brand }}" list="brandSuggestions" placeholder="Select or type a saved brand" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
-          <label for="check_keyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword to check</label>
+          <label for="check_keyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword to check <span class="text-red-600">*</span></label>
           <input id="check_keyword" name="check_keyword" type="text" value="{{ check_keyword }}" placeholder="e.g. emergency plumber phoenix" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
           <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Check Keyword</button>
@@ -110,14 +132,40 @@
       {% if brands %}
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {% for brand in brands %}
-            <article class="rounded-[22px] border border-sand-200 bg-white/80 p-5">
+            {% set brand_color_input_id = "brand_color_" ~ loop.index %}
+            <article class="rounded-[22px] border border-sand-200 bg-white/80 p-5 shadow-sm" style="border-top: 8px solid {{ brand.brand_color }};">
               {% if brand.logo_path %}
                 <div class="mb-4 flex flex-wrap items-center gap-3">
                   <img src="{{ brand.logo_url }}" alt="{{ brand.name }} logo" class="h-28 w-28 rounded-[18px] border border-sand-200 bg-white p-2 object-contain" />
                   <a href="{{ brand.logo_url }}" download class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black">Download Logo</a>
                 </div>
               {% endif %}
-              <h3 class="font-display text-2xl text-sand-950">{{ brand.name }}</h3>
+              <div class="flex items-start justify-between gap-3">
+                <h3 class="font-display text-2xl text-sand-950">{{ brand.name }}</h3>
+                <span class="mt-1 h-6 w-6 shrink-0 rounded-full border-2 border-white shadow ring-1 ring-sand-200" style="background-color: {{ brand.brand_color }};" aria-label="Brand color"></span>
+              </div>
+              <form method="post" class="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-sand-100 px-3 py-3">
+                <input type="hidden" name="action" value="save_brand_color" />
+                <input type="hidden" name="brand_name" value="{{ brand.name }}" />
+                <input id="{{ brand_color_input_id }}" name="brand_color" type="color" value="{{ brand.brand_color }}" class="h-10 w-12 cursor-pointer rounded-xl border border-sand-200 bg-white p-1" aria-label="Color for {{ brand.name }}" />
+                <span class="rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white" style="background-color: {{ brand.brand_color }};">{{ brand.brand_color }}</span>
+                <button type="submit" class="inline-flex min-h-10 items-center rounded-full bg-sand-600 px-3 py-2 text-xs font-bold text-sand-50 transition hover:bg-sand-700">Save Color</button>
+                <details class="basis-full rounded-xl bg-white/70 px-3 py-2">
+                  <summary class="cursor-pointer text-xs font-bold uppercase tracking-[0.12em] text-sand-700">Presets</summary>
+                  <div class="mt-2 flex flex-wrap gap-1.5">
+                    {% for color in brand_color_palette %}
+                      <button
+                        type="button"
+                        title="{{ color.name }}"
+                        data-color-preset="{{ color.value }}"
+                        data-color-target="{{ brand_color_input_id }}"
+                        class="h-8 w-8 rounded-full border-2 border-white shadow ring-1 ring-sand-200 transition hover:scale-105"
+                        style="background-color: {{ color.value }};"
+                      ></button>
+                    {% endfor %}
+                  </div>
+                </details>
+              </form>
               {% if brand.website %}
                 <div class="mt-3 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Website:</strong> {{ brand.website }}</div>
               {% endif %}
@@ -155,4 +203,17 @@
       <option value="{{ item.name }}"></option>
     {% endfor %}
   </datalist>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    document.querySelectorAll("[data-color-preset]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = document.getElementById(button.dataset.colorTarget);
+        if (target) {
+          target.value = button.dataset.colorPreset;
+        }
+      });
+    });
+  </script>
 {% endblock %}

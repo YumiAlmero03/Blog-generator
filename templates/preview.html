@@ -14,7 +14,13 @@
       <div class="rounded-[22px] border border-sand-200 bg-white/80 p-5 text-sm leading-6 text-sand-700">
         <div><strong class="text-sand-900">Keyword:</strong> {{ keyword }}</div>
         <div class="mt-2"><strong class="text-sand-900">Supporting keyword:</strong> {{ supporting_keyword }}</div>
+        {% if medium_name %}
+          <div class="mt-2"><strong class="text-sand-900">Medium:</strong> {{ medium_name }}</div>
+        {% endif %}
         <div class="mt-2"><strong class="text-sand-900">Meta description:</strong> {{ meta_description }}</div>
+        {% if tags %}
+          <div class="mt-2"><strong class="text-sand-900">Tags:</strong> {{ tags }}</div>
+        {% endif %}
       </div>
 
       <article class="rounded-[22px] border border-sand-200 bg-white px-6 py-6 text-sand-900">

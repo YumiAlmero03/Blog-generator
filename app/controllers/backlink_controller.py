@@ -8,9 +8,11 @@ from app.controllers.helpers import base_template_context
 TIER_OPTIONS = ("Tier 1", "Tier 2", "Tier 3")
 WEBSITE_TYPE_OPTIONS = (
     ("blog", "Blog"),
+    ("google_sites", "Google Sites"),
     ("review", "Review Site"),
     ("forum", "Forum"),
     ("social_media", "Social Media"),
+    ("twitter", "Twitter / X"),
     ("directory", "Directory"),
     ("news", "News Site"),
     ("community", "Community Site"),
@@ -25,9 +27,11 @@ def backlinks():
         "blog_name": "",
         "writer_name": "",
         "website_type": "blog",
+        "title_max_characters": 0,
         "max_characters": 0,
         "blog_url": "",
         "tier_level": "Tier 1",
+        "content_guidelines": "",
         "notes": "",
         "success": None,
         "error": None,
@@ -60,9 +64,11 @@ def _populate_for_edit(state: dict, backlink_id: int):
     state["blog_name"] = backlink.get("blog_name", "") or backlink.get("account_name", "")
     state["writer_name"] = backlink.get("writer_name", "")
     state["website_type"] = backlink.get("website_type", "blog") or "blog"
+    state["title_max_characters"] = backlink.get("title_max_characters", 0) or 0
     state["max_characters"] = backlink.get("max_characters", 0) or 0
     state["blog_url"] = backlink.get("blog_url", "")
     state["tier_level"] = backlink.get("tier_level", "Tier 1")
+    state["content_guidelines"] = backlink.get("content_guidelines", "")
     state["notes"] = backlink.get("notes", "")
 
 
@@ -72,17 +78,15 @@ def _handle_save_backlink(state: dict):
     state["blog_name"] = request.form.get("blog_name", "").strip()
     state["writer_name"] = request.form.get("writer_name", "").strip()
     state["website_type"] = request.form.get("website_type", "blog").strip() or "blog"
+    state["title_max_characters"] = request.form.get("title_max_characters", "0").strip()
     state["max_characters"] = request.form.get("max_characters", "0").strip()
     state["blog_url"] = request.form.get("blog_url", "").strip()
     state["tier_level"] = request.form.get("tier_level", "Tier 1").strip() or "Tier 1"
+    state["content_guidelines"] = request.form.get("content_guidelines", "").strip()
     state["notes"] = request.form.get("notes", "").strip()
 
     if not state["website_name"]:
-        state["error"] = "Please enter the website or blog name."
-        return
-
-    if not state["blog_url"]:
-        state["error"] = "Please enter the blog URL."
+        state["error"] = "Please enter the medium name."
         return
 
     if state["tier_level"] not in TIER_OPTIONS:
@@ -90,6 +94,10 @@ def _handle_save_backlink(state: dict):
     valid_website_types = {value for value, _label in WEBSITE_TYPE_OPTIONS}
     if state["website_type"] not in valid_website_types:
         state["website_type"] = "blog"
+    try:
+        state["title_max_characters"] = max(0, int(state["title_max_characters"] or 0))
+    except ValueError:
+        state["title_max_characters"] = 0
     try:
         state["max_characters"] = max(0, int(state["max_characters"] or 0))
     except ValueError:
@@ -101,9 +109,11 @@ def _handle_save_backlink(state: dict):
         blog_name=state["blog_name"],
         writer_name=state["writer_name"],
         website_type=state["website_type"],
+        title_max_characters=state["title_max_characters"],
         max_characters=state["max_characters"],
         blog_url=state["blog_url"],
         tier_level=state["tier_level"],
+        content_guidelines=state["content_guidelines"],
         notes=state["notes"],
         backlink_id=backlink_id,
     )
@@ -115,10 +125,12 @@ def _handle_save_backlink(state: dict):
             "blog_name": "",
             "writer_name": "",
             "website_type": "blog",
+            "title_max_characters": 0,
             "max_characters": 0,
             "blog_url": "",
             "tier_level": "Tier 1",
+            "content_guidelines": "",
             "notes": "",
-            "success": "Backlink site saved.",
+            "success": "Medium saved.",
         }
     )

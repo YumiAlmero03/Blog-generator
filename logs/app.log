@@ -413,3 +413,2364 @@ Traceback (most recent call last):
         (keyword_value, normalized),
     )
 sqlite3.OperationalError: database is locked
+2026-04-29 12:10:13,139 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 141, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 493, in open
+    response = meth(req, response)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 602, in http_response
+    response = self.parent.error(
+        'http', request, response, code, msg, hdrs)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 525, in error
+    result = self._call_chain(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 718, in http_error_302
+    return self.parent.open(new, timeout=req.timeout)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 100, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 155, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 12:10:33,601 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 141, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 100, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 155, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 12:12:13,027 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 141, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 100, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 155, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 12:12:16,763 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 141, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 100, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 155, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 12:13:04,611 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 12:13:05,883 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 12:13:06,846 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 14:05:15,347 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 14:05:24,062 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 14:06:23,122 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 14:06:24,182 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 14:06:24,492 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 14:06:25,344 ERROR blog_generator tool_controller.py:25 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sock=sock,
+        ^^^^^^^^^^
+    ...<5 lines>...
+        session=session
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1076, in _create
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/ssl.py", line 1372, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 145, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=SSL_CONTEXT) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 23, in seo_checker
+    state["result"] = run_seo_audit(state["url"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 104, in run_seo_audit
+    page = fetch_url(url)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 159, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1081)
+2026-04-29 15:10:37,233 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 148, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 105, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 169, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+2026-04-29 15:10:41,263 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 148, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 105, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 169, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+2026-04-29 15:10:43,673 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 148, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 105, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 169, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+2026-04-29 15:25:16,774 WARNING blog_generator content_generator.py:59 _generate_content_from_prompt() - Content word count is 561 (minimum: 800) on attempt 1/3. Raw response length: 4208 chars
+2026-04-29 15:38:49,254 WARNING blog_generator content_generator.py:50 _generate_content_from_prompt() - Content used banned terms instant on attempt 1/3
+2026-04-29 15:40:07,258 INFO blog_generator content_generator.py:69 _generate_content_from_prompt() - Content generated successfully with 807 words on attempt 2/3
+2026-04-29 15:40:12,467 ERROR blog_generator backlink_blog_controller.py:197 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 189, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-29 16:35:17,175 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 151, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 107, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 179, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+2026-04-29 16:35:18,303 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 151, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 107, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 179, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+2026-04-29 16:35:25,495 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 151, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 107, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 179, in fetch_url
+    raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+ValueError: Could not reach that website: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+2026-04-30 10:11:28,813 WARNING blog_generator content_generator.py:59 _generate_content_from_prompt() - Content word count is 217 (minimum: 800) on attempt 1/3. Raw response length: 1895 chars
+2026-04-30 10:12:21,668 WARNING blog_generator content_generator.py:59 _generate_content_from_prompt() - Content word count is 503 (minimum: 800) on attempt 2/3. Raw response length: 3847 chars
+2026-04-30 10:13:34,508 WARNING blog_generator content_generator.py:59 _generate_content_from_prompt() - Content word count is 377 (minimum: 800) on attempt 3/3. Raw response length: 3144 chars
+2026-04-30 10:13:34,509 ERROR blog_generator backlink_blog_controller.py:202 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 182, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 186, in generate_backlink_content
+    content = _generate_content_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 83, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 377 words.
+2026-04-30 10:29:16,253 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 151, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 107, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 182, in fetch_url
+    raise ValueError(_ssl_error_message(exc)) from exc
+ValueError: The website is serving a Cloudflare Origin Certificate directly. That certificate is meant for Cloudflare-to-origin traffic, not public browser/Python clients. In Cloudflare, make sure the DNS record is proxied, or install a public certificate such as Let's Encrypt on the origin server.
+2026-04-30 10:29:37,430 INFO blog_generator content_generator.py:77 _generate_content_from_prompt() - Content generated successfully with 256 words on attempt 1/3
+2026-04-30 10:29:37,795 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 151, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 493, in open
+    response = meth(req, response)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 602, in http_response
+    response = self.parent.error(
+        'http', request, response, code, msg, hdrs)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 525, in error
+    result = self._call_chain(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 718, in http_error_302
+    return self.parent.open(new, timeout=req.timeout)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 107, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 182, in fetch_url
+    raise ValueError(_ssl_error_message(exc)) from exc
+ValueError: The website is serving a Cloudflare Origin Certificate directly. That certificate is meant for Cloudflare-to-origin traffic, not public browser/Python clients. In Cloudflare, make sure the DNS record is proxied, or install a public certificate such as Let's Encrypt on the origin server.
+2026-04-30 10:29:39,263 ERROR blog_generator tool_controller.py:27 seo_checker() - seo_checker action failed
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1321, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              encode_chunked=req.has_header('Transfer-encoding'))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1358, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1404, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1353, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1113, in _send_output
+    self.send(msg)
+    ~~~~~~~~~^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1057, in send
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py", line 1499, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+                                          server_hostname=server_hostname)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 130, in wrap_socket
+    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_api.py", line 339, in _verify_peercerts
+    _verify_peercerts_impl(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 459, in _verify_peercerts_impl
+    _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/venv/lib/python3.14/site-packages/pip/_vendor/truststore/_macos.py", line 568, in _verify_peercerts_impl_macos_10_14
+    raise err
+ssl.SSLCertVerificationError: ('“CloudFlare Origin Certificate” certificate is not standards compliant',)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 151, in fetch_url
+    with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
+         ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 493, in open
+    response = meth(req, response)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 602, in http_response
+    response = self.parent.error(
+        'http', request, response, code, msg, hdrs)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 525, in error
+    result = self._call_chain(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 718, in http_error_302
+    return self.parent.open(new, timeout=req.timeout)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 487, in open
+    response = self._open(req, data)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 504, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1369, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        context=self._context)
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 1324, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error ('“CloudFlare Origin Certificate” certificate is not standards compliant',)>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/tool_controller.py", line 25, in seo_checker
+    state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 107, in run_seo_audit
+    page = fetch_url(url, verify_ssl=verify_ssl)
+  File "/Users/lanie/Sites/Backend/Blog generator/app/services/seo_checker_service.py", line 182, in fetch_url
+    raise ValueError(_ssl_error_message(exc)) from exc
+ValueError: The website is serving a Cloudflare Origin Certificate directly. That certificate is meant for Cloudflare-to-origin traffic, not public browser/Python clients. In Cloudflare, make sure the DNS record is proxied, or install a public certificate such as Let's Encrypt on the origin server.
+2026-04-30 10:29:42,646 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 11:42:21,238 INFO blog_generator content_generator.py:77 _generate_content_from_prompt() - Content generated successfully with 314 words on attempt 1/3
+2026-04-30 11:42:26,472 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 11:46:45,355 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 596 (minimum: 800) on attempt 1/3. Raw response length: 4335 chars
+2026-04-30 11:47:57,058 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 687 (minimum: 800) on attempt 2/3. Raw response length: 5013 chars
+2026-04-30 11:49:31,339 INFO blog_generator content_generator.py:77 _generate_content_from_prompt() - Content generated successfully with 806 words on attempt 3/3
+2026-04-30 11:49:36,551 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 11:52:57,983 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 665 (minimum: 800) on attempt 1/3. Raw response length: 5043 chars
+2026-04-30 11:54:30,565 INFO blog_generator content_generator.py:77 _generate_content_from_prompt() - Content generated successfully with 857 words on attempt 2/3
+2026-04-30 11:54:35,769 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 11:58:15,317 INFO blog_generator content_generator.py:77 _generate_content_from_prompt() - Content generated successfully with 233 words on attempt 1/3
+2026-04-30 11:58:20,536 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 12:06:03,244 INFO blog_generator content_generator.py:77 _generate_content_from_prompt() - Content generated successfully with 238 words on attempt 1/3
+2026-04-30 12:06:08,472 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 14:17:59,834 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 464 (minimum: 800) on attempt 1/3. Raw response length: 3399 chars
+2026-04-30 14:19:24,717 WARNING blog_generator content_generator.py:58 _generate_content_from_prompt() - Content used banned terms instant on attempt 2/3
+2026-04-30 14:22:58,890 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 672 (minimum: 800) on attempt 3/3. Raw response length: 5173 chars
+2026-04-30 14:23:04,159 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 14:24:36,677 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 375 (minimum: 800) on attempt 1/3. Raw response length: 2693 chars
+2026-04-30 14:27:40,187 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 588 (minimum: 800) on attempt 2/3. Raw response length: 4338 chars
+2026-04-30 14:28:47,044 INFO blog_generator content_generator.py:77 _generate_content_from_prompt() - Content generated successfully with 848 words on attempt 1/3
+2026-04-30 14:28:52,306 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 14:29:55,464 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 552 (minimum: 800) on attempt 3/3. Raw response length: 4165 chars
+2026-04-30 14:30:00,736 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 14:46:00,317 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 624 (minimum: 800) on attempt 1/3. Raw response length: 4189 chars
+2026-04-30 14:47:16,023 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 588 (minimum: 800) on attempt 2/3. Raw response length: 4134 chars
+2026-04-30 14:49:05,255 WARNING blog_generator content_generator.py:58 _generate_content_from_prompt() - Content used banned terms instant, glitch on attempt 3/3
+2026-04-30 14:49:10,521 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 14:50:51,639 WARNING blog_generator meta_description_generator.py:32 _generate_meta_descriptions_from_prompt() - Generated meta descriptions used banned terms instant on attempt 1/3
+2026-04-30 14:51:15,643 WARNING blog_generator meta_description_generator.py:32 _generate_meta_descriptions_from_prompt() - Generated meta descriptions used banned terms instant on attempt 2/3
+2026-04-30 14:53:33,553 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 672 (minimum: 800) on attempt 1/3. Raw response length: 4692 chars
+2026-04-30 14:55:28,740 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 752 (minimum: 800) on attempt 2/3. Raw response length: 5279 chars
+2026-04-30 14:56:50,850 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 653 (minimum: 800) on attempt 3/3. Raw response length: 4659 chars
+2026-04-30 14:56:56,132 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 15:05:32,782 WARNING blog_generator content_generator.py:58 _generate_content_from_prompt() - Content used banned terms instant, glitch on attempt 1/3
+2026-04-30 15:06:53,284 WARNING blog_generator content_generator.py:58 _generate_content_from_prompt() - Content used banned terms glitch on attempt 2/3
+2026-04-30 15:08:17,024 WARNING blog_generator content_generator.py:58 _generate_content_from_prompt() - Content used banned terms instant on attempt 3/3
+2026-04-30 15:08:22,301 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 15:22:59,594 WARNING blog_generator content_generator.py:67 _generate_content_from_prompt() - Content word count is 416 (minimum: 800) on attempt 1/3. Raw response length: 2886 chars
+2026-04-30 15:24:45,249 INFO blog_generator content_generator.py:77 _generate_content_from_prompt() - Content generated successfully with 1013 words on attempt 2/3
+2026-04-30 15:24:50,522 ERROR blog_generator backlink_blog_controller.py:206 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 198, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 16:39:49,553 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 617 (minimum: 800) on attempt 1/3. Raw response length: 4693 chars
+2026-04-30 16:42:54,372 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 963 words on attempt 2/3
+2026-04-30 16:42:59,582 ERROR blog_generator backlink_blog_controller.py:215 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 207, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 16:44:40,327 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 578 (minimum: 800) on attempt 1/3. Raw response length: 4266 chars
+2026-04-30 16:46:34,804 WARNING blog_generator content_generator.py:156 _generate_content_from_prompt() - Content used banned terms glitch on attempt 2/3
+2026-04-30 16:47:43,612 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 761 (minimum: 800) on attempt 3/3. Raw response length: 5618 chars
+2026-04-30 16:47:43,613 ERROR blog_generator backlink_blog_controller.py:215 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 187, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 330, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<2 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 201, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 761 words.
+2026-04-30 16:52:38,956 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 662 (minimum: 800) on attempt 1/3. Raw response length: 5149 chars
+2026-04-30 16:56:23,615 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 518 (minimum: 800) on attempt 1/3. Raw response length: 3831 chars
+2026-04-30 16:57:18,459 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 643 (minimum: 800) on attempt 2/3. Raw response length: 4953 chars
+2026-04-30 16:58:03,413 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 356 (minimum: 800) on attempt 1/3. Raw response length: 2792 chars
+2026-04-30 17:00:40,062 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 579 (minimum: 800) on attempt 2/3. Raw response length: 4348 chars
+2026-04-30 17:01:33,508 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 579 (minimum: 800) on attempt 3/3. Raw response length: 4705 chars
+2026-04-30 17:01:33,510 ERROR blog_generator backlink_blog_controller.py:215 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 187, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 330, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<2 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 201, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 579 words.
+2026-04-30 17:02:27,399 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 668 (minimum: 800) on attempt 2/3. Raw response length: 4787 chars
+2026-04-30 17:04:37,603 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 891 words on attempt 3/3
+2026-04-30 17:04:42,832 ERROR blog_generator backlink_blog_controller.py:215 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 207, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 17:06:06,100 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 634 (minimum: 800) on attempt 3/3. Raw response length: 4633 chars
+2026-04-30 17:06:06,101 ERROR blog_generator backlink_blog_controller.py:215 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 187, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 330, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<2 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 201, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 634 words.
+2026-04-30 17:07:40,996 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 721 (minimum: 800) on attempt 1/3. Raw response length: 5766 chars
+2026-04-30 17:09:11,745 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 913 words on attempt 2/3
+2026-04-30 17:09:16,985 ERROR blog_generator backlink_blog_controller.py:215 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 207, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 17:11:49,931 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 1004 words on attempt 1/3
+2026-04-30 17:11:55,126 ERROR blog_generator backlink_blog_controller.py:215 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 207, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword=state["supporting_keyword"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-04-30 17:41:22,606 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 496 (minimum: 800) on attempt 1/3. Raw response length: 3765 chars
+2026-04-30 17:44:56,773 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 989 words on attempt 2/3
+2026-04-30 17:45:53,290 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 615 (minimum: 800) on attempt 1/3. Raw response length: 4599 chars
+2026-04-30 17:47:40,092 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 688 (minimum: 800) on attempt 2/3. Raw response length: 4975 chars
+2026-04-30 17:49:06,774 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 839 words on attempt 3/3
+2026-04-30 17:54:18,885 WARNING blog_generator content_generator.py:156 _generate_content_from_prompt() - Content used banned terms guaranteed on attempt 1/3
+2026-04-30 17:56:52,368 WARNING blog_generator content_generator.py:156 _generate_content_from_prompt() - Content used banned terms guaranteed on attempt 2/3
+2026-04-30 17:59:32,971 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 717 (minimum: 800) on attempt 3/3. Raw response length: 4922 chars
+2026-04-30 17:59:32,972 ERROR blog_generator blog_controller.py:155 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 127, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        change_request=state["change_request"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 230, in generate_content
+    return _generate_content_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 201, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 717 words.
+2026-04-30 18:01:34,655 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 562 (minimum: 800) on attempt 1/3. Raw response length: 4172 chars
+2026-05-01 00:28:06,060 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 1137 words on attempt 1/3
+2026-05-01 03:53:56,054 INFO blog_generator content_generator.py:187 _generate_content_from_prompt() - Content generated successfully with 903 words on attempt 2/3
+2026-05-01 06:55:55,192 WARNING blog_generator content_generator.py:165 _generate_content_from_prompt() - Content word count is 707 (minimum: 800) on attempt 1/3. Raw response length: 5055 chars
+2026-05-01 08:58:08,968 WARNING blog_generator content_generator.py:156 _generate_content_from_prompt() - Content used banned terms guaranteed on attempt 2/3
+2026-05-01 09:02:35,536 WARNING blog_generator content_generator.py:156 _generate_content_from_prompt() - Content used banned terms guaranteed, illegal on attempt 3/3
+2026-05-01 09:02:35,536 ERROR blog_generator blog_controller.py:155 _handle_generate_content() - generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/blog_controller.py", line 127, in _handle_generate_content
+    state["content"] = generate_content(
+                       ~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        change_request=state["change_request"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 230, in generate_content
+    return _generate_content_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 201, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 3 attempts. Last attempt was 959 words.

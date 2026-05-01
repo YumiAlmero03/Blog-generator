@@ -34,10 +34,10 @@
           <span class="text-sm font-semibold text-sand-900">Add watermark</span>
         </label>
 
-        <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
+        <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand <span class="text-red-600">*</span></label>
         <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Optional unless watermark is enabled" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
-        <label for="image_file" class="mb-2 block text-sm font-bold text-sand-900">Image upload</label>
+        <label for="image_file" class="mb-2 block text-sm font-bold text-sand-900">Image upload <span class="text-red-600">*</span></label>
         <input id="image_file" name="image_file" type="file" accept=".png,.jpg,.jpeg,.webp" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none" />
         {% if source_image_name %}
           <p class="mb-4 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Reusing last uploaded image: <strong>{{ source_image_name }}</strong>. Choose a new file anytime to replace it.</p>

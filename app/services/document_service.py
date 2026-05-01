@@ -125,7 +125,15 @@ def html_to_docx_paragraph(doc, html_content):
     parser.close()
 
 
-def build_docx_response(title: str, keyword: str, supporting_keyword: str, meta_description: str, content_html: str):
+def build_docx_response(
+    title: str,
+    keyword: str,
+    supporting_keyword: str,
+    meta_description: str,
+    content_html: str,
+    medium_name: str = "",
+    tags: str = "",
+):
     doc = Document()
 
     title_para = doc.add_paragraph(title, style="Heading 1")
@@ -140,9 +148,19 @@ def build_docx_response(title: str, keyword: str, supporting_keyword: str, meta_
         supporting_paragraph.add_run("Supporting Keyword: ").bold = True
         supporting_paragraph.add_run(supporting_keyword)
 
+    if medium_name:
+        medium_paragraph = doc.add_paragraph()
+        medium_paragraph.add_run("Medium: ").bold = True
+        medium_paragraph.add_run(medium_name)
+
     meta_paragraph = doc.add_paragraph()
     meta_paragraph.add_run("Meta Description: ").bold = True
     meta_paragraph.add_run(meta_description)
+
+    if tags:
+        tags_paragraph = doc.add_paragraph()
+        tags_paragraph.add_run("Tags: ").bold = True
+        tags_paragraph.add_run(tags)
 
     doc.add_paragraph()
     html_to_docx_paragraph(doc, content_html)

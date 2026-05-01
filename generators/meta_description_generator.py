@@ -93,10 +93,12 @@ def generate_backlink_meta_descriptions(
     backlink_website_name: str = "",
     backlink_blog_url: str = "",
     backlink_website_type: str = "",
+    backlink_title_max_characters: int | str = 0,
     backlink_max_characters: int | str = 0,
     backlink_tier_level: str = "",
     backlink_blog_name: str = "",
     backlink_writer_name: str = "",
+    backlink_content_guidelines: str = "",
 ):
     prompt = build_backlink_meta_description_prompt(
         title=title,
@@ -107,9 +109,11 @@ def generate_backlink_meta_descriptions(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
         backlink_website_type=backlink_website_type,
+        backlink_title_max_characters=backlink_title_max_characters,
         backlink_max_characters=backlink_max_characters,
         backlink_tier_level=backlink_tier_level,
         backlink_blog_name=backlink_blog_name,
         backlink_writer_name=backlink_writer_name,
+        backlink_content_guidelines=backlink_content_guidelines,
     )
     return _generate_meta_descriptions_from_prompt(provider, prompt)
