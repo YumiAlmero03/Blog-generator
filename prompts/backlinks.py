@@ -187,6 +187,7 @@ def build_backlink_content_prompt(
     backlink_blog_name: str = "",
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
+    suggested_content: str = "",
     change_request: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
@@ -204,6 +205,15 @@ def build_backlink_content_prompt(
         backlink_content_guidelines=backlink_content_guidelines,
     )
     banned_words_section = build_banned_words_prompt_section()
+    suggested_content_section = ""
+    cleaned_suggested_content = (suggested_content or "").strip()
+    if cleaned_suggested_content:
+        suggested_content_section = f"""
+Suggested content, angles, facts, or talking points from the user:
+{cleaned_suggested_content}
+
+Use these suggestions as helpful source direction when they fit the title, medium, brand context, and rules. Keep the final writing original, natural, and not copied verbatim unless the user clearly supplied exact wording to preserve.
+"""
     change_request_section = ""
     cleaned_change_request = (change_request or "").strip()
     if cleaned_change_request:
@@ -240,7 +250,9 @@ Apply this request while keeping the medium content natural, complete, and align
     if post_type == "markdown":
         format_rules = f"""
 - Write the content value in Markdown, not HTML.
-- Use Markdown headings like ## and ###, Markdown lists, and short paragraphs.
+- Use Markdown headings like ## and ###, Markdown lists, and compact paragraphs.
+- Do not put every sentence on its own line. Keep related sentences together in the same paragraph.
+- Use only one blank line between Markdown blocks.
 - Use this Markdown link format once in the first paragraph when a brand URL is provided: [anchor text](REQUIRED_URL).
 - Do not use HTML tags in the content value.
 """
@@ -249,6 +261,7 @@ Apply this request while keeping the medium content natural, complete, and align
         format_rules = f"""
 - Write the content value as WordPress Gutenberg block HTML.
 - Wrap paragraphs and headings with Gutenberg comments, such as <!-- wp:paragraph --><p>...</p><!-- /wp:paragraph --> and <!-- wp:heading --><h2>...</h2><!-- /wp:heading -->.
+- Use normal paragraph blocks with 2-4 sentences each. Do not create many tiny paragraph blocks.
 - Use this HTML link format once inside the first Gutenberg paragraph block when a brand URL is provided: <a href='REQUIRED_URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
 """
         return_example = '"content": "<!-- wp:paragraph --><p>Intro with <a href=\'https://example.com\'>anchor text</a>.</p><!-- /wp:paragraph -->"'
@@ -257,6 +270,8 @@ Apply this request while keeping the medium content natural, complete, and align
 - Write the content value as plain text only.
 - Do not use HTML tags or Markdown syntax.
 - Use clear section labels on their own lines when needed.
+- Keep related sentences together in compact paragraphs. Do not put every sentence on its own line.
+- Use only one blank line between sections.
 - Include the brand URL exactly once in the first paragraph as plain text when a brand URL is provided.
 """
         return_example = '"content": "Intro paragraph with https://example.com included once.\\n\\nSection heading\\nBody text..."'
@@ -264,8 +279,10 @@ Apply this request while keeping the medium content natural, complete, and align
         format_rules = f"""
 - Write the content value in HTML.
 - Use <h2> for main sections and <h3> for subsections.
-- Use <p> for paragraphs.
+- Use <p> for compact paragraphs with 2-4 related sentences each.
 - Use <ul><li> for bullet lists where helpful.
+- Do not create a separate <p> tag for every sentence.
+- Do not add unnecessary newline characters between HTML tags.
 - Use this HTML link format once inside the first paragraph when a brand URL is provided: <a href='REQUIRED_URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
 """
         return_example = '"content": "<p>Intro with <a href=\'https://example.com\'>anchor text</a>.</p><h2>Heading</h2><p>Body text...</p>"'
@@ -303,6 +320,7 @@ Brand: {brand}
 {banned_words_section}
 
 {money_site_section}
+{suggested_content_section}
 {change_request_section}
 
 Rules:
@@ -326,7 +344,9 @@ Rules:
 - Do not wrap keywords in <b> or <strong> tags.
 - Use a natural, human, conversational tone.
 - Write in active voice with short, clear sentences.
-- Write for readability using short paragraphs.
+- Write for readability using compact paragraphs, not many tiny one-line paragraphs.
+- Avoid excessive line breaks. Do not place each sentence on a separate line.
+- Keep sections tidy: one heading followed by 1-3 meaningful paragraphs, not a long stack of single-sentence lines.
 - Add detailed explanations, useful examples, and practical context in each section to support the word count naturally.
 - Structure the article in this order: introduction, 3–4 main sections with subheadings, then exactly one ending section that best fits the page intent.
 {format_rules}

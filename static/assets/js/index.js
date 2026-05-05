@@ -10,6 +10,7 @@
   const previewMetaDescription = document.getElementById("previewMetaDescription");
   const downloadSelectedTitle = document.getElementById("downloadSelectedTitle");
   const downloadMetaDescription = document.getElementById("downloadMetaDescription");
+  const customTitleInput = document.getElementById("customTitleInput");
   const editorContainer = document.getElementById("contentEditor");
   const editorWordCount = document.getElementById("editorWordCount");
   const existingLinksElement = document.getElementById("existingLinksData");
@@ -22,6 +23,9 @@
   let linkFieldCounter = 0;
 
   function getSelectedTitle() {
+    if (customTitleInput && customTitleInput.value.trim()) {
+      return { value: customTitleInput.value.trim() };
+    }
     return document.querySelector('input[name="selected_title"]:checked');
   }
 

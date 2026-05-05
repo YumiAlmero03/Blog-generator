@@ -20,10 +20,12 @@ def backlink_blog_generator():
         "count": 10,
         "titles": [],
         "selected_title": "",
+        "custom_title": "",
         "meta_descriptions": [],
         "meta_description": "",
         "content": "",
         "tag_suggestions": [],
+        "suggested_content": "",
         "change_request": "",
         "error": None,
         "step": "title",
@@ -116,10 +118,12 @@ def _handle_generate_titles(state: dict):
 
 
 def _handle_generate_content(state: dict):
-    state["selected_title"] = request.form.get("selected_title", "").strip()
+    state["custom_title"] = request.form.get("custom_title", "").strip()
+    state["selected_title"] = state["custom_title"] or request.form.get("selected_title", "").strip()
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
+    state["suggested_content"] = request.form.get("suggested_content", "").strip()
     state["change_request"] = request.form.get("change_request", "").strip()
     state["brand_website_url"] = request.form.get("brand_website_url", "").strip()
     state["selected_backlink_id"] = request.form.get("selected_backlink_id", "").strip()
@@ -192,6 +196,7 @@ def _handle_generate_content(state: dict):
             money_site_url=state["brand_website_url"],
             brand=state["brand"],
             brand_context=brand_context,
+            suggested_content=state["suggested_content"],
             change_request=state["change_request"],
             **backlink_context,
         )

@@ -6,7 +6,7 @@ from logger import logger
 from word_bank import find_banned_terms_in_text
 
 MIN_BLOG_WORDS = 800
-MAX_GENERATION_ATTEMPTS = 3
+MAX_GENERATION_ATTEMPTS = 5
 
 
 def count_html_words(html_text: str) -> int:
@@ -326,6 +326,7 @@ def generate_backlink_content(
     backlink_blog_name: str = "",
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
+    suggested_content: str = "",
     change_request: str = "",
 ):
     effective_max_words = _effective_medium_max_words(
@@ -357,6 +358,7 @@ def generate_backlink_content(
         backlink_blog_name=backlink_blog_name,
         backlink_writer_name=backlink_writer_name,
         backlink_content_guidelines=backlink_content_guidelines,
+        suggested_content=suggested_content,
         change_request=change_request,
     )
     validator = None
@@ -365,7 +367,7 @@ def generate_backlink_content(
     content = _generate_content_from_prompt(
         provider,
         prompt,
-        min_words=validation_min_words or (0 if effective_max_words else MIN_BLOG_WORDS),
+        min_words=validation_min_words ,
         max_words=effective_max_words,
         validator=validator,
     )
