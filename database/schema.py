@@ -94,6 +94,12 @@ def init_db():
                 content_guidelines TEXT NOT NULL DEFAULT '',
                 notes TEXT NOT NULL DEFAULT ''
             );
+
+            CREATE TABLE IF NOT EXISTS social_profiles (
+                id INTEGER PRIMARY KEY,
+                brand_name TEXT NOT NULL DEFAULT '',
+                social_type TEXT NOT NULL DEFAULT ''
+            );
             """
         )
         _ensure_column(connection, "backlinks", "account_name", "TEXT NOT NULL DEFAULT ''")
@@ -105,6 +111,8 @@ def init_db():
         _ensure_column(connection, "backlinks", "min_words", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "backlinks", "max_characters", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "backlinks", "content_guidelines", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "brand_name", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "social_type", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "brands", "brand_color", "TEXT NOT NULL DEFAULT ''")
         connection.execute(
             """

@@ -1,6 +1,6 @@
 from flask import Blueprint, send_from_directory
 
-from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, image_controller, page_controller, settings_controller, tool_controller
+from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, image_controller, page_controller, settings_controller, social_media_controller, tool_controller
 from app.services.image_service import UPLOAD_ROOT
 
 
@@ -16,6 +16,8 @@ web.add_url_rule("/text-tools", view_func=tool_controller.text_tools, methods=["
 web.add_url_rule("/seo-checker", view_func=tool_controller.seo_checker, methods=["GET", "POST"])
 web.add_url_rule("/image-tools", view_func=image_controller.image_tools, methods=["GET", "POST"])
 web.add_url_rule("/brands", view_func=brand_controller.brands, methods=["GET", "POST"])
+web.add_url_rule("/social-media-activator", view_func=social_media_controller.social_media_activator, methods=["GET", "POST"])
+web.add_url_rule("/social-media-list", view_func=social_media_controller.social_media_list, methods=["GET", "POST"])
 web.add_url_rule("/mediums", view_func=backlink_controller.backlinks, methods=["GET", "POST"])
 web.add_url_rule("/backlinks", view_func=backlink_controller.backlinks, methods=["GET", "POST"])
 web.add_url_rule("/settings", view_func=settings_controller.settings, methods=["GET", "POST"])

@@ -9,6 +9,7 @@ from prompts.blog import (
     build_title_prompt,
 )
 from prompts.pages import build_page_prompt, build_simple_page_prompt
+from prompts.social_media import build_social_media_post_prompt
 from prompts.shared import (
     MAX_BLOG_WORDS,
     MIN_BLOG_WORDS,
@@ -28,5 +29,6 @@ __all__ = [
     "build_meta_description_prompt",
     "build_page_prompt",
     "build_simple_page_prompt",
+    "build_social_media_post_prompt",
     "build_title_prompt",
 ]

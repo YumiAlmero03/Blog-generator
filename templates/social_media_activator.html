@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% set active_page = "social-activator" %}
+
+{% block title %}Social Media Activator{% endblock %}
+{% block eyebrow %}Short Social Posts{% endblock %}
+{% block hero_title %}Social Media Activator{% endblock %}
+{% block hero_text %}Generate a short platform-aware post, image idea, and hashtags from a saved social media profile.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" class="grid gap-1" data-loading-message="Generating social post...">
+        <label for="focus_word" class="mb-2 block text-sm font-bold text-sand-900">Focus Word <span class="text-red-600">*</span></label>
+        <input id="focus_word" name="focus_word" type="text" value="{{ focus_word }}" placeholder="e.g. launch, summer, speed, comfort" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="selected_profile_id" class="mb-2 block text-sm font-bold text-sand-900">Social Media Profile <span class="text-red-600">*</span></label>
+        <select id="selected_profile_id" name="selected_profile_id" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="">Choose a profile</option>
+          {% for profile in profiles %}
+            <option value="{{ profile.id }}" {% if selected_profile_id|string == profile.id|string %}selected{% endif %}>{{ profile.brand_name }} · {{ profile.social_type }}</option>
+          {% endfor %}
+        </select>
+
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Post</button>
+      </form>
+
+      <p class="mt-5 text-sm leading-6 text-sand-700">
+        Add profiles in <a href="/social-media-list" class="font-bold text-sand-800 underline decoration-sand-300 underline-offset-2">Social Media List</a>.
+      </p>
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if result %}
+        <div class="grid gap-5">
+          {% if selected_profile %}
+            <div class="rounded-[22px] border border-moss-200 bg-moss-100/60 p-4 text-sm leading-6 text-sand-800">
+              <strong class="text-sand-900">Profile:</strong> {{ selected_profile.brand_name }} · {{ selected_profile.social_type }}
+            </div>
+          {% endif %}
+
+          <div>
+            <h2 class="mb-2 font-display text-2xl text-sand-950">Post Content</h2>
+            <div class="rounded-[22px] border border-sand-200 bg-white px-5 py-5 text-base leading-7 text-sand-900">{{ result.post_content }}</div>
+            <div class="mt-2 text-sm font-medium text-sand-700">Characters: {{ result.character_count }}/220</div>
+          </div>
+
+          <div>
+            <h2 class="mb-2 font-display text-2xl text-sand-950">Image Description</h2>
+            <div class="rounded-[22px] border border-sand-200 bg-white px-5 py-5 text-sm leading-6 text-sand-800">{{ result.image_description }}</div>
+          </div>
+
+          <div>
+            <h2 class="mb-2 font-display text-2xl text-sand-950">Tags / Hashtags</h2>
+            <div class="flex flex-wrap gap-2">
+              {% for tag in result.tags %}
+                <span class="rounded-full border border-sand-200 bg-sand-50 px-3 py-2 text-sm font-bold text-sand-800">{{ tag }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          Generated social content will appear here.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

@@ -16,6 +16,7 @@ from database.pages import (
 )
 from database.schema import init_db
 from database.settings import get_setting, list_settings, set_setting
+from database.social_media import delete_social_profile, get_social_profile, list_social_profiles, save_social_profile
 
 
 init_db()

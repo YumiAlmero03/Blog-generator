@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% set active_page = "social-list" %}
+
+{% block title %}Social Media List{% endblock %}
+{% block eyebrow %}Social Profiles{% endblock %}
+{% block hero_title %}Social Media List{% endblock %}
+{% block hero_text %}Manage the brand and platform profiles used by the Social Media Activator.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ success }}</div>
+      {% endif %}
+
+      <form method="post" class="grid gap-1">
+        <input type="hidden" name="profile_id" value="{{ profile_id }}" />
+
+        <label for="brand_name" class="mb-2 block text-sm font-bold text-sand-900">Brand <span class="text-red-600">*</span></label>
+        <select id="brand_name" name="brand_name" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="">Choose a brand</option>
+          {% for brand in brand_names %}
+            <option value="{{ brand }}" {% if brand_name == brand %}selected{% endif %}>{{ brand }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="social_type" class="mb-2 block text-sm font-bold text-sand-900">Social Media Type <span class="text-red-600">*</span></label>
+        <select id="social_type" name="social_type" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for item in social_media_types %}
+            <option value="{{ item }}" {% if social_type == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+
+        <input type="hidden" name="action" value="save_profile" />
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">
+          {% if profile_id %}Update Profile{% else %}Save Profile{% endif %}
+        </button>
+      </form>
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if profiles %}
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {% for profile in profiles %}
+            <article class="rounded-[22px] border border-sand-200 bg-white/80 p-5">
+              <div class="mb-3 inline-flex rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ profile.social_type }}</div>
+              <h3 class="font-display text-2xl text-sand-950">{{ profile.brand_name }}</h3>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <a class="inline-flex items-center rounded-full bg-sand-100 px-3 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-200 hover:text-sand-900" href="/social-media-list?edit={{ profile.id }}">Edit</a>
+                <form method="post" onsubmit="return confirm('Delete this social media profile?');">
+                  <input type="hidden" name="action" value="delete_profile" />
+                  <input type="hidden" name="profile_id" value="{{ profile.id }}" />
+                  <button type="submit" class="inline-flex items-center rounded-full bg-red-50 px-3 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100">Delete</button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          No social media profiles saved yet.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}
