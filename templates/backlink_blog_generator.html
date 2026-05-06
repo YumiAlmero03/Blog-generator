@@ -134,13 +134,19 @@
           <div class="grid gap-6">
             <div>
               <h3 class="mb-4 font-display text-2xl text-sand-950">Select Title <span class="text-red-600">*</span></h3>
-              <label for="customTitleInput" class="mb-2 block text-sm font-bold text-sand-900">Custom title</label>
-              <input id="customTitleInput" name="custom_title" type="text" value="{{ custom_title }}" placeholder="Write your own title instead of using one below" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+              <div class="mb-4 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4">
+                <label for="customTitleRadio" class="mb-3 flex cursor-pointer items-center gap-3 text-sm font-bold text-sand-900">
+                  <input id="customTitleRadio" name="selected_title" type="radio" value="{{ custom_title }}" class="h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if custom_title %}checked{% endif %} />
+                  <span>Use custom title</span>
+                </label>
+                <label for="customTitleInput" class="mb-2 block text-sm font-bold text-sand-900">Custom title</label>
+                <input id="customTitleInput" name="custom_title" type="text" value="{{ custom_title }}" placeholder="Write your own title instead of using one below" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+              </div>
               <ul class="grid gap-3">
                 {% for title in titles %}
                   <li>
                     <label for="title_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
-                      <input id="title_{{ loop.index }}" name="selected_title" type="radio" value="{{ title }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if selected_title == title or (not selected_title and loop.first) %}checked{% endif %} />
+                      <input id="title_{{ loop.index }}" name="selected_title" type="radio" value="{{ title }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if selected_title == title or (not selected_title and not custom_title and loop.first) %}checked{% endif %} />
                       <span class="text-sm font-semibold leading-6 text-sand-900">{{ title }}</span>
                     </label>
                   </li>

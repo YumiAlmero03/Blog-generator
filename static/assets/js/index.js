@@ -11,6 +11,7 @@
   const downloadSelectedTitle = document.getElementById("downloadSelectedTitle");
   const downloadMetaDescription = document.getElementById("downloadMetaDescription");
   const customTitleInput = document.getElementById("customTitleInput");
+  const customTitleRadio = document.getElementById("customTitleRadio");
   const editorContainer = document.getElementById("contentEditor");
   const editorWordCount = document.getElementById("editorWordCount");
   const existingLinksElement = document.getElementById("existingLinksData");
@@ -23,10 +24,21 @@
   let linkFieldCounter = 0;
 
   function getSelectedTitle() {
-    if (customTitleInput && customTitleInput.value.trim()) {
-      return { value: customTitleInput.value.trim() };
+    if (customTitleInput && customTitleRadio && customTitleRadio.checked) {
+      const customTitle = customTitleInput.value.trim();
+      return customTitle ? { value: customTitle } : null;
     }
     return document.querySelector('input[name="selected_title"]:checked');
+  }
+
+  function syncCustomTitleRadio() {
+    if (!customTitleInput || !customTitleRadio) {
+      return;
+    }
+    customTitleRadio.value = customTitleInput.value.trim();
+    if (customTitleInput.value.trim()) {
+      customTitleRadio.checked = true;
+    }
   }
 
   function getSelectedMetaDescription() {
@@ -127,6 +139,7 @@
 
   if (generateContentButton && contentForm) {
     generateContentButton.addEventListener("click", function () {
+      syncCustomTitleRadio();
       const selectedTitle = getSelectedTitle();
       if (!selectedTitle) {
         window.alert("Please select a title first.");
@@ -139,6 +152,7 @@
   }
 
   function syncPreviewFields() {
+    syncCustomTitleRadio();
     const selectedTitle = getSelectedTitle();
     const selectedMetaDescription = getSelectedMetaDescription();
 
@@ -177,7 +191,15 @@
   }
 
   if (contentForm) {
-    contentForm.addEventListener("submit", prepareContentForm);
+    contentForm.addEventListener("submit", function () {
+      syncCustomTitleRadio();
+      prepareContentForm();
+    });
+  }
+
+  if (customTitleInput) {
+    customTitleInput.addEventListener("input", syncCustomTitleRadio);
+    customTitleInput.addEventListener("focus", syncCustomTitleRadio);
   }
 
   if (editorContainer && window.Quill) {
