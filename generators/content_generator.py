@@ -5,7 +5,7 @@ from utils import extract_json_string
 from logger import logger
 from word_bank import find_banned_terms_in_text
 
-MIN_BLOG_WORDS = 800
+MIN_BLOG_WORDS = 1300
 MAX_GENERATION_ATTEMPTS = 5
 
 
@@ -234,6 +234,8 @@ def generate_content(
     brand: str = "",
     brand_context: str = "",
     change_request: str = "",
+    min_words: int = MIN_BLOG_WORDS,
+    max_words: int = 1400,
 ):
     prompt = build_content_prompt(
         title=title,
@@ -245,8 +247,10 @@ def generate_content(
         brand=brand,
         brand_context=brand_context,
         change_request=change_request,
+        min_words=min_words,
+        max_words=max_words,
     )
-    return _generate_content_from_prompt(provider, prompt)
+    return _generate_content_from_prompt(provider, prompt, min_words=min_words, max_words=max_words)
 
 
 def keep_required_url_once(content: str, required_url: str) -> str:

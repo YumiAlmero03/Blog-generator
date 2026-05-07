@@ -7,6 +7,7 @@ from logger import logger
 
 from app.controllers.helpers import base_template_context
 from app.services.provider_service import generation_error_message, get_provider
+from app.services.word_limit_settings import get_page_word_limits
 
 
 def page_generator():
@@ -41,6 +42,7 @@ def page_generator():
                 if state["brand"]:
                     upsert_brand(state["brand"])
                 brand_context = get_brand_context(state["brand"])
+                min_words, max_words = get_page_word_limits()
                 result = generate_page(
                     provider,
                     keyword=state["keyword"],
@@ -50,6 +52,8 @@ def page_generator():
                     expectations=state["expectations"],
                     brand_context=brand_context,
                     change_request=state["change_request"],
+                    min_words=min_words,
+                    max_words=max_words,
                 )
                 state["page_title"] = result.get("title", "")
                 state["meta_description"] = result.get("meta_description", "")
@@ -102,6 +106,7 @@ def simple_page_generator():
                 if state["brand"]:
                     upsert_brand(state["brand"])
                 brand_context = get_brand_context(state["brand"])
+                min_words, max_words = get_page_word_limits()
                 result = generate_simple_page(
                     provider,
                     page_title=state["page_title"],
@@ -110,6 +115,8 @@ def simple_page_generator():
                     expectations=state["expectations"],
                     brand_context=brand_context,
                     change_request=state["change_request"],
+                    min_words=min_words,
+                    max_words=max_words,
                 )
                 state["generated_title"] = result.get("title", "")
                 state["meta_descriptions"] = result.get("meta_descriptions", [])

@@ -9,6 +9,7 @@ from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
 
 MIN_PAGE_WORDS = 900
+MAX_PAGE_WORDS = 1200
 MAX_GENERATION_ATTEMPTS = 3
 
 
@@ -56,7 +57,10 @@ def generate_page(
     brand: str = "",
     brand_context: str = "",
     change_request: str = "",
+    min_words: int = MIN_PAGE_WORDS,
+    max_words: int = MAX_PAGE_WORDS,
 ):
+    min_word_count, max_word_count = _normalize_word_limits(min_words, max_words)
     prompt = build_page_prompt(
         keyword=keyword,
         supporting_keywords=supporting_keywords,
@@ -65,6 +69,8 @@ def generate_page(
         brand=brand,
         brand_context=brand_context,
         change_request=change_request,
+        min_words=min_word_count,
+        max_words=max_word_count,
     )
 
     last_error = None
@@ -75,10 +81,10 @@ def generate_page(
         if attempt > 1:
             retry_instruction = (
                 f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                f"- Your previous page was too short.\n"
+                f"- Your previous page did not satisfy the word-count rules.\n"
                 f"- Keep the same keyword intent and return valid JSON only.\n"
-                f"- The page content must be at least {MIN_PAGE_WORDS} words.\n"
-                f"- Expand the body with more useful detail, examples, FAQs, benefits, and section depth.\n"
+                f"- The page content must be between {min_word_count} and {max_word_count} words.\n"
+                f"- Adjust the section depth until the page fits that range naturally.\n"
             )
 
         raw = provider.generate_json(prompt + retry_instruction)
@@ -103,11 +109,22 @@ def generate_page(
                 )
                 continue
 
-            if word_count < MIN_PAGE_WORDS:
+            if word_count < min_word_count:
                 logger.warning(
                     "Page word count is %d (minimum: %d) for keyword '%s' on attempt %d/%d",
                     word_count,
-                    MIN_PAGE_WORDS,
+                    min_word_count,
+                    keyword,
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
+
+            if word_count > max_word_count:
+                logger.warning(
+                    "Page word count is %d (maximum: %d) for keyword '%s' on attempt %d/%d",
+                    word_count,
+                    max_word_count,
                     keyword,
                     attempt,
                     MAX_GENERATION_ATTEMPTS,
@@ -140,3 +157,17 @@ def generate_page(
         f"Generated page could not satisfy the rules after {MAX_GENERATION_ATTEMPTS} attempts. "
         f"Last attempt was {last_word_count} words."
     )
+
+
+def _normalize_word_limits(min_words: int, max_words: int) -> tuple[int, int]:
+    try:
+        cleaned_min = max(1, int(min_words or MIN_PAGE_WORDS))
+    except (TypeError, ValueError):
+        cleaned_min = MIN_PAGE_WORDS
+    try:
+        cleaned_max = max(1, int(max_words or MAX_PAGE_WORDS))
+    except (TypeError, ValueError):
+        cleaned_max = MAX_PAGE_WORDS
+    if cleaned_max < cleaned_min:
+        cleaned_max = cleaned_min
+    return cleaned_min, cleaned_max

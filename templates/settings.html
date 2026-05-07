@@ -4,7 +4,7 @@
 {% block title %}Settings{% endblock %}
 {% block eyebrow %}Global Settings{% endblock %}
 {% block hero_title %}Settings{% endblock %}
-{% block hero_text %}Manage global app values here. The money site setting is now shared across article generation instead of living inside individual brand records.{% endblock %}
+{% block hero_text %}Manage global app values here. The money site and word limits are shared across generators.{% endblock %}
 
 {% block content %}
   <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
@@ -25,6 +25,64 @@
         placeholder="e.g. https://phoenixhomeservices.com/services"
         class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
       />
+
+      <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <h2 class="text-base font-bold text-sand-950">Blog Generator Words</h2>
+          <p class="mt-1 text-sm text-sand-600">Used by the main Blog Generator page.</p>
+        </div>
+        <div>
+          <label for="blog_min_words" class="mb-2 block text-sm font-bold text-sand-900">Min words</label>
+          <input
+            id="blog_min_words"
+            name="blog_min_words"
+            type="number"
+            min="1"
+            value="{{ blog_min_words }}"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+        <div>
+          <label for="blog_max_words" class="mb-2 block text-sm font-bold text-sand-900">Max words</label>
+          <input
+            id="blog_max_words"
+            name="blog_max_words"
+            type="number"
+            min="1"
+            value="{{ blog_max_words }}"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+      </div>
+
+      <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <h2 class="text-base font-bold text-sand-950">Page / Simple Page Words</h2>
+          <p class="mt-1 text-sm text-sand-600">Used by Page Generator and Simple Page Generator.</p>
+        </div>
+        <div>
+          <label for="page_min_words" class="mb-2 block text-sm font-bold text-sand-900">Min words</label>
+          <input
+            id="page_min_words"
+            name="page_min_words"
+            type="number"
+            min="1"
+            value="{{ page_min_words }}"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+        <div>
+          <label for="page_max_words" class="mb-2 block text-sm font-bold text-sand-900">Max words</label>
+          <input
+            id="page_max_words"
+            name="page_max_words"
+            type="number"
+            min="1"
+            value="{{ page_max_words }}"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+      </div>
 
       <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Save Settings</button>
     </form>

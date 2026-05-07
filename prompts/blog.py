@@ -120,10 +120,16 @@ def build_content_prompt(
     brand: str = "",
     brand_context: str = "",
     change_request: str = "",
+    min_words: int | str = MIN_BLOG_WORDS,
+    max_words: int | str = MAX_BLOG_WORDS,
 ) -> str:
     links_section = ""
     context_section = build_brand_context_section(brand_context)
     banned_words_section = build_banned_words_prompt_section()
+    min_word_count = _positive_int(min_words, MIN_BLOG_WORDS)
+    max_word_count = _positive_int(max_words, MAX_BLOG_WORDS)
+    if max_word_count < min_word_count:
+        max_word_count = min_word_count
     change_request_section = ""
     cleaned_change_request = (change_request or "").strip()
     if cleaned_change_request:
@@ -191,7 +197,7 @@ Brand: {brand}
 {change_request_section}
 
 Rules:
-- Write a blog article between "{MIN_BLOG_WORDS}" and "{MAX_BLOG_WORDS}" words.
+- Write a blog article between "{min_word_count}" and "{max_word_count}" words.
 - Start with an engaging introduction of 60–80 words that explains the reader’s problem or need.
 - Do not repeat the exact article title in the body unless absolutely necessary. However, keep the content closely aligned with the title and main topic.
 - Sentences must be less than 21 words.
@@ -234,7 +240,7 @@ Rules:
 - Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
 - Do not use these sections together in the same page.
 - Choose the ending section that best matches the page type and search intent.
-- Ensure the final article is complete and within the "{MIN_BLOG_WORDS}"-"{MAX_BLOG_WORDS}" word range before finishing.
+- Ensure the final article is complete and within the "{min_word_count}"-"{max_word_count}" word range before finishing.
 
 Return valid JSON only in this format:
 {{
@@ -243,3 +249,10 @@ Return valid JSON only in this format:
 }}
 """
 
+
+def _positive_int(value: int | str, default: int | str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = int(default)
+    return max(1, parsed)

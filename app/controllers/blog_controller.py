@@ -10,6 +10,7 @@ from logger import logger
 
 from app.controllers.helpers import base_template_context
 from app.services.provider_service import generation_error_message, get_provider
+from app.services.word_limit_settings import get_blog_word_limits
 
 
 def index():
@@ -109,6 +110,7 @@ def _handle_generate_content(state: dict):
         if state["brand"]:
             upsert_brand(state["brand"])
         state["money_site_url"] = get_setting("money_site", "")
+        min_words, max_words = get_blog_word_limits()
         brand_context = get_brand_context(state["brand"])
         state["meta_descriptions"] = generate_meta_descriptions(
             provider,
@@ -135,6 +137,8 @@ def _handle_generate_content(state: dict):
             brand=state["brand"],
             brand_context=brand_context,
             change_request=state["change_request"],
+            min_words=min_words,
+            max_words=max_words,
         )
         state["tag_suggestions"] = suggest_content_tags(
             title=state["selected_title"],

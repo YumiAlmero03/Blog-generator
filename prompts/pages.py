@@ -10,9 +10,15 @@ def build_page_prompt(
     brand: str = "",
     brand_context: str = "",
     change_request: str = "",
+    min_words: int | str = 900,
+    max_words: int | str = 1200,
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     banned_words_section = build_banned_words_prompt_section()
+    min_word_count = _positive_int(min_words, 900)
+    max_word_count = _positive_int(max_words, 1200)
+    if max_word_count < min_word_count:
+        max_word_count = min_word_count
     change_request_section = ""
     cleaned_change_request = (change_request or "").strip()
     if cleaned_change_request:
@@ -52,7 +58,7 @@ Rules:
 
 - Title should be catchy, include the main keyword naturally, and be 45–55 characters when possible.
 - Introduction should be 60–80 words, engaging, and include the main keyword naturally once.
-- Content should be between 900 and 1200 words, structured with clear sections and subheadings.
+- Content should be between {min_word_count} and {max_word_count} words, structured with clear sections and subheadings.
 - Paragraphs should be short and easy to read.
 
 - If a brand is provided, match the brand’s voice, positioning, and audience naturally.
@@ -80,7 +86,7 @@ Rules:
 
 - Do not use markdown.
 - Do not add explanations before or after the JSON.
-- Ensure the content is complete and exceeds 900 words.
+- Ensure the content is complete and between {min_word_count} and {max_word_count} words.
 - Start your response with '{{' and end with '}}'
 
 Return valid JSON only in this format:
@@ -100,9 +106,15 @@ def build_simple_page_prompt(
     expectations: str = "",
     brand_context: str = "",
     change_request: str = "",
+    min_words: int | str = 900,
+    max_words: int | str = 1200,
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     banned_words_section = build_banned_words_prompt_section()
+    min_word_count = _positive_int(min_words, 900)
+    max_word_count = _positive_int(max_words, 1200)
+    if max_word_count < min_word_count:
+        max_word_count = min_word_count
     change_request_section = ""
     cleaned_change_request = (change_request or "").strip()
     if cleaned_change_request:
@@ -154,7 +166,7 @@ Rules:
 - Adapt the structure to the page type
 - Do not add image placeholders
 - Do not use markdown
-- Ensure the content is complete and exceeds 900 words.
+- Ensure the content is complete and between {min_word_count} and {max_word_count} words.
 - Generate exactly 3 meta description options for the page.
 - Each meta description should be useful for search snippets, natural, and around 120-160 characters when possible.
 - Do not add explanations before or after the JSON
@@ -171,3 +183,11 @@ Return valid JSON only in this format:
   "content": "<h1>Page Title</h1><p>...</p>"
 }}
 """
+
+
+def _positive_int(value: int | str, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(1, parsed)
