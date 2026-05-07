@@ -44,7 +44,9 @@ def generate_simple_page(
             data = json.loads(json_text)
             title = data.get("title", "").strip()
             content = data.get("content", "").strip()
-            banned_terms = find_banned_terms_in_text("\n".join([title, content]))
+            meta_descriptions = _normalize_meta_descriptions(data.get("meta_descriptions", []))
+            meta_text = "\n".join(item.get("text", "") for item in meta_descriptions)
+            banned_terms = find_banned_terms_in_text("\n".join([title, content, meta_text]))
             if banned_terms:
                 logger.warning(
                     "Simple page used banned terms %s on attempt %d/%d",
@@ -53,10 +55,20 @@ def generate_simple_page(
                     MAX_GENERATION_ATTEMPTS,
                 )
                 continue
+            h3_count = _count_h3_tags(content)
+            if h3_count < 3:
+                logger.warning(
+                    "Simple page used only %d <h3> tags on attempt %d/%d",
+                    h3_count,
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
 
             logger.info("Simple page generated successfully for '%s'", page_title)
             return {
                 "title": title,
+                "meta_descriptions": meta_descriptions,
                 "content": content,
             }
         except Exception as exc:
@@ -66,4 +78,26 @@ def generate_simple_page(
     if last_error is not None:
         raise ValueError("Could not parse JSON from model output.") from last_error
 
-    raise ValueError("Generated simple page kept using banned words after multiple attempts.")
+    raise ValueError("Generated simple page could not satisfy the rules after multiple attempts.")
+
+
+def _normalize_meta_descriptions(raw_items) -> list[dict]:
+    if not isinstance(raw_items, list):
+        return []
+
+    normalized = []
+    for item in raw_items:
+        if isinstance(item, dict):
+            text = str(item.get("text", "")).strip()
+        else:
+            text = str(item).strip()
+        if not text:
+            continue
+        normalized.append({"text": text, "character_count": len(text)})
+        if len(normalized) >= 3:
+            break
+    return normalized
+
+
+def _count_h3_tags(content: str) -> int:
+    return (content or "").lower().count("<h3")

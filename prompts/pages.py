@@ -112,6 +112,17 @@ Minor change request from the user:
 
 Apply this request while keeping the simple page complete, clear, and aligned with all rules below.
 """
+    responsible_gaming_section = ""
+    if (page_type or "").strip().lower() == "responsible gaming":
+        responsible_gaming_section = """
+Responsible Gaming page requirements:
+- Frame the page around safer play, user control, age restrictions, support resources, self-exclusion, deposit/time limits, warning signs, and getting help.
+- Do not make gambling sound exciting, profitable, guaranteed, or risk-free.
+- Avoid promotional language, bonus language, jackpot language, or encouragement to play more.
+- Include a clear reminder that gaming should be for adults only and should never be treated as a way to make money.
+- Include practical steps readers can take if gaming stops feeling recreational.
+- Keep the tone supportive, calm, factual, and non-judgmental.
+"""
     return f"""
 You are an expert WordPress page writer for simple website pages.
 
@@ -129,12 +140,14 @@ Brand:
 What to include:
 {expectations}
 {change_request_section}
+{responsible_gaming_section}
 
 Rules:
-- This generator is for simple pages such as Privacy Policy, Terms and Conditions, Disclaimer, About Us, Contact Us, Refund Policy, Shipping Policy, Cookie Policy, or similar low-complexity pages
+- This generator is for simple pages such as Privacy Policy, Terms and Conditions, Disclaimer, About Us, Contact Us, Refund Policy, Shipping Policy, Cookie Policy, Responsible Gaming, or similar low-complexity pages
 - Write clear, structured HTML that can be pasted directly into the WordPress Gutenberg editor
 - Use only simple HTML tags: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>
 - Include exactly one <h1>
+- Include at least 3 <h3> subheadings in the content.
 - Keep the tone clear, professional, and easy to understand
 - If a brand is provided, use the brand name naturally where relevant
 - If brand context is provided, align the page with that brand only when it fits naturally
@@ -142,12 +155,19 @@ Rules:
 - Do not add image placeholders
 - Do not use markdown
 - Ensure the content is complete and exceeds 900 words.
+- Generate exactly 3 meta description options for the page.
+- Each meta description should be useful for search snippets, natural, and around 120-160 characters when possible.
 - Do not add explanations before or after the JSON
 - Start your response with '{{' and end with '}}'
 
 Return valid JSON only in this format:
 {{
   "title": "Page Title",
+  "meta_descriptions": [
+    {{"text": "First meta description option here."}},
+    {{"text": "Second meta description option here."}},
+    {{"text": "Third meta description option here."}}
+  ],
   "content": "<h1>Page Title</h1><p>...</p>"
 }}
 """

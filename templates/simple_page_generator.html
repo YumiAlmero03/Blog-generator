@@ -42,6 +42,7 @@
           <option value="Refund Policy" {% if page_type == 'Refund Policy' %}selected{% endif %}>Refund Policy</option>
           <option value="Shipping Policy" {% if page_type == 'Shipping Policy' %}selected{% endif %}>Shipping Policy</option>
           <option value="Cookie Policy" {% if page_type == 'Cookie Policy' %}selected{% endif %}>Cookie Policy</option>
+          <option value="Responsible Gaming" {% if page_type == 'Responsible Gaming' %}selected{% endif %}>Responsible Gaming</option>
         </select>
 
         <label for="expectations" class="mb-2 block text-sm font-bold text-sand-900">What to include</label>
@@ -64,6 +65,22 @@
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if generated_content %}
         <h2 class="mb-5 font-display text-3xl text-sand-950">{{ generated_title or page_title }}</h2>
+        {% if meta_descriptions %}
+          <div class="mb-5 rounded-[22px] border border-sand-200 bg-sand-50/80 p-5">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <h3 class="font-display text-2xl text-sand-950">Meta Descriptions</h3>
+              <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">3 Options</span>
+            </div>
+            <ul class="grid gap-3">
+              {% for meta_desc in meta_descriptions %}
+                <li class="rounded-2xl border border-sand-200 bg-white px-4 py-4">
+                  <div class="text-sm font-semibold leading-6 text-sand-900">{{ meta_desc.text }}</div>
+                  <div class="mt-1 text-xs font-medium uppercase tracking-[0.06em] text-sand-600">Character count: {{ meta_desc.character_count }}</div>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
         <div class="rounded-[22px] border border-sand-200 bg-white px-6 py-6 text-sand-900">{{ generated_content|safe }}</div>
 
         <label for="htmlOutput" class="mb-2 mt-5 block text-sm font-bold text-sand-900">HTML output</label>

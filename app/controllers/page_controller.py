@@ -80,6 +80,7 @@ def simple_page_generator():
         "page_type": "",
         "expectations": "",
         "generated_title": "",
+        "meta_descriptions": [],
         "generated_content": "",
         "change_request": "",
         "error": None,
@@ -111,6 +112,7 @@ def simple_page_generator():
                     change_request=state["change_request"],
                 )
                 state["generated_title"] = result.get("title", "")
+                state["meta_descriptions"] = result.get("meta_descriptions", [])
                 state["generated_content"] = result.get("content", "")
                 record_page(
                     brand=state["brand"],
