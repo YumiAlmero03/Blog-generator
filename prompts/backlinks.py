@@ -243,6 +243,37 @@ Apply this request while keeping the medium content natural, complete, and align
     else:
         min_word_rule = f'- Write a blog article between "{MIN_BLOG_WORDS}" and "{MAX_BLOG_WORDS}" words unless a smaller max word count is provided for the selected medium.'
         completion_word_rule = f'- If no max word count is provided, ensure the final article is complete and within the "{MIN_BLOG_WORDS}"-"{MAX_BLOG_WORDS}" word range before finishing.'
+    medium_name_target = f"{backlink_website_name or ''} {backlink_blog_name or ''} {backlink_website_type or ''}".lower()
+    platform_rules = ""
+    if "twitter" in medium_name_target or "x.com" in medium_name_target or " twitter" in f" {medium_name_target}":
+        platform_rules = """
+Twitter/X-specific rules:
+- Use plain text.
+- Keep the post punchy and short.
+- Do not write a long article structure.
+- Use no more than 2 hashtags if hashtags fit naturally.
+"""
+    elif "google_sites" in medium_name_target or "google sites" in medium_name_target:
+        platform_rules = """
+Google Sites-specific rules:
+- Use a shorter title than a normal blog title.
+- Use simple sections and compact paragraphs.
+- Avoid overly long headings or dense HTML.
+"""
+    elif "pinterest" in medium_name_target:
+        platform_rules = """
+Pinterest-specific rules:
+- Write visually descriptive, concise copy.
+- Make it useful as a pin description.
+- Keep tags concise and topical.
+"""
+    elif "forum" in medium_name_target:
+        platform_rules = """
+Forum-specific rules:
+- Sound like a helpful community post, not a polished advertisement.
+- Keep the structure practical and discussion-friendly.
+- Avoid corporate phrasing.
+"""
     cleaned_money_site_url = (money_site_url or "").strip()
     post_type = (backlink_post_type or "html").strip().lower()
     if post_type not in {"html", "markdown", "gutenberg", "text"}:
@@ -322,6 +353,7 @@ Brand: {brand}
 {money_site_section}
 {suggested_content_section}
 {change_request_section}
+{platform_rules}
 
 Rules:
 {min_word_rule}

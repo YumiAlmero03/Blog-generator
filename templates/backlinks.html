@@ -27,6 +27,14 @@
       <form method="post" class="grid gap-1">
         <input type="hidden" name="backlink_id" value="{{ backlink_id }}" />
 
+        <label for="medium_preset" class="mb-2 block text-sm font-bold text-sand-900">Medium preset</label>
+        <select id="medium_preset" name="medium_preset" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="">No preset</option>
+          {% for key, preset in medium_presets.items() %}
+            <option value="{{ key }}">{{ preset.label }}</option>
+          {% endfor %}
+        </select>
+
         <label for="website_name" class="mb-2 block text-sm font-bold text-sand-900">Medium Name <span class="text-red-600">*</span></label>
         <input id="website_name" name="website_name" type="text" value="{{ website_name }}" placeholder="e.g. Google Sites, Twitter, Example Media Blog" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
@@ -136,4 +144,33 @@
       {% endif %}
     </section>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script id="mediumPresetData" type="application/json">{{ medium_presets|tojson }}</script>
+  <script>
+    const mediumPresetData = JSON.parse(document.getElementById("mediumPresetData")?.textContent || "{}");
+    const mediumPresetSelect = document.getElementById("medium_preset");
+    if (mediumPresetSelect) {
+      mediumPresetSelect.addEventListener("change", () => {
+        const preset = mediumPresetData[mediumPresetSelect.value];
+        if (!preset) {
+          return;
+        }
+        ["website_type", "post_type", "title_max_characters", "min_words", "max_characters", "content_guidelines"].forEach((field) => {
+          const input = document.getElementById(field);
+          if (!input) {
+            return;
+          }
+          if (!input.value.trim() || input.value === "0" || input.value === "blog" || input.value === "html") {
+            input.value = preset[field] || input.value;
+          }
+        });
+        const nameInput = document.getElementById("website_name");
+        if (nameInput && !nameInput.value.trim()) {
+          nameInput.value = preset.label || "";
+        }
+      });
+    }
+  </script>
 {% endblock %}

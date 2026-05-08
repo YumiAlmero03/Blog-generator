@@ -104,6 +104,8 @@
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Content</dt><dd class="mt-1 text-sand-700">{{ result.stats.word_count }} words, {{ result.stats.h1_count }} H1, {{ result.stats.h2_count }} H2</dd></div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Images</dt><dd class="mt-1 text-sand-700">{{ result.stats.missing_alt_count }} missing alt text out of {{ result.stats.image_count }} images</dd></div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Canonical</dt><dd class="mt-1 break-words text-sand-700">{{ result.stats.canonical or "Missing" }}</dd></div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Social cards</dt><dd class="mt-1 text-sand-700">{{ result.stats.open_graph|length }} Open Graph tags, {{ result.stats.twitter_cards|length }} Twitter card tags</dd></div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Links</dt><dd class="mt-1 text-sand-700">{{ result.stats.links.internal_count }} internal, {{ result.stats.links.external_count }} external, {{ result.stats.links.total_count }} total</dd></div>
         </dl>
       </div>
 
@@ -124,6 +126,54 @@
             </div>
           {% else %}
             <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No sitemap locations were discovered.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 grid gap-5 lg:grid-cols-2">
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <h2 class="font-display text-3xl font-bold text-sand-950">Robots & Headings</h2>
+        <div class="mt-5 grid gap-3">
+          <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">
+            <strong class="text-sand-900">Robots:</strong>
+            {{ result.stats.robots_url or "/robots.txt" }} · HTTP {{ result.stats.robots_status_code or "n/a" }} · {{ result.stats.robots_sitemap_count }} sitemap reference{% if result.stats.robots_sitemap_count != 1 %}s{% endif %}
+          </div>
+          {% for level, headings in result.stats.heading_outline.items() %}
+            {% if headings %}
+              <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
+                <div class="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-600">{{ level|upper }}</div>
+                <ul class="grid gap-1 text-sm leading-6 text-sand-700">
+                  {% for heading in headings[:6] %}
+                    <li>{{ heading }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <h2 class="font-display text-3xl font-bold text-sand-950">Sample Link Health</h2>
+        <div class="mt-5 grid gap-3">
+          {% for link in result.stats.links.sample_checks %}
+            <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
+              <div class="flex flex-wrap items-center gap-2">
+                {% if link.status == "ok" %}
+                  <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">OK</span>
+                {% elif link.status == "broken" %}
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Broken</span>
+                {% else %}
+                  <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">Check</span>
+                {% endif %}
+                <span class="text-xs font-bold uppercase tracking-[0.1em] text-sand-600">{{ link.type }}</span>
+                <span class="text-xs font-bold text-sand-600">HTTP {{ link.status_code or "n/a" }}</span>
+              </div>
+              <p class="mt-2 break-words text-sm leading-6 text-sand-700">{{ link.url }}</p>
+            </div>
+          {% else %}
+            <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No crawlable links were found on the page.</p>
           {% endfor %}
         </div>
       </div>

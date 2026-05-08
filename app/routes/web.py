@@ -1,12 +1,15 @@
 from flask import Blueprint, send_from_directory
 
-from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, image_controller, page_controller, settings_controller, social_media_controller, tool_controller
+from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, dashboard_controller, image_controller, page_controller, settings_controller, social_media_controller, tool_controller
 from app.services.image_service import UPLOAD_ROOT
 
 
 web = Blueprint("web", __name__)
 
 
+web.add_url_rule("/dashboard", view_func=dashboard_controller.dashboard, methods=["GET"])
+web.add_url_rule("/generation-history", view_func=dashboard_controller.generation_history, methods=["GET"])
+web.add_url_rule("/generation-history/<int:history_id>", view_func=dashboard_controller.generation_history_detail, methods=["GET"])
 web.add_url_rule("/", view_func=blog_controller.index, methods=["GET", "POST"])
 web.add_url_rule("/medium-blog-generator", view_func=backlink_blog_controller.backlink_blog_generator, methods=["GET", "POST"])
 web.add_url_rule("/backlink-blog-generator", view_func=backlink_blog_controller.backlink_blog_generator, methods=["GET", "POST"])

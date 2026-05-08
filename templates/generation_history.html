@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% set active_page = "history" %}
+
+{% block title %}Generation History{% endblock %}
+{% block eyebrow %}Saved Outputs{% endblock %}
+{% block hero_title %}Generation History{% endblock %}
+{% block hero_text %}Review saved articles, pages, social posts, quality reports, prompt inputs, tags, and word counts.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <div class="grid gap-3">
+      {% for item in history_items %}
+        <a href="/generation-history/{{ item.id }}" class="grid gap-3 rounded-2xl border border-sand-200 bg-white px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50 md:grid-cols-[150px_1fr_120px] md:items-center">
+          <div>
+            <span class="inline-flex rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-moss-700">{{ item.content_type }}</span>
+            <div class="mt-2 text-xs font-bold text-sand-500">{{ item.created_at }}</div>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-sand-950">{{ item.title or "Untitled" }}</h2>
+            <p class="mt-1 text-sm text-sand-700">{{ item.brand_name or "No brand" }}{% if item.primary_keyword %} · {{ item.primary_keyword }}{% endif %}{% if item.medium_name %} · {{ item.medium_name }}{% endif %}</p>
+          </div>
+          <div class="text-sm font-bold text-sand-700 md:text-right">{{ item.word_count }} words</div>
+        </a>
+      {% else %}
+        <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          No saved generation history yet.
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

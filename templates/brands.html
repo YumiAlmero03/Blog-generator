@@ -31,6 +31,14 @@
           <label for="brand_name" class="mb-2 block text-sm font-bold text-sand-900">Brand name <span class="text-red-600">*</span></label>
           <input id="brand_name" name="brand_name" type="text" value="{{ brand_name }}" placeholder="e.g. Phoenix Home Services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
+          <label for="brand_preset" class="mb-2 block text-sm font-bold text-sand-900">Brand preset</label>
+          <select id="brand_preset" name="brand_preset" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            <option value="">No preset</option>
+            {% for key, preset in brand_presets.items() %}
+              <option value="{{ key }}">{{ preset.label }}</option>
+            {% endfor %}
+          </select>
+
           <label for="brand_color" class="mb-2 block text-sm font-bold text-sand-900">Brand color</label>
           <div class="mb-4 flex items-center gap-3">
             <input id="brand_color" name="brand_color" type="color" value="{{ brand_color }}" class="h-12 w-16 cursor-pointer rounded-2xl border border-sand-200 bg-white p-1" />
@@ -236,7 +244,25 @@
 {% endblock %}
 
 {% block scripts %}
+  <script id="brandPresetData" type="application/json">{{ brand_presets|tojson }}</script>
   <script>
+    const brandPresetData = JSON.parse(document.getElementById("brandPresetData")?.textContent || "{}");
+    const brandPresetSelect = document.getElementById("brand_preset");
+    if (brandPresetSelect) {
+      brandPresetSelect.addEventListener("change", () => {
+        const preset = brandPresetData[brandPresetSelect.value];
+        if (!preset) {
+          return;
+        }
+        ["niche", "tone", "notes", "main_keywords"].forEach((field) => {
+          const input = document.getElementById(field);
+          if (input && !input.value.trim()) {
+            input.value = preset[field] || "";
+          }
+        });
+      });
+    }
+
     document.querySelectorAll("[data-color-preset]").forEach((button) => {
       button.addEventListener("click", () => {
         const target = document.getElementById(button.dataset.colorTarget);

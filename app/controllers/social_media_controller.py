@@ -3,6 +3,7 @@ from flask import render_template, request
 from database import (
     delete_social_profile,
     get_brand_context,
+    record_generation,
     get_social_profile,
     list_brand_names,
     list_social_profiles,
@@ -140,6 +141,41 @@ def _handle_generate_social_media_post(state: dict):
             brand_name=brand_name,
             social_type=state["selected_profile"].get("social_type", ""),
             brand_context=get_brand_context(brand_name),
+        )
+        post_content = state["result"].get("post_content", "")
+        tags = state["result"].get("tags", [])
+        quality_report = {
+            "word_count": len(post_content.split()),
+            "checks": [
+                {
+                    "name": "Character count",
+                    "status": "pass" if len(post_content) <= 220 else "fail",
+                    "detail": f"{len(post_content)} of 220 characters",
+                    "recommendation": "Keep social activator posts at or below 220 characters.",
+                },
+                {
+                    "name": "Tags",
+                    "status": "pass" if tags else "warn",
+                    "detail": f"{len(tags)} tag(s)",
+                    "recommendation": "Use a few platform-appropriate tags without cluttering the post.",
+                },
+            ],
+        }
+        record_generation(
+            content_type="Social Post",
+            brand_name=brand_name,
+            title=f"{state['selected_profile'].get('social_type', '')} post for {state['focus_word']}",
+            primary_keyword=state["focus_word"],
+            medium_name=state["selected_profile"].get("social_type", ""),
+            word_count=quality_report["word_count"],
+            tags=tags,
+            prompt_inputs={
+                "focus_word": state["focus_word"],
+                "social_type": state["selected_profile"].get("social_type", ""),
+                "image_description": state["result"].get("image_description", ""),
+            },
+            content=post_content,
+            quality_report=quality_report,
         )
     except Exception as exc:
         logger.exception("social_media_activator generation failed")

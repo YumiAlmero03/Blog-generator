@@ -18,6 +18,7 @@ def brands():
         "notes": "",
         "logo_path": "",
         "brand_color": "#b07042",
+        "brand_preset": "",
         "check_brand": "",
         "check_keyword": "",
         "keyword_check_result": None,
@@ -45,6 +46,7 @@ def brands():
         logo_url=image_url(state["logo_path"]),
         brands=_build_brand_view_models(),
         brand_color_palette=brand_color_palette,
+        brand_presets=_brand_presets(),
     )
 
 
@@ -71,6 +73,7 @@ def _handle_save_brand(state: dict):
     state["tone"] = request.form.get("tone", "").strip()
     state["notes"] = request.form.get("notes", "").strip()
     state["brand_color"] = _normalize_color_input(request.form.get("brand_color", ""))
+    state["brand_preset"] = request.form.get("brand_preset", "").strip()
     logo_upload = request.files.get("logo_file")
 
     if not state["brand_name"]:
@@ -78,6 +81,7 @@ def _handle_save_brand(state: dict):
         return
 
     try:
+        _apply_brand_preset(state)
         if logo_upload and logo_upload.filename:
             state["logo_path"] = f"brand_logos/{save_uploaded_image(logo_upload, BRAND_LOGO_DIR, 'logo')}"
 
@@ -180,3 +184,59 @@ def _brand_color_palette() -> list[dict]:
         {"name": "Moss", "value": "#486034"},
         {"name": "Sand", "value": "#b07042"},
     ]
+
+
+def _apply_brand_preset(state: dict):
+    preset = _brand_presets().get(state.get("brand_preset", ""))
+    if not preset:
+        return
+    for key in ("niche", "tone", "notes", "main_keywords"):
+        if not state.get(key, "").strip():
+            state[key] = preset.get(key, "")
+
+
+def _brand_presets() -> dict:
+    return {
+        "casino_safe": {
+            "label": "Casino Safe",
+            "niche": "online entertainment and responsible gaming",
+            "tone": "calm, factual, compliant, adult-only",
+            "main_keywords": "responsible gaming, safer play, online entertainment",
+            "notes": "Avoid promotional gambling language. Emphasize age restrictions, user control, risk awareness, support resources, and safer play.",
+        },
+        "ecommerce": {
+            "label": "Ecommerce",
+            "niche": "online retail",
+            "tone": "helpful, clear, product-focused",
+            "main_keywords": "online shopping, product guide, customer support",
+            "notes": "Focus on product benefits, buying confidence, practical comparisons, shipping, returns, and customer questions.",
+        },
+        "local_service": {
+            "label": "Local Service",
+            "niche": "local services",
+            "tone": "friendly, trustworthy, practical",
+            "main_keywords": "local service, service area, customer support",
+            "notes": "Mention service areas, response time, trust signals, FAQs, and clear calls to action where natural.",
+        },
+        "saas": {
+            "label": "SaaS",
+            "niche": "software and workflow tools",
+            "tone": "professional, useful, concise",
+            "main_keywords": "software platform, workflow automation, business tools",
+            "notes": "Focus on use cases, features, integrations, productivity, onboarding, and measurable business value.",
+        },
+        "affiliate": {
+            "label": "Affiliate",
+            "niche": "affiliate content and reviews",
+            "tone": "balanced, editorial, helpful",
+            "main_keywords": "review, comparison, buying guide",
+            "notes": "Keep claims balanced. Include pros, cons, suitability, alternatives, and user-focused recommendations.",
+        },
+        "news": {
+            "label": "News",
+            "niche": "news and editorial publishing",
+            "tone": "neutral, concise, informative",
+            "main_keywords": "latest updates, industry news, analysis",
+            "notes": "Use neutral wording, clear context, timely framing, and avoid unsupported claims.",
+        },
+    }

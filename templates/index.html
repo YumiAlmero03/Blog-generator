@@ -156,12 +156,23 @@
                 </div>
               </div>
             {% endif %}
+
+            {% include "_quality_report.html" %}
           {% endif %}
 
           <div class="flex justify-start pt-2">
             {% if content %}
               <div class="w-full max-w-3xl">
                 <label for="change_request" class="mb-2 block text-sm font-bold text-sand-900">Minor change suggestions</label>
+                <label for="regenerate_scope" class="mb-2 block text-sm font-bold text-sand-900">Regenerate target</label>
+                <select id="regenerate_scope" name="regenerate_scope" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+                  <option value="full" {% if regenerate_scope == 'full' %}selected{% endif %}>Full article</option>
+                  <option value="intro" {% if regenerate_scope == 'intro' %}selected{% endif %}>Intro only</option>
+                  <option value="section" {% if regenerate_scope == 'section' %}selected{% endif %}>Weakest section</option>
+                  <option value="conclusion" {% if regenerate_scope == 'conclusion' %}selected{% endif %}>Ending only</option>
+                  <option value="meta" {% if regenerate_scope == 'meta' %}selected{% endif %}>Meta angle</option>
+                  <option value="tags" {% if regenerate_scope == 'tags' %}selected{% endif %}>Tags angle</option>
+                </select>
                 <textarea id="change_request" name="change_request" placeholder="e.g. make the intro warmer, add more examples, shorten the conclusion, mention pricing less" class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ change_request }}</textarea>
               </div>
             {% endif %}

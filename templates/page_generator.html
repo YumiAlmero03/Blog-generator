@@ -42,6 +42,14 @@
 
         {% if page_content %}
           <label for="change_request" class="mb-2 block text-sm font-bold text-sand-900">Minor change suggestions</label>
+          <label for="regenerate_scope" class="mb-2 block text-sm font-bold text-sand-900">Regenerate target</label>
+          <select id="regenerate_scope" name="regenerate_scope" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            <option value="full" {% if regenerate_scope == 'full' %}selected{% endif %}>Full page</option>
+            <option value="intro" {% if regenerate_scope == 'intro' %}selected{% endif %}>Intro only</option>
+            <option value="section" {% if regenerate_scope == 'section' %}selected{% endif %}>Weakest section</option>
+            <option value="conclusion" {% if regenerate_scope == 'conclusion' %}selected{% endif %}>Final section</option>
+            <option value="meta" {% if regenerate_scope == 'meta' %}selected{% endif %}>Meta angle</option>
+          </select>
           <textarea id="change_request" name="change_request" placeholder="e.g. make the CTA softer, add more local proof, simplify the service explanation" class="mb-5 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ change_request }}</textarea>
         {% endif %}
 
@@ -78,6 +86,10 @@
         {% endif %}
 
         <div id="previewArea" class="rounded-[22px] border border-sand-200 bg-white px-6 py-6 text-sand-900">{{ page_content|safe }}</div>
+
+        <div class="mt-5">
+          {% include "_quality_report.html" %}
+        </div>
 
         <label for="htmlOutput" class="mt-5 mb-2 block text-sm font-bold text-sand-900">HTML output</label>
         <textarea id="htmlOutput" readonly class="mt-0 min-h-[260px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ page_content }}</textarea>

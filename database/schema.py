@@ -100,6 +100,22 @@ def init_db():
                 brand_name TEXT NOT NULL DEFAULT '',
                 social_type TEXT NOT NULL DEFAULT ''
             );
+
+            CREATE TABLE IF NOT EXISTS generation_history (
+                id INTEGER PRIMARY KEY,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                content_type TEXT NOT NULL DEFAULT '',
+                brand_name TEXT NOT NULL DEFAULT '',
+                title TEXT NOT NULL DEFAULT '',
+                primary_keyword TEXT NOT NULL DEFAULT '',
+                medium_name TEXT NOT NULL DEFAULT '',
+                word_count INTEGER NOT NULL DEFAULT 0,
+                meta_description TEXT NOT NULL DEFAULT '',
+                tags TEXT NOT NULL DEFAULT '',
+                prompt_inputs TEXT NOT NULL DEFAULT '',
+                content TEXT NOT NULL DEFAULT '',
+                quality_report TEXT NOT NULL DEFAULT ''
+            );
             """
         )
         _ensure_column(connection, "backlinks", "account_name", "TEXT NOT NULL DEFAULT ''")
@@ -114,6 +130,8 @@ def init_db():
         _ensure_column(connection, "social_profiles", "brand_name", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "social_profiles", "social_type", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "brands", "brand_color", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "generation_history", "medium_name", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "generation_history", "quality_report", "TEXT NOT NULL DEFAULT ''")
         connection.execute(
             """
             UPDATE backlinks

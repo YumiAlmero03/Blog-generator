@@ -39,6 +39,8 @@ class PageSeoParser(HTMLParser):
         self.title_parts = []
         self.meta_description = ""
         self.canonical = ""
+        self.open_graph = {}
+        self.twitter_cards = {}
         self.images = []
         self.headings = {f"h{level}": [] for level in range(1, 7)}
         self.links = []
@@ -54,8 +56,16 @@ class PageSeoParser(HTMLParser):
         if tag in {"script", "style", "noscript", "svg"}:
             self._skip_depth += 1
 
-        if tag == "meta" and attrs_dict.get("name", "").lower() == "description":
-            self.meta_description = attrs_dict.get("content", "").strip()
+        if tag == "meta":
+            meta_name = attrs_dict.get("name", "").lower()
+            meta_property = attrs_dict.get("property", "").lower()
+            content = attrs_dict.get("content", "").strip()
+            if meta_name == "description":
+                self.meta_description = content
+            elif meta_property.startswith("og:"):
+                self.open_graph[meta_property] = content
+            elif meta_name.startswith("twitter:"):
+                self.twitter_cards[meta_name] = content
         elif tag == "link":
             rel_values = {value.strip().lower() for value in attrs_dict.get("rel", "").split()}
             if "canonical" in rel_values:
@@ -112,7 +122,8 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True) -> dict:
     base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
     robots_result = _fetch_optional_text(urljoin(base_url, "/robots.txt"), verify_ssl=page.ssl_verified)
     sitemap_result = _check_sitemaps(base_url, robots_result.get("text", ""), verify_ssl=page.ssl_verified)
-    checks = _build_checks(parser, page, sitemap_result, robots_result)
+    link_report = _build_link_report(parser.links, page.url, base_url, verify_ssl=page.ssl_verified)
+    checks = _build_checks(parser, page, sitemap_result, robots_result, link_report)
     score = _score_checks(checks)
     ai_summary = _generate_ai_summary(parser, checks, score, page.url)
 
@@ -135,8 +146,15 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True) -> dict:
             "h1_count": len(parser.headings["h1"]),
             "h2_count": len(parser.headings["h2"]),
             "canonical": parser.canonical,
+            "open_graph": parser.open_graph,
+            "twitter_cards": parser.twitter_cards,
             "robots_found": robots_result.get("found", False),
+            "robots_url": robots_result.get("url", ""),
+            "robots_status_code": robots_result.get("status_code"),
+            "robots_sitemap_count": len(_sitemap_urls_from_robots(robots_result.get("text", ""))),
             "sitemaps": sitemap_result["sitemaps"],
+            "heading_outline": parser.headings,
+            "links": link_report,
             "ssl_verified": page.ssl_verified,
             "ssl_warning": page.ssl_warning,
         },
@@ -250,11 +268,16 @@ def _fetch_optional_text(url: str, verify_ssl: bool = True) -> dict:
     }
 
 
-def _check_sitemaps(base_url: str, robots_text: str, verify_ssl: bool = True) -> dict:
+def _sitemap_urls_from_robots(robots_text: str) -> list[str]:
     sitemap_urls = []
     for line in robots_text.splitlines():
         if line.lower().startswith("sitemap:"):
             sitemap_urls.append(line.split(":", 1)[1].strip())
+    return sitemap_urls
+
+
+def _check_sitemaps(base_url: str, robots_text: str, verify_ssl: bool = True) -> dict:
+    sitemap_urls = _sitemap_urls_from_robots(robots_text)
 
     sitemap_urls.extend(urljoin(base_url, path) for path in COMMON_SITEMAP_PATHS)
     seen = set()
@@ -280,7 +303,7 @@ def _check_sitemaps(base_url: str, robots_text: str, verify_ssl: bool = True) ->
     return {"sitemaps": sitemaps, "found": any(item["found"] for item in sitemaps)}
 
 
-def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict, robots_result: dict) -> list[dict]:
+def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict, robots_result: dict, link_report: dict) -> list[dict]:
     word_count = _word_count(parser.body_text)
     missing_alt_count = sum(1 for image in parser.images if not image["has_alt"])
     title_length = len(parser.title)
@@ -317,7 +340,7 @@ def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict
         ),
         _check(
             "Heading structure",
-            "pass" if len(parser.headings["h1"]) == 1 and len(parser.headings["h2"]) >= 1 else "warn",
+            "pass" if len(parser.headings["h1"]) == 1 and len(parser.headings["h2"]) >= 1 else "fail" if not parser.headings["h1"] else "warn",
             f"{len(parser.headings['h1'])} H1, {len(parser.headings['h2'])} H2 headings",
             "Use one H1 and organize the page with useful H2 sections.",
             10,
@@ -342,6 +365,27 @@ def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict
             "Robots.txt found" if robots_result.get("found") else "Robots.txt not found",
             "Add robots.txt with sitemap references and crawler rules.",
             8,
+        ),
+        _check(
+            "Social cards",
+            "pass" if parser.open_graph.get("og:title") and parser.open_graph.get("og:description") else "warn",
+            f"{len(parser.open_graph)} Open Graph tag(s), {len(parser.twitter_cards)} Twitter card tag(s)",
+            "Add Open Graph and Twitter card tags so shared links have useful previews.",
+            6,
+        ),
+        _check(
+            "Internal links",
+            "pass" if link_report["internal_count"] >= 1 else "warn",
+            f"{link_report['internal_count']} internal, {link_report['external_count']} external",
+            "Add relevant internal links to help visitors and crawlers discover related pages.",
+            5,
+        ),
+        _check(
+            "Sample link health",
+            "pass" if link_report["broken_sample_count"] == 0 else "warn",
+            f"{link_report['broken_sample_count']} broken/unreachable link(s) in sample of {len(link_report['sample_checks'])}",
+            "Review broken links and update or remove URLs that no longer resolve.",
+            5,
         ),
     ]
 
@@ -383,6 +427,60 @@ def _grade(score: int) -> str:
 
 def _word_count(text: str) -> int:
     return len(re.findall(r"\b[\w'-]+\b", text or ""))
+
+
+def _build_link_report(links: list[str], page_url: str, base_url: str, verify_ssl: bool = True) -> dict:
+    parsed_base = urlparse(base_url)
+    normalized_links = []
+    for href in links:
+        cleaned = (href or "").strip()
+        if not cleaned or cleaned.startswith(("#", "mailto:", "tel:", "javascript:")):
+            continue
+        absolute_url = urljoin(page_url, cleaned)
+        parsed_link = urlparse(absolute_url)
+        if parsed_link.scheme not in {"http", "https"} or not parsed_link.netloc:
+            continue
+        link_type = "internal" if parsed_link.netloc == parsed_base.netloc else "external"
+        normalized_links.append({"url": absolute_url, "type": link_type})
+
+    sample_checks = []
+    seen = set()
+    for item in normalized_links:
+        if item["url"] in seen:
+            continue
+        seen.add(item["url"])
+        if len(sample_checks) >= 8:
+            break
+        sample_checks.append(_check_link_url(item["url"], item["type"], verify_ssl=verify_ssl))
+
+    return {
+        "total_count": len(normalized_links),
+        "internal_count": sum(1 for item in normalized_links if item["type"] == "internal"),
+        "external_count": sum(1 for item in normalized_links if item["type"] == "external"),
+        "sample_checks": sample_checks,
+        "broken_sample_count": sum(1 for item in sample_checks if item["status"] in {"broken", "unreachable"}),
+    }
+
+
+def _check_link_url(url: str, link_type: str, verify_ssl: bool = True) -> dict:
+    try:
+        _validate_public_http_url(url)
+        request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,*/*"}, method="HEAD")
+        ssl_context = SSL_CONTEXT if verify_ssl else UNVERIFIED_SSL_CONTEXT
+        with urlopen(request, timeout=6, context=ssl_context) as response:
+            status_code = getattr(response, "status", 200)
+    except HTTPError as exc:
+        status_code = exc.code
+    except Exception:
+        return {"url": url, "type": link_type, "status_code": None, "status": "unreachable"}
+
+    if 200 <= status_code < 400:
+        status = "ok"
+    elif 400 <= status_code < 600:
+        status = "broken"
+    else:
+        status = "warning"
+    return {"url": url, "type": link_type, "status_code": status_code, "status": status}
 
 
 def _generate_ai_summary(parser: PageSeoParser, checks: list[dict], score: int, url: str) -> dict:

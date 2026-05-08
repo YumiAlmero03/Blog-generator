@@ -2,13 +2,14 @@ import json
 
 from flask import render_template, request
 
-from database import get_brand_context, get_setting, list_brand_names, record_blog, upsert_brand
+from database import get_brand_context, get_setting, list_brand_names, record_blog, record_generation, upsert_brand
 from generators.content_generator import generate_content, suggest_content_tags
 from generators.meta_description_generator import generate_meta_descriptions
 from generators.title_generator import generate_titles
 from logger import logger
 
 from app.controllers.helpers import base_template_context
+from app.services.content_quality_service import analyze_generated_content
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_blog_word_limits
 
@@ -25,8 +26,10 @@ def index():
         "meta_descriptions": [],
         "meta_description": "",
         "content": "",
+        "quality_report": None,
         "tag_suggestions": [],
         "change_request": "",
+        "regenerate_scope": "full",
         "error": None,
         "step": "title",
         "include_money_site": False,
@@ -94,6 +97,7 @@ def _handle_generate_content(state: dict):
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["change_request"] = request.form.get("change_request", "").strip()
+    state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
     state["include_money_site"] = request.form.get("include_money_site") == "1"
     titles_raw = request.form.get("titles_json", "").strip()
     selected_meta_description = request.form.get("meta_description_choice", "").strip()
@@ -126,6 +130,7 @@ def _handle_generate_content(state: dict):
                 None,
             )
             state["meta_description"] = (selected_match or state["meta_descriptions"][0]).get("text", "")
+        scoped_change_request = _scoped_change_request(state["change_request"], state["regenerate_scope"])
         state["content"] = generate_content(
             provider,
             title=state["selected_title"],
@@ -136,7 +141,7 @@ def _handle_generate_content(state: dict):
             money_site_url=state["money_site_url"] if state["include_money_site"] else "",
             brand=state["brand"],
             brand_context=brand_context,
-            change_request=state["change_request"],
+            change_request=scoped_change_request,
             min_words=min_words,
             max_words=max_words,
         )
@@ -147,6 +152,33 @@ def _handle_generate_content(state: dict):
             brand=state["brand"],
             content=state["content"],
             minimum=10,
+        )
+        state["quality_report"] = analyze_generated_content(
+            state["content"],
+            title=state["selected_title"],
+            keyword=state["keyword"],
+            meta_description=state["meta_description"],
+            min_words=min_words,
+            max_words=max_words,
+        )
+        record_generation(
+            content_type="Blog",
+            brand_name=state["brand"],
+            title=state["selected_title"],
+            primary_keyword=state["keyword"],
+            word_count=state["quality_report"]["word_count"],
+            meta_description=state["meta_description"],
+            tags=state["tag_suggestions"],
+            prompt_inputs={
+                "supporting_keyword": state["supporting_keyword"],
+                "tone": state["tone"],
+                "include_money_site": state["include_money_site"],
+                "regenerate_scope": state["regenerate_scope"],
+                "change_request": state["change_request"],
+                "links": state["links"],
+            },
+            content=state["content"],
+            quality_report=state["quality_report"],
         )
         record_blog(
             brand=state["brand"],
@@ -176,3 +208,19 @@ def _extract_links_from_request() -> list[dict]:
         if cleaned_text and cleaned_url:
             links.append({"text": cleaned_text, "url": cleaned_url, "type": cleaned_type})
     return links
+
+
+def _scoped_change_request(change_request: str, scope: str) -> str:
+    cleaned = (change_request or "").strip()
+    cleaned_scope = (scope or "full").strip().lower()
+    scope_labels = {
+        "intro": "Regenerate only the introduction while keeping the rest of the article structure and intent consistent.",
+        "meta": "Regenerate the meta description options and keep the article aligned with the selected title.",
+        "tags": "Refresh the tag angle and make the article naturally support better tags.",
+        "conclusion": "Regenerate only the ending section while keeping the article body consistent.",
+        "section": "Regenerate the weakest body section while keeping the title, intro, and ending consistent.",
+    }
+    prefix = scope_labels.get(cleaned_scope, "")
+    if not prefix:
+        return cleaned
+    return f"{prefix}\n{cleaned}".strip()

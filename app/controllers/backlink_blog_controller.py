@@ -2,13 +2,14 @@ import json
 
 from flask import render_template, request
 
-from database import get_backlink, get_brand_context, get_brand_record, list_backlinks, list_brand_names, record_blog, upsert_brand
+from database import get_backlink, get_brand_context, get_brand_record, list_backlinks, list_brand_names, record_blog, record_generation, upsert_brand
 from generators.content_generator import generate_backlink_content, suggest_content_tags
 from generators.meta_description_generator import generate_backlink_meta_descriptions
 from generators.title_generator import generate_backlink_titles
 from logger import logger
 
 from app.controllers.helpers import base_template_context
+from app.services.content_quality_service import analyze_generated_content
 from app.services.provider_service import generation_error_message, get_provider
 
 
@@ -24,9 +25,11 @@ def backlink_blog_generator():
         "meta_descriptions": [],
         "meta_description": "",
         "content": "",
+        "quality_report": None,
         "tag_suggestions": [],
         "suggested_content": "",
         "change_request": "",
+        "regenerate_scope": "full",
         "error": None,
         "step": "title",
         "brand_website_url": "",
@@ -125,6 +128,7 @@ def _handle_generate_content(state: dict):
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["suggested_content"] = request.form.get("suggested_content", "").strip()
     state["change_request"] = request.form.get("change_request", "").strip()
+    state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
     state["brand_website_url"] = request.form.get("brand_website_url", "").strip()
     state["selected_backlink_id"] = request.form.get("selected_backlink_id", "").strip()
     titles_raw = request.form.get("titles_json", "").strip()
@@ -197,7 +201,7 @@ def _handle_generate_content(state: dict):
             brand=state["brand"],
             brand_context=brand_context,
             suggested_content=state["suggested_content"],
-            change_request=state["change_request"],
+            change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
             **backlink_context,
         )
         state["tag_suggestions"] = suggest_content_tags(
@@ -206,6 +210,36 @@ def _handle_generate_content(state: dict):
             brand=state["brand"],
             content=state["content"],
             minimum=10,
+        )
+        max_words = _int_or_zero(backlink_context.get("backlink_max_characters", 0))
+        min_words = _int_or_zero(backlink_context.get("backlink_min_words", 0))
+        state["quality_report"] = analyze_generated_content(
+            state["content"],
+            title=state["selected_title"],
+            keyword=state["keyword"],
+            meta_description=state["meta_description"],
+            min_words=min_words,
+            max_words=max_words,
+            required_url=state["brand_website_url"],
+        )
+        record_generation(
+            content_type="Medium Blog",
+            brand_name=state["brand"],
+            title=state["selected_title"],
+            primary_keyword=state["keyword"],
+            medium_name=state["selected_backlink"].get("website_name", ""),
+            word_count=state["quality_report"]["word_count"],
+            meta_description=state["meta_description"],
+            tags=state["tag_suggestions"],
+            prompt_inputs={
+                "tone": state["tone"],
+                "suggested_content": state["suggested_content"],
+                "regenerate_scope": state["regenerate_scope"],
+                "change_request": state["change_request"],
+                "medium": backlink_context,
+            },
+            content=state["content"],
+            quality_report=state["quality_report"],
         )
         record_blog(
             brand=state["brand"],
@@ -220,3 +254,25 @@ def _handle_generate_content(state: dict):
             "An error occurred while generating medium content. Check logs/app.log for details.",
             exc,
         )
+
+
+def _scoped_change_request(change_request: str, scope: str) -> str:
+    cleaned = (change_request or "").strip()
+    cleaned_scope = (scope or "full").strip().lower()
+    scope_labels = {
+        "intro": "Regenerate only the first paragraph/introduction and keep the required brand URL in that first paragraph.",
+        "section": "Regenerate the weakest body section while keeping the selected medium format and brand URL rule.",
+        "conclusion": "Regenerate only the ending section without adding the brand URL again.",
+        "tags": "Refresh the tag angle and make the content naturally support better tags.",
+    }
+    prefix = scope_labels.get(cleaned_scope, "")
+    if not prefix:
+        return cleaned
+    return f"{prefix}\n{cleaned}".strip()
+
+
+def _int_or_zero(value) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
