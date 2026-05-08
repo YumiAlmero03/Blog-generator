@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% set active_page = "banned-words" %}
+
+{% block title %}Banned Words{% endblock %}
+{% block eyebrow %}Content Rules{% endblock %}
+{% block hero_title %}Banned Words{% endblock %}
+{% block hero_text %}Add custom banned words or phrases used by prompts, validators, quality checks, titles, pages, blogs, and meta descriptions.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-[minmax(320px,1fr)_minmax(280px,420px)]">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ success }}</div>
+      {% endif %}
+
+      <form method="post" class="grid gap-1">
+        <label for="custom_banned_words" class="mb-2 block text-sm font-bold text-sand-900">Custom banned words and phrases</label>
+        <textarea
+          id="custom_banned_words"
+          name="custom_banned_words"
+          spellcheck="false"
+          class="mb-4 min-h-[420px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 font-mono text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          placeholder="Add one word or phrase per line">{{ custom_banned_words }}</textarea>
+
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Save Banned Words</button>
+      </form>
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <h2 class="mb-3 text-base font-bold text-sand-950">Built-in banned words</h2>
+      <p class="mb-5 text-sm leading-6 text-sand-700">These come from <span class="font-mono text-xs">banned_words.txt</span>. The custom list on the left is added on top of these defaults.</p>
+      {% if default_banned_words %}
+        <div class="flex flex-wrap gap-2">
+          {% for term in default_banned_words %}
+            <span class="rounded-full bg-sand-100 px-3 py-2 text-xs font-bold text-sand-700">{{ term }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-5 py-8 text-center text-sm leading-6 text-sand-700">
+          No built-in banned words found.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

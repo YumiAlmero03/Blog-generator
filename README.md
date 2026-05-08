@@ -1,180 +1,97 @@
 # Auto Blog Generator
 
-## Project Overview
-
-This project is an automated blog content generator built in Python. It creates complete, SEO-friendly blog posts ready for WordPress publishing. The system accepts keyword inputs and generates titles, introductions, full articles, and featured images using AI providers. Designed for efficiency, it produces human-sounding content that adheres to Yoast SEO guidelines.
-
-The architecture supports multiple AI providers (Ollama, OpenAI, Gemini) for flexibility in deployment and cost management.
-
-## Requirements
-
-- **Input Handling**: Accept single or multiple keywords (single keyword as default).
-- **Output Formats**: Generate WordPress-ready HTML/markdown content.
-- **AI Integration**: Modular provider system for easy switching between local (Ollama) and cloud (OpenAI, Gemini) models.
-- **Validation**: Built-in checks for content length, SEO compliance, and image guidelines.
-- **Extensibility**: Plugin-like structure for adding new generators (e.g., meta descriptions, internal links).
+Auto Blog Generator is a local Flask workspace for creating and managing SEO content. It supports blog posts, medium/backlink posts, WordPress pages, simple pages, social posts, image tools, text tools, brand profiles, medium profiles, and website SEO checks.
 
 ## Features
 
-- Keyword-based content generation (single or multi-keyword support)
-- Automated title generation with multiple options
-- Lightweight TinyDB storage for brands, saved brand pages, and used keywords
-- Introduction generation (≤450 characters, problem-focused)
-- Full article generation (~800 words, SEO-optimized)
-- Featured image generation (text-free, button-free visuals)
-- Yoast-friendly content validation
-- Provider abstraction for Ollama, OpenAI, and Gemini
-- Command-line interface for easy integration
-- Configurable prompts and generation rules
+- Blog title, meta description, tag, and article generation
+- Medium Blog Generator with platform-specific rules
+- Page Generator and Simple Page Generator
+- Social Media Activator and Social Media List
+- Brand library with logos, colors, presets, and keyword history
+- Medium library with post type, title, min-word, and max-word rules
+- Website SEO Checker for on-page checks, robots.txt, sitemap, headings, social cards, links, and image alt text
+- Generation dashboard and history
+- Quality reports for generated content
+- Provider support for Ollama, OpenAI, and Gemini
 
-## Content Rules
+## Run Locally
 
-1. **Introduction**: Must explain the user's problem clearly. Limited to 450 characters or less. Focus on engaging the reader and setting context.
-2. **Main Article**: Approximately 800 words. Ensure natural, human-sounding language. Incorporate keywords naturally for SEO.
-3. **Overall Tone**: Avoid robotic phrasing. Use varied sentence structures, active voice, and conversational style.
-4. **SEO Compliance**: Follow Yoast guidelines – readable structure, keyword density, internal linking suggestions.
-5. **Featured Image**: Generated based on the selected title. Must be visual-only (no text overlays or call-to-action buttons).
-6. **WordPress Readiness**: Output formatted for direct copy-paste into WordPress editor, including headings, paragraphs, and image placeholders.
+```bash
+source venv/bin/activate
+pip install -r requirements.txt
+python ui.py
+```
 
-## Planned Workflow
+Then open:
 
-1. **Input Collection**: User provides one or more keywords via CLI.
-2. **Title Generation**: System generates 5-10 title variants using the configured AI provider.
-3. **Title Selection**: User selects preferred title (or system auto-selects based on criteria).
-4. **Introduction Generation**: Create a concise intro explaining the problem (≤450 chars).
-5. **Article Generation**: Produce the full ~800-word article with SEO optimization.
-6. **Image Generation**: Generate or prompt for a featured image based on the title.
-7. **Validation & Formatting**: Check content against rules, format for WordPress.
-8. **Output**: Display or save the complete blog post package.
+```text
+http://localhost:3444
+```
 
-## Future Improvements
+## Configuration
 
-- **Provider Extensions**: Add support for more AI services (e.g., Anthropic Claude, local models via transformers).
-- **Advanced Validation**: Integrate Yoast API or similar for real-time SEO scoring.
-- **WordPress Integration**: Direct publishing to WordPress via API.
-- **Content Enhancement**: Add meta descriptions, alt text generation, internal/external linking.
-- **Multi-language Support**: Generate content in multiple languages.
-- **Batch Processing**: Handle multiple keywords/topics in a single run.
-- **UI/UX**: Web interface or GUI for non-technical users.
-- **Analytics**: Track generation success rates, SEO performance post-publishing.
+Provider and model configuration lives in `config.py` and environment variables, depending on your local setup.
 
-### generators/title_generator.py
-Contains the `generate_titles` function, which orchestrates title generation. Builds the prompt, calls the provider's `generate_json` method, parses the JSON response, and returns a list of titles.
+The app supports:
 
-## Dependencies
+- `ollama`
+- `openai`
+- `gemini`
 
-- `ollama` (for Ollama provider)
-- `openai` (for OpenAI provider)
-- `google-genai` (for Gemini provider)
-- `tinydb` (for lightweight local storage)
-- Standard library: `json`, `os`, `abc`
+For cloud providers, set the required API keys in your environment.
 
-## Local Brand Data
+## Project Structure
 
-The app now keeps lightweight local data in `data/app_db.json` using TinyDB. It stores:
+- `app/controllers/`: Flask page handlers
+- `app/services/`: reusable app logic
+- `app/routes/web.py`: route registration
+- `database/`: SQLite schema and data helpers
+- `generators/`: AI generation orchestration
+- `prompts/`: prompt builders grouped by feature
+- `templates/`: Jinja pages and shared layout
+- `static/`: CSS and JavaScript
+- `tests/`: unit tests
+- `docs/`: architecture and testing notes
 
-- saved brand names
-- pages generated for each brand
-- keywords already used for blog posts and pages
+Read more in:
 
-This data is used as prompt context so future generations can stay more consistent and avoid repeating the same keyword angles too often.
+- `docs/ARCHITECTURE.md`
+- `docs/TESTING.md`
 
-## Notes
+## Testing
 
-- Ensure the selected model supports JSON output format.
-- For OpenAI and Gemini, set the appropriate API keys in your environment.
-- Titles are generated to be around 45-65 characters for SEO optimization.
+```bash
+pytest
+```
+
+Syntax check:
+
+```bash
+python -m compileall app database generators prompts
+```
+
+GitHub Actions is configured in `.github/workflows/tests.yml`.
+
+## Personalization Notes
+
+Use global settings for app-wide defaults such as word limits and shared URLs. Use brand records for brand-specific personalization such as niche, tone, notes, colors, logo, website, and main keywords.
+
+When adding a new setting:
+
+1. Add the setting key and defaults in a service.
+2. Save it from `app/controllers/settings_controller.py`.
+3. Add the field in `templates/settings.html`.
+4. Pass the setting into prompts or validators explicitly.
+5. Add a unit test for fallback behavior.
 
 ## Docker
 
-You can run the app with Docker Compose.
+If Docker files are present in your checkout:
 
-1. Copy the example env file:
-   `cp .env.example .env`
-2. Update `.env` if you want a different provider or model.
-3. Start the app:
-   `docker compose up --build`
+```bash
+cp .env.example .env
+docker compose up --build
+```
 
 Then open `http://localhost:3444`.
-
-Notes:
-- The app data is persisted through the `./data` volume mount.
-- If you use `ollama`, the default Docker config points to Ollama running on your host at `http://host.docker.internal:11434`.
-- If you use `openai` or `gemini`, set `OPENAI_API_KEY` or `GEMINI_API_KEY` in `.env`.
-MODEL = "gemini-3-flash-preview"
-
-<!-- the plan -->
-# Goals
-
-## Project Overview
-This project is a simple auto blog generator designed to create blog content that is easy to publish on WordPress. It should support title generation, introduction generation, full article generation, and featured image generation while keeping the output SEO-friendly and natural-sounding.
-
-The system should be flexible enough to work with different AI providers such as Ollama, OpenAI, or Gemini.
-
-## Requirements
-
-### Input
-- Accept one or multiple keywords
-- One keyword is the default input case
-
-### Content Rules
-- Generate an introduction that explains the user problem
-- The introduction must be 450 characters or less
-- Generate a main article of around 800 words
-- The article must sound human, natural, and SEO-friendly
-- The output must be website-ready and easy to copy directly into WordPress
-- The content should aim to follow Yoast-friendly writing rules
-
-### Featured Image Rules
-- Generate a featured image based on the selected blog title
-- The image must contain no text
-- The image must contain no buttons
-
-## Core Features
-- Keyword input: single or multiple
-- Blog title generation
-- Short introduction generation
-- Full article generation
-- Featured image generation
-- Yoast-friendly content checks
-- Provider-based model architecture for Ollama, OpenAI, and Gemini
-
-## Planned Workflow
-1. User enters one or more keywords
-2. System generates multiple blog title options
-3. User selects a preferred title
-4. System generates a short introduction that explains the problem in 450 characters or less
-5. System generates an SEO-friendly article of around 800 words
-6. System formats the output so it is easy to paste into WordPress
-7. System generates a featured image prompt or image based on the title
-8. System validates the content against basic Yoast-friendly rules
-
-## Yoast-Friendly Goals
-The generated content should aim to follow these guidelines:
-- Clear and readable structure
-- Natural keyword placement
-- Introduction includes the topic naturally
-- Reasonable paragraph length
-- Readable sentence length
-- Low passive voice when possible
-- Useful headings and subheadings
-- Human and non-robotic tone
-
-## Validation Rules
-- Warn if introduction exceeds 450 characters
-- Warn if the article is far below or above the 800-word target
-- Support both single-keyword and multi-keyword input
-- Ensure output is WordPress-ready
-- Ensure image output avoids text and buttons
-
-## Future Improvements
-- Automatic WordPress draft publishing
-- Title scoring and ranking
-- Regenerate individual sections
-- Internal linking suggestions
-- Meta title and meta description generation
-- Provider switching between Ollama, OpenAI, and Gemini
-
-source venv/bin/activate   
-pip install -r requirements.txt
-python ui.py

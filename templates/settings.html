@@ -16,6 +16,12 @@
     {% endif %}
 
     <form method="post" class="grid max-w-3xl gap-1">
+      <div class="mb-5 rounded-3xl border border-sand-200 bg-sand-50/70 p-5">
+        <h2 class="text-base font-bold text-sand-950">Content Rules</h2>
+        <p class="mt-1 text-sm leading-6 text-sand-600">Manage custom banned words and phrases used by generators and quality checks.</p>
+        <a href="/banned-words" class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-sand-100 px-4 py-2.5 text-sm font-bold text-sand-700 transition hover:bg-sand-200 hover:text-sand-900">Open Banned Words</a>
+      </div>
+
       <label for="money_site" class="mb-2 block text-sm font-bold text-sand-900">Money site URL</label>
       <input
         id="money_site"

@@ -78,6 +78,12 @@ def init_db():
                 value TEXT NOT NULL DEFAULT ''
             );
 
+            CREATE TABLE IF NOT EXISTS banned_words (
+                id INTEGER PRIMARY KEY,
+                term TEXT NOT NULL,
+                normalized_term TEXT NOT NULL UNIQUE
+            );
+
             CREATE TABLE IF NOT EXISTS backlinks (
                 id INTEGER PRIMARY KEY,
                 website_name TEXT NOT NULL DEFAULT '',

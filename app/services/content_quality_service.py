@@ -92,9 +92,9 @@ def analyze_generated_content(
         ),
         _check(
             "Meta length",
-            "pass" if not meta_description or 120 <= len(meta_description) <= 170 else "warn",
+            "pass" if not meta_description or 120 <= len(meta_description) <= 140 else "warn",
             f"{len(meta_description)} characters" if meta_description else "No meta description selected",
-            "Keep meta descriptions useful and usually around 120-170 characters.",
+            "Keep meta descriptions useful and within 120-140 characters.",
         ),
         _check(
             "Images",

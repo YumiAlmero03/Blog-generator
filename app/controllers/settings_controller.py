@@ -1,6 +1,6 @@
 from flask import render_template, request
 
-from database import get_setting, set_setting
+from database import get_setting, list_custom_banned_words, replace_custom_banned_words, set_setting
 
 from app.controllers.helpers import base_template_context
 from app.services.word_limit_settings import (
@@ -53,3 +53,35 @@ def settings():
         state["success"] = "Settings saved."
 
     return render_template("settings.html", **base_template_context(), **state)
+
+
+def banned_words():
+    state = {
+        "custom_banned_words": "\n".join(list_custom_banned_words()),
+        "default_banned_words": _load_default_banned_words(),
+        "success": None,
+        "error": None,
+    }
+
+    if request.method == "POST":
+        raw_terms = request.form.get("custom_banned_words", "")
+        terms = raw_terms.splitlines()
+        saved_terms = replace_custom_banned_words(terms)
+        state["custom_banned_words"] = "\n".join(saved_terms)
+        state["success"] = "Banned words saved."
+
+    return render_template("banned_words.html", **base_template_context(), **state)
+
+
+def _load_default_banned_words() -> list[str]:
+    from word_bank import WORD_BANK_FILE
+
+    if not WORD_BANK_FILE.exists():
+        return []
+
+    terms = []
+    for raw_line in WORD_BANK_FILE.read_text(encoding="utf-8").splitlines():
+        cleaned = raw_line.strip()
+        if cleaned and not cleaned.startswith("#"):
+            terms.append(cleaned)
+    return terms

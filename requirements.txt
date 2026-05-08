@@ -5,3 +5,4 @@ ollama
 openai
 pillow
 python-docx
+pytest

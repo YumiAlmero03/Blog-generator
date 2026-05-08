@@ -135,7 +135,7 @@ Brand: {brand}
 {banned_words_section}
 
 Rules:
-- Each meta description must be between 160 and 170 characters long.
+- Each meta description must be between 120 and 140 characters long.
 - Count characters carefully before finishing.
 - Include the main keyword naturally.
 - Make it compelling and encourage clicks.
@@ -149,7 +149,7 @@ Rules:
 - If the medium tier is Tier 1 and a publication name is provided, the description may sound like it belongs on that blog or publication, but keep it natural.
 - Vary the approach for each variant.
 - Do not add any extra text before or after the JSON.
-- Ensure each meta description is complete, natural, and within the 160–170 character limit.
+- Ensure each meta description is complete, natural, and within the 120-140 character limit.
 - Start your response with '{{' and end with '}}'
 
 Return valid JSON only in this format:
@@ -157,11 +157,11 @@ Return valid JSON only in this format:
   "meta_descriptions": [
     {{
       "text": "Your first meta description here",
-      "character_count": 155
+      "character_count": 132
     }},
     {{
       "text": "Your second meta description here",
-      "character_count": 158
+      "character_count": 136
     }}
   ]
 }}

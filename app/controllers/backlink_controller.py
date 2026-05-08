@@ -1,6 +1,7 @@
 from flask import render_template, request
 
-from database import get_backlink, list_backlinks, save_backlink
+from database import delete_backlink, get_backlink, list_backlinks, save_backlink
+from logger import logger
 
 from app.controllers.helpers import base_template_context
 
@@ -54,7 +55,11 @@ def backlinks():
         _populate_for_edit(state, int(edit_id))
 
     if request.method == "POST":
-        _handle_save_backlink(state)
+        action = request.form.get("action", "save_backlink").strip()
+        if action == "delete_backlink":
+            _handle_delete_backlink(state)
+        else:
+            _handle_save_backlink(state)
 
     return render_template(
         "backlinks.html",
@@ -161,6 +166,22 @@ def _handle_save_backlink(state: dict):
             "success": "Medium saved.",
         }
     )
+
+
+def _handle_delete_backlink(state: dict):
+    backlink_id = request.form.get("backlink_id", "").strip()
+    if not backlink_id.isdigit():
+        state["error"] = "Please select a medium to delete."
+        return
+
+    try:
+        if delete_backlink(int(backlink_id)):
+            state["success"] = "Medium deleted."
+        else:
+            state["error"] = "Medium not found."
+    except Exception:
+        logger.exception("mediums delete_backlink action failed")
+        state["error"] = "An error occurred while deleting the medium. Check logs/app.log for details."
 
 
 def _apply_medium_preset(state: dict, preset_key: str):

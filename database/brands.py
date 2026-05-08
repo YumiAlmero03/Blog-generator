@@ -125,6 +125,19 @@ def get_brand_record(brand: str) -> Optional[dict]:
         return row_to_dict(row)
 
 
+def delete_brand(brand: str) -> bool:
+    normalized = normalize_brand_name(brand)
+    if not normalized:
+        return False
+
+    with get_connection() as connection:
+        cursor = connection.execute(
+            "DELETE FROM brands WHERE normalized_name = ?",
+            (normalized,),
+        )
+        return cursor.rowcount > 0
+
+
 def get_brand_context(brand: str) -> str:
     from database.pages import get_blog_keywords, get_brand_blogs, get_brand_pages, get_brand_related_keywords, get_page_keywords
 

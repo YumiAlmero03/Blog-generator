@@ -58,82 +58,98 @@
     {% block head_extras %}{% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/app.css') }}" />
   </head>
-  <body class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(154,79,34,0.14),transparent_28%),radial-gradient(circle_at_top_right,rgba(135,161,109,0.12),transparent_24%),linear-gradient(180deg,#fbf7f2_0%,#f4efe7_52%,#f8f2ea_100%)] font-sans text-sand-900">
+  <body class="min-h-screen bg-[linear-gradient(180deg,#fbf7f2_0%,#f4efe7_52%,#f8f2ea_100%)] font-sans text-sand-900">
     {% block overlay %}{% endblock %}
 
-    <div class="px-4 pb-12 pt-7 sm:px-5">
+    {% macro nav_link(href, page_key, label) -%}
+      <a
+        href="{{ href }}"
+        class="flex min-h-10 items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if active_page == page_key %}bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}text-sand-700 hover:bg-sand-100 hover:text-sand-950{% endif %}"
+      >{{ label }}</a>
+    {%- endmacro %}
+
+    <div class="min-h-screen lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
       {% block shell_header %}
-        <header class="mx-auto mb-6 grid max-w-6xl gap-4">
-          <a href="/" class="font-display text-2xl font-bold tracking-[0.03em] text-sand-900 sm:text-3xl">Auto Blog Generator</a>
-          <nav class="flex flex-wrap gap-2.5" aria-label="Main navigation">
-            <a
-              href="/dashboard"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'dashboard' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Dashboard</a>
-            <a
-              href="/"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'blog' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Blog Generator</a>
-            <a
-              href="/medium-blog-generator"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'backlink-blog' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Medium Blog</a>
-            <a
-              href="/page-generator"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'page' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Page Generator</a>
-            <a
-              href="/simple-page-generator"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'simple' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Simple Pages</a>
-            <a
-              href="/text-tools"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'text' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Text Tools</a>
-            <a
-              href="/seo-checker"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'seo' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >SEO Checker</a>
-            <a
-              href="/image-tools"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'image' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Image Tools</a>
-            <a
-              href="/brands"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'brands' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Brands</a>
-            <a
-              href="/social-media-activator"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'social-activator' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Social Activator</a>
-            <a
-              href="/social-media-list"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'social-list' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Social List</a>
-            <a
-              href="/mediums"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'backlinks' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Mediums</a>
-            <a
-              href="/settings"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'settings' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >Settings</a>
-            <a
-              href="/generation-history"
-              class="rounded-full border px-4 py-2.5 text-sm font-bold transition {% if active_page == 'history' %}border-sand-600 bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}border-sand-200 bg-white/80 text-sand-700 hover:border-sand-500 hover:text-sand-600{% endif %}"
-            >History</a>
-          </nav>
-        </header>
+        <aside class="border-b border-sand-200/80 bg-white/85 backdrop-blur-md lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r">
+          <div class="mx-auto max-w-6xl px-4 py-4 lg:px-5 lg:py-6">
+            <a href="/dashboard" class="block font-display text-2xl font-bold tracking-[0.03em] text-sand-950">Auto Blog Generator</a>
+            <p class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-sand-500">Content Workspace</p>
+
+            <details class="mt-4 rounded-2xl border border-sand-200 bg-sand-50/80 px-4 py-3 lg:hidden">
+              <summary class="cursor-pointer text-sm font-bold text-sand-900">Open navigation</summary>
+              <nav class="mt-4 grid gap-5" aria-label="Mobile navigation">
+                <div class="grid gap-1">
+                  <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Workspace</div>
+                  {{ nav_link("/dashboard", "dashboard", "Dashboard") }}
+                  {{ nav_link("/generation-history", "history", "History") }}
+                </div>
+                <div class="grid gap-1">
+                  <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Generators</div>
+                  {{ nav_link("/", "blog", "Blog Generator") }}
+                  {{ nav_link("/medium-blog-generator", "backlink-blog", "Medium Blog") }}
+                  {{ nav_link("/page-generator", "page", "Page Generator") }}
+                  {{ nav_link("/simple-page-generator", "simple", "Simple Pages") }}
+                  {{ nav_link("/social-media-activator", "social-activator", "Social Activator") }}
+                </div>
+                <div class="grid gap-1">
+                  <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Tools</div>
+                  {{ nav_link("/seo-checker", "seo", "SEO Checker") }}
+                  {{ nav_link("/text-tools", "text", "Text Tools") }}
+                  {{ nav_link("/image-tools", "image", "Image Tools") }}
+                </div>
+                <div class="grid gap-1">
+                  <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Settings</div>
+                  {{ nav_link("/brands", "brands", "Brands") }}
+                  {{ nav_link("/mediums", "backlinks", "Mediums") }}
+                  {{ nav_link("/social-media-list", "social-list", "Social List") }}
+                  {{ nav_link("/banned-words", "banned-words", "Banned Words") }}
+                  {{ nav_link("/settings", "settings", "App Settings") }}
+                </div>
+              </nav>
+            </details>
+
+            <nav class="mt-7 hidden gap-7 lg:grid" aria-label="Main navigation">
+              <div class="grid gap-1">
+                <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Workspace</div>
+                {{ nav_link("/dashboard", "dashboard", "Dashboard") }}
+                {{ nav_link("/generation-history", "history", "History") }}
+              </div>
+              <div class="grid gap-1">
+                <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Generators</div>
+                {{ nav_link("/", "blog", "Blog Generator") }}
+                {{ nav_link("/medium-blog-generator", "backlink-blog", "Medium Blog") }}
+                {{ nav_link("/page-generator", "page", "Page Generator") }}
+                {{ nav_link("/simple-page-generator", "simple", "Simple Pages") }}
+                {{ nav_link("/social-media-activator", "social-activator", "Social Activator") }}
+              </div>
+              <div class="grid gap-1">
+                <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Tools</div>
+                {{ nav_link("/seo-checker", "seo", "SEO Checker") }}
+                {{ nav_link("/text-tools", "text", "Text Tools") }}
+                {{ nav_link("/image-tools", "image", "Image Tools") }}
+              </div>
+              <div class="grid gap-1">
+                <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Settings</div>
+                {{ nav_link("/brands", "brands", "Brands") }}
+                {{ nav_link("/mediums", "backlinks", "Mediums") }}
+                {{ nav_link("/social-media-list", "social-list", "Social List") }}
+                {{ nav_link("/banned-words", "banned-words", "Banned Words") }}
+                {{ nav_link("/settings", "settings", "App Settings") }}
+              </div>
+            </nav>
+          </div>
+        </aside>
       {% endblock %}
 
-      <main class="mx-auto max-w-6xl">
+      <main class="w-full px-4 pb-12 pt-5 sm:px-5 lg:px-8 lg:pt-7">
+        <div class="mx-auto max-w-7xl">
         {% block hero %}
-          <section class="mb-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+          <section class="mb-6 rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
             <div class="grid gap-5">
               <div>
                 <p class="mb-2.5 text-xs font-extrabold uppercase tracking-[0.18em] text-sand-600">{% block eyebrow %}Workspace{% endblock %}</p>
-                <h1 class="mb-3 font-display text-4xl font-bold leading-none text-sand-950 sm:text-5xl md:text-6xl">{% block hero_title %}Auto Blog Generator{% endblock %}</h1>
-                <p class="max-w-3xl text-base leading-7 text-sand-700 sm:text-lg">{% block hero_text %}{% endblock %}</p>
+                <h1 class="mb-3 font-display text-3xl font-bold leading-tight text-sand-950 sm:text-4xl">{% block hero_title %}Auto Blog Generator{% endblock %}</h1>
+                <p class="max-w-3xl text-sm leading-7 text-sand-700 sm:text-base">{% block hero_text %}{% endblock %}</p>
               </div>
               {% if provider is defined and model is defined %}
                 <div class="flex flex-wrap gap-3">
@@ -146,6 +162,7 @@
         {% endblock %}
 
         {% block content %}{% endblock %}
+        </div>
       </main>
     </div>
 

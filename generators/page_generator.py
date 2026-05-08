@@ -11,6 +11,8 @@ from word_bank import find_banned_terms_in_text
 MIN_PAGE_WORDS = 900
 MAX_PAGE_WORDS = 1200
 MAX_GENERATION_ATTEMPTS = 3
+MIN_META_DESCRIPTION_CHARACTERS = 120
+MAX_META_DESCRIPTION_CHARACTERS = 140
 
 
 PLACEHOLDER_PALETTE = [
@@ -81,9 +83,10 @@ def generate_page(
         if attempt > 1:
             retry_instruction = (
                 f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                f"- Your previous page did not satisfy the word-count rules.\n"
+                f"- Your previous page did not satisfy the word-count or meta description rules.\n"
                 f"- Keep the same keyword intent and return valid JSON only.\n"
                 f"- The page content must be between {min_word_count} and {max_word_count} words.\n"
+                f"- The meta_description must be between {MIN_META_DESCRIPTION_CHARACTERS} and {MAX_META_DESCRIPTION_CHARACTERS} characters.\n"
                 f"- Adjust the section depth until the page fits that range naturally.\n"
             )
 
@@ -103,6 +106,19 @@ def generate_page(
                 logger.warning(
                     "Page output used banned terms %s for keyword '%s' on attempt %d/%d",
                     ", ".join(banned_terms),
+                    keyword,
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
+
+            meta_description_length = len(meta_description)
+            if not MIN_META_DESCRIPTION_CHARACTERS <= meta_description_length <= MAX_META_DESCRIPTION_CHARACTERS:
+                logger.warning(
+                    "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d/%d",
+                    meta_description_length,
+                    MIN_META_DESCRIPTION_CHARACTERS,
+                    MAX_META_DESCRIPTION_CHARACTERS,
                     keyword,
                     attempt,
                     MAX_GENERATION_ATTEMPTS,

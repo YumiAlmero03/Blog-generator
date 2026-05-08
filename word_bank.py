@@ -6,18 +6,39 @@ WORD_BANK_FILE = Path(__file__).resolve().parent / "banned_words.txt"
 
 
 def load_banned_word_bank() -> list[str]:
-    if not WORD_BANK_FILE.exists():
-        return []
-
     terms = []
     seen = set()
 
-    for raw_line in WORD_BANK_FILE.read_text(encoding="utf-8").splitlines():
-        cleaned = raw_line.strip()
-        if not cleaned or cleaned.startswith("#"):
-            continue
-        lowered = cleaned.lower()
+    def add_term(raw_term: str):
+        cleaned_term = raw_term.strip()
+        if not cleaned_term or cleaned_term.startswith("#"):
+            return
+        lowered = cleaned_term.lower()
         if lowered in seen:
+            return
+        seen.add(lowered)
+        terms.append(cleaned_term)
+
+    if not WORD_BANK_FILE.exists():
+        return _load_custom_banned_words(terms, seen)
+
+    for raw_line in WORD_BANK_FILE.read_text(encoding="utf-8").splitlines():
+        add_term(raw_line)
+
+    _load_custom_banned_words(terms, seen)
+    return terms
+
+
+def _load_custom_banned_words(terms: list[str], seen: set[str]) -> list[str]:
+    try:
+        from database import list_custom_banned_words
+    except Exception:
+        return terms
+
+    for custom_term in list_custom_banned_words():
+        cleaned = custom_term.strip()
+        lowered = cleaned.lower()
+        if not cleaned or lowered in seen:
             continue
         seen.add(lowered)
         terms.append(cleaned)

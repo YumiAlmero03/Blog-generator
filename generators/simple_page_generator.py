@@ -9,6 +9,8 @@ from word_bank import find_banned_terms_in_text
 MIN_SIMPLE_PAGE_WORDS = 900
 MAX_SIMPLE_PAGE_WORDS = 1200
 MAX_GENERATION_ATTEMPTS = 3
+MIN_META_DESCRIPTION_CHARACTERS = 120
+MAX_META_DESCRIPTION_CHARACTERS = 140
 
 
 def generate_simple_page(
@@ -42,8 +44,9 @@ def generate_simple_page(
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words, missed required <h3> tags, or missed the word-count range.\n"
+                "- Your previous response used banned words, missed required <h3> tags, missed the word-count range, or missed the meta description character range.\n"
                 f"- The page content must be between {min_word_count} and {max_word_count} words.\n"
+                f"- Every meta description must be between {MIN_META_DESCRIPTION_CHARACTERS} and {MAX_META_DESCRIPTION_CHARACTERS} characters.\n"
                 "- Include at least 3 <h3> subheadings.\n"
                 "- Return a fresh simple page and avoid every banned term completely.\n"
             )
@@ -64,6 +67,21 @@ def generate_simple_page(
                 logger.warning(
                     "Simple page used banned terms %s on attempt %d/%d",
                     ", ".join(banned_terms),
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
+            invalid_meta_lengths = [
+                len(item.get("text", ""))
+                for item in meta_descriptions
+                if not MIN_META_DESCRIPTION_CHARACTERS <= len(item.get("text", "")) <= MAX_META_DESCRIPTION_CHARACTERS
+            ]
+            if invalid_meta_lengths:
+                logger.warning(
+                    "Simple page meta descriptions missed %d-%d characters with lengths %s on attempt %d/%d",
+                    MIN_META_DESCRIPTION_CHARACTERS,
+                    MAX_META_DESCRIPTION_CHARACTERS,
+                    ", ".join(str(length) for length in invalid_meta_lengths),
                     attempt,
                     MAX_GENERATION_ATTEMPTS,
                 )

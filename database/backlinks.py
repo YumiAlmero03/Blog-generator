@@ -15,6 +15,12 @@ def get_backlink(backlink_id: int) -> dict | None:
         return row_to_dict(row)
 
 
+def delete_backlink(backlink_id: int) -> bool:
+    with get_connection() as connection:
+        cursor = connection.execute("DELETE FROM backlinks WHERE id = ?", (backlink_id,))
+        return cursor.rowcount > 0
+
+
 def save_backlink(
     website_name: str,
     blog_name: str,

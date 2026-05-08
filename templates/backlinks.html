@@ -25,6 +25,7 @@
       </p>
 
       <form method="post" class="grid gap-1">
+        <input type="hidden" name="action" value="save_backlink" />
         <input type="hidden" name="backlink_id" value="{{ backlink_id }}" />
 
         <label for="medium_preset" class="mb-2 block text-sm font-bold text-sand-900">Medium preset</label>
@@ -133,6 +134,11 @@
               {% endif %}
               <div class="mt-4 flex flex-wrap gap-2">
                 <a class="inline-flex items-center rounded-full bg-sand-100 px-3 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-200 hover:text-sand-900" href="/mediums?edit={{ backlink.id }}">Edit</a>
+                <form method="post" onsubmit="return confirm('Delete this medium?');">
+                  <input type="hidden" name="action" value="delete_backlink" />
+                  <input type="hidden" name="backlink_id" value="{{ backlink.id }}" />
+                  <button type="submit" class="inline-flex items-center rounded-full bg-red-50 px-3 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100">Delete</button>
+                </form>
               </div>
             </article>
           {% endfor %}

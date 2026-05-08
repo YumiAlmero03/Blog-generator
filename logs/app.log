@@ -6651,3 +6651,444 @@ sqlite3.OperationalError: database is locked
 2026-05-08 11:43:07,803 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 686 (minimum: 800) on attempt 1/5. Raw response length: 5046 chars
 2026-05-08 11:44:10,207 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 767 (minimum: 800) on attempt 2/5. Raw response length: 5474 chars
 2026-05-08 11:45:28,575 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 677 (minimum: 800) on attempt 3/5. Raw response length: 4742 chars
+2026-05-08 12:44:41,404 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 497 (minimum: 800) on attempt 1/5. Raw response length: 3784 chars
+2026-05-08 12:47:17,818 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 2/5
+2026-05-08 12:48:07,669 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms glitch on attempt 1/5
+2026-05-08 12:49:59,951 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 3/5
+2026-05-08 12:51:02,422 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 735 (minimum: 800) on attempt 2/5. Raw response length: 5297 chars
+2026-05-08 12:53:33,924 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 758 (minimum: 800) on attempt 4/5. Raw response length: 5744 chars
+2026-05-08 12:54:52,530 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 810 words on attempt 3/5
+2026-05-08 12:54:57,778 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 244, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-08 12:57:00,984 WARNING blog_generator content_generator.py:198 _generate_content_from_prompt() - Content validation failed on attempt 5/5: The required brand URL must be inserted inside the first paragraph and must not be placed later in the article.
+2026-05-08 12:57:00,984 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 195, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 371, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<3 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 220, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 5 attempts. Last attempt was 830 words.
+2026-05-08 12:57:59,086 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 596 (minimum: 800) on attempt 1/5. Raw response length: 4383 chars
+2026-05-08 12:59:25,318 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 649 (minimum: 800) on attempt 2/5. Raw response length: 4562 chars
+2026-05-08 13:01:03,452 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 811 words on attempt 3/5
+2026-05-08 13:01:08,841 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 244, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-08 16:04:40,658 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 563 (minimum: 800) on attempt 1/5. Raw response length: 4514 chars
+2026-05-08 16:06:17,757 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 731 (minimum: 800) on attempt 2/5. Raw response length: 5123 chars
+2026-05-08 16:07:37,137 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 645 (minimum: 800) on attempt 3/5. Raw response length: 4854 chars
+2026-05-08 16:08:38,026 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 711 (minimum: 800) on attempt 4/5. Raw response length: 5521 chars
+2026-05-08 16:09:59,450 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms glitch on attempt 5/5
+2026-05-08 16:09:59,451 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 195, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 371, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<3 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 220, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 5 attempts. Last attempt was 980 words.
+2026-05-08 16:13:22,124 WARNING blog_generator meta_description_generator.py:32 _generate_meta_descriptions_from_prompt() - Generated meta descriptions used banned terms instant on attempt 1/3
+2026-05-08 16:17:31,146 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 1/5
+2026-05-08 16:18:55,076 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 577 (minimum: 800) on attempt 1/5. Raw response length: 4221 chars
+2026-05-08 16:20:03,059 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 410 (minimum: 800) on attempt 1/5. Raw response length: 3296 chars
+2026-05-08 16:21:36,057 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 726 (minimum: 800) on attempt 2/5. Raw response length: 5203 chars
+2026-05-08 16:23:16,067 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 875 words on attempt 2/5
+2026-05-08 16:23:21,282 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 244, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-08 16:24:47,203 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 736 (minimum: 800) on attempt 2/5. Raw response length: 6075 chars
+2026-05-08 16:25:43,348 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 701 (minimum: 800) on attempt 3/5. Raw response length: 5036 chars
+2026-05-08 16:27:44,937 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms glitch on attempt 3/5
+2026-05-08 16:28:44,713 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 4/5
+2026-05-08 16:30:53,920 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 695 (minimum: 800) on attempt 4/5. Raw response length: 5023 chars
+2026-05-08 16:31:51,479 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 673 (minimum: 800) on attempt 5/5. Raw response length: 4810 chars
+2026-05-08 16:31:51,481 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 195, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 371, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<3 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 220, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 5 attempts. Last attempt was 673 words.
+2026-05-08 16:33:22,671 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 868 words on attempt 5/5
+2026-05-08 16:33:27,889 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 244, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-08 16:39:32,490 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 1/5
+2026-05-08 16:47:00,280 WARNING blog_generator meta_description_generator.py:35 _generate_meta_descriptions_from_prompt() - Generated meta descriptions used banned terms instant on attempt 1/3
+2026-05-08 16:48:41,973 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 491 (minimum: 800) on attempt 1/5. Raw response length: 3529 chars
+2026-05-08 16:49:00,299 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 158, 174, 154, 156, 143 on attempt 2/3
+2026-05-08 16:51:25,891 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 714 (minimum: 800) on attempt 2/5. Raw response length: 5193 chars
+2026-05-08 16:51:40,035 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 88, 100, 98, 102, 103 on attempt 1/3
+2026-05-08 16:51:56,593 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 100, 107, 142, 144 on attempt 3/3
+2026-05-08 16:51:56,594 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.
+2026-05-08 16:55:08,079 INFO blog_generator content_generator.py:206 _generate_content_from_prompt() - Content generated successfully with 956 words on attempt 3/5
+2026-05-08 16:55:13,279 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 244, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-08 16:55:42,826 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 93, 88, 89, 84, 88 on attempt 1/3
+2026-05-08 16:57:49,424 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 527 (minimum: 800) on attempt 1/5. Raw response length: 4318 chars
+2026-05-08 16:58:04,113 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 80, 96, 84, 90, 86 on attempt 2/3
+2026-05-08 16:59:52,734 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 648 (minimum: 800) on attempt 2/5. Raw response length: 4736 chars
+2026-05-08 17:00:09,009 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 111, 106, 107, 96, 105 on attempt 3/3
+2026-05-08 17:00:09,010 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.
+2026-05-08 17:03:25,608 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 3/5
+2026-05-08 17:05:00,215 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 638 (minimum: 800) on attempt 4/5. Raw response length: 4484 chars
+2026-05-08 17:07:03,611 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 143, 169, 187, 207, 200 on attempt 1/3
+2026-05-08 17:07:21,372 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 144, 151, 142 on attempt 1/3
+2026-05-08 17:08:18,038 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 691 (minimum: 800) on attempt 5/5. Raw response length: 4860 chars
+2026-05-08 17:08:18,040 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 195, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 371, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<3 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 220, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 5 attempts. Last attempt was 691 words.
+2026-05-08 17:09:39,005 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 161, 202, 186, 204, 199 on attempt 2/3
+2026-05-08 17:09:53,268 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 90, 87, 82, 90, 81 on attempt 2/3
+2026-05-08 17:10:55,238 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 192, 208, 200, 197, 192 on attempt 3/3
+2026-05-08 17:10:55,240 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.
+2026-05-08 17:12:13,126 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 331 (minimum: 800) on attempt 1/5. Raw response length: 2724 chars
+2026-05-08 17:13:24,516 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 2/5
+2026-05-08 17:14:47,562 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 795 (minimum: 800) on attempt 3/5. Raw response length: 5695 chars
+2026-05-08 17:16:28,391 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 115 on attempt 1/3
+2026-05-08 17:16:46,207 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 148, 153 on attempt 1/3
+2026-05-08 17:17:53,556 WARNING blog_generator content_generator.py:172 _generate_content_from_prompt() - Content word count is 783 (minimum: 800) on attempt 4/5. Raw response length: 5941 chars
+2026-05-08 17:19:40,141 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 117 on attempt 2/3
+2026-05-08 17:19:58,851 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 150, 175, 160, 163, 178 on attempt 2/3
+2026-05-08 17:20:59,445 WARNING blog_generator content_generator.py:163 _generate_content_from_prompt() - Content used banned terms instant on attempt 5/5
+2026-05-08 17:20:59,447 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 195, in _handle_generate_content
+    state["content"] = generate_backlink_content(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<8 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 371, in generate_backlink_content
+    content = _generate_content_from_prompt(
+        provider,
+    ...<3 lines>...
+        validator=validator,
+    )
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/content_generator.py", line 220, in _generate_content_from_prompt
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Generated article could not satisfy the rules after 5 attempts. Last attempt was 655 words.
+2026-05-08 17:22:01,946 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 116, 114, 119 on attempt 3/3
+2026-05-08 17:22:01,947 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.
+2026-05-08 17:22:20,010 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 157, 169, 152, 158, 155 on attempt 3/3
+2026-05-08 17:22:20,011 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.
+2026-05-08 17:26:00,700 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 156, 163, 170, 167, 172 on attempt 1/3
+2026-05-08 17:27:12,651 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 171, 162, 158, 158 on attempt 2/3
+2026-05-08 17:27:56,641 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 180, 183, 177, 155, 176 on attempt 1/3
+2026-05-08 17:28:40,154 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 109, 119 on attempt 1/3
+2026-05-08 17:29:29,726 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 201, 219, 199, 203, 182 on attempt 3/3
+2026-05-08 17:29:29,727 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.
+2026-05-08 17:30:09,224 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 172, 164, 154, 145, 166 on attempt 2/3
+2026-05-08 17:30:24,679 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 114 on attempt 2/3
+2026-05-08 17:31:30,907 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 147 on attempt 3/3
+2026-05-08 17:31:30,908 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.
+2026-05-08 17:31:45,481 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 90, 85, 73, 74, 79 on attempt 3/3
+2026-05-08 17:31:45,481 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.
+2026-05-08 17:36:18,448 WARNING blog_generator meta_description_generator.py:35 _generate_meta_descriptions_from_prompt() - Generated meta descriptions used banned terms instant on attempt 1/3
+2026-05-08 17:37:05,556 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 143, 144, 149, 143, 149 on attempt 2/3
+2026-05-08 17:37:50,727 WARNING blog_generator meta_description_generator.py:49 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 85, 102, 100, 102, 108 on attempt 3/3
+2026-05-08 17:37:50,728 ERROR blog_generator backlink_blog_controller.py:252 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 180, in _handle_generate_content
+    state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        provider,
+        ^^^^^^^^^
+    ...<5 lines>...
+        **backlink_context,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 142, in generate_backlink_meta_descriptions
+    return _generate_meta_descriptions_from_prompt(provider, prompt)
+  File "/Users/lanie/Sites/Backend/Blog generator/generators/meta_description_generator.py", line 66, in _generate_meta_descriptions_from_prompt
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
+ValueError: Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.

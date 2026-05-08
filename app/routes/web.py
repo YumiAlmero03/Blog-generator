@@ -24,6 +24,7 @@ web.add_url_rule("/social-media-list", view_func=social_media_controller.social_
 web.add_url_rule("/mediums", view_func=backlink_controller.backlinks, methods=["GET", "POST"])
 web.add_url_rule("/backlinks", view_func=backlink_controller.backlinks, methods=["GET", "POST"])
 web.add_url_rule("/settings", view_func=settings_controller.settings, methods=["GET", "POST"])
+web.add_url_rule("/banned-words", view_func=settings_controller.banned_words, methods=["GET", "POST"])
 web.add_url_rule("/preview", view_func=tool_controller.preview, methods=["POST"])
 web.add_url_rule("/download_doc", view_func=tool_controller.download_doc, methods=["POST"])
 

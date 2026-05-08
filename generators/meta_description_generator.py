@@ -5,6 +5,8 @@ from logger import logger
 from word_bank import find_banned_terms_in_text
 
 MAX_GENERATION_ATTEMPTS = 3
+MIN_META_DESCRIPTION_CHARACTERS = 120
+MAX_META_DESCRIPTION_CHARACTERS = 140
 
 def _generate_meta_descriptions_from_prompt(provider, prompt: str):
     last_error = None
@@ -14,8 +16,9 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str):
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words or phrases.\n"
+                "- Your previous response used banned words or phrases, or missed the 120-140 character range.\n"
                 "- Return fresh meta descriptions that avoid every banned term completely.\n"
+                "- Make every meta description between 120 and 140 characters.\n"
             )
 
         raw = provider.generate_json(prompt + retry_instruction)
@@ -36,6 +39,22 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str):
                     MAX_GENERATION_ATTEMPTS,
                 )
                 continue
+            invalid_lengths = [
+                len(item.get("text", ""))
+                for item in meta_descriptions
+                if isinstance(item, dict)
+                and not MIN_META_DESCRIPTION_CHARACTERS <= len(item.get("text", "")) <= MAX_META_DESCRIPTION_CHARACTERS
+            ]
+            if invalid_lengths:
+                logger.warning(
+                    "Generated meta descriptions missed %d-%d characters with lengths %s on attempt %d/%d",
+                    MIN_META_DESCRIPTION_CHARACTERS,
+                    MAX_META_DESCRIPTION_CHARACTERS,
+                    ", ".join(str(length) for length in invalid_lengths),
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
             return meta_descriptions
         except Exception as exc:
             last_error = exc
@@ -44,7 +63,7 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str):
     if last_error is not None:
         raise ValueError("Could not parse JSON from model output.") from last_error
 
-    raise ValueError("Generated meta descriptions kept using banned words after multiple attempts.")
+    raise ValueError("Generated meta descriptions could not satisfy banned words and length rules after multiple attempts.")
 
 
 def generate_meta_descriptions(

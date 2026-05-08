@@ -1,6 +1,6 @@
 from flask import render_template, request
 
-from database import check_keyword_usage, get_brand_record, list_brand_records, upsert_brand
+from database import check_keyword_usage, delete_brand, get_brand_record, list_brand_records, upsert_brand
 from logger import logger
 
 from app.controllers.helpers import base_template_context, image_url
@@ -36,6 +36,8 @@ def brands():
             _handle_save_brand(state)
         elif action == "save_brand_color":
             _handle_save_brand_color(state)
+        elif action == "delete_brand":
+            _handle_delete_brand(state)
         elif action == "check_keyword":
             _handle_check_keyword(state)
 
@@ -148,6 +150,22 @@ def _handle_save_brand_color(state: dict):
     except Exception:
         logger.exception("brands save_brand_color action failed")
         state["error"] = "An error occurred while saving the brand color. Check logs/app.log for details."
+
+
+def _handle_delete_brand(state: dict):
+    brand_name = request.form.get("brand_name", "").strip()
+    if not brand_name:
+        state["error"] = "Please select a brand to delete."
+        return
+
+    try:
+        if delete_brand(brand_name):
+            state["success"] = f"Deleted brand: {brand_name}"
+        else:
+            state["error"] = "Brand not found."
+    except Exception:
+        logger.exception("brands delete_brand action failed")
+        state["error"] = "An error occurred while deleting the brand. Check logs/app.log for details."
 
 
 def _build_brand_view_models() -> list[dict]:

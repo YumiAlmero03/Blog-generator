@@ -319,9 +319,9 @@ def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict
         ),
         _check(
             "Meta description",
-            "pass" if 120 <= meta_length <= 160 else "fail" if not parser.meta_description else "warn",
+            "pass" if 120 <= meta_length <= 140 else "fail" if not parser.meta_description else "warn",
             f"{meta_length} characters" if parser.meta_description else "Missing meta description",
-            "Write one useful search snippet around 120-160 characters.",
+            "Write one useful search snippet around 120-140 characters.",
             16,
         ),
         _check(
