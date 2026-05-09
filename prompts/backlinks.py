@@ -37,7 +37,7 @@ def build_backlink_title_prompt(
     )
     banned_words_section = build_banned_words_prompt_section()
     return f"""
-You are an SEO blog title generator for medium and guest-post content.
+You are an informational blog title generator for medium and guest-post content.
 
 Generate exactly {count} blog title variants for this keyword/topic:
 {keyword}
@@ -49,16 +49,20 @@ Brand: {brand}
 
 Rules:
 - Return exactly {count} titles
-- Dont seperate keyword with punctuation, use it naturally in the title
+- Create informational titles only.
+- Never mention the brand name in any title.
+- Do not make titles promotional, sales-focused, or casino-focused.
+- Prefer topics about gaming platforms, games, player experience, software, apps, digital tools, online safety, or technology.
+- If the keyword is casino-related, reframe the title toward broader gaming platforms, games, entertainment technology, UX, security, or responsible digital play.
+- Dont separate keyword with punctuation; use it naturally only when it fits an informational title.
 - Make them natural and human sounding
 - Make them SEO-friendly
 - Clear and clickable
 - Make the title feel appropriate for an external publisher or guest-post style article
 - Let the title style match the website type when one is provided, such as more discussion-oriented for forums or more editorial for review sites
-- If a brand is provided, let the titles fit the brand naturally without forcing the brand name into every title
+- Use the brand context only to understand the audience. Do not include the brand name in titles.
 - If a medium publication name is provided, let some title options reflect that publisher context naturally when it improves fit
 - If the medium tier is Tier 1 and a publication name is provided, make some title options feel like they belong on that blog or publication
-- When both brand and blog name are provided, use them naturally and sparingly; do not stuff both into every title
 - Avoid repeating titles or keyword angles that were already used for this brand when the context shows previous usage
 - Avoid robotic wording
 - Avoid duplicates
@@ -71,7 +75,7 @@ Rules:
   - list style if appropriate
 - Keep titles around 45 to 55 characters when possible, unless the selected medium needs a shorter title
 - Respect any title max character limit from the selected medium
-- Use the keyword naturally
+- Use the keyword naturally when it fits, but do not force exact-match phrasing.
 - No explanations
 - Do not add any extra text before or after the JSON
 - Start your response with '{{' and end with '}}'
@@ -123,7 +127,7 @@ def build_backlink_meta_description_prompt(
     )
     banned_words_section = build_banned_words_prompt_section()
     return f"""
-You are an SEO meta description writer for medium and guest-post content.
+You are an informational SEO meta description writer for medium and guest-post content.
 
 Generate exactly {count} compelling meta description variants for this blog post title:
 "{title}"
@@ -137,14 +141,17 @@ Brand: {brand}
 Rules:
 - Each meta description must be between 120 and 140 characters long.
 - Count characters carefully before finishing.
-- Include the main keyword naturally.
-- Make it compelling and encourage clicks.
+- Keep the description informational, neutral, and helpful.
+- Include the main keyword only if it fits naturally.
+- Do not mention the brand name unless the title itself makes that unavoidable.
+- Do not make it promotional, sales-focused, or casino-focused.
+- Prefer a gaming platform, games, digital tools, online safety, user experience, or technology angle.
+- If the keyword is casino-related, reframe the wording toward broader gaming platforms, games, entertainment technology, UX, security, or responsible digital play.
 - Avoid keyword stuffing.
 - Use active voice.
-- Include a call-to-action or value proposition when it fits naturally.
 - Make it sound human and natural.
 - Let the wording match the website type naturally.
-- If a brand is provided, align the wording with the brand and mention the brand only if it fits naturally.
+- If a brand is provided, use it only as audience context.
 - If a medium publication name is provided, you may reflect that publishing context naturally, but do not force it.
 - If the medium tier is Tier 1 and a publication name is provided, the description may sound like it belongs on that blog or publication, but keep it natural.
 - Vary the approach for each variant.
@@ -286,6 +293,8 @@ Forum-specific rules:
 - Use only one blank line between Markdown blocks.
 - Use this Markdown link format once in the first paragraph when a brand URL is provided: [anchor text](REQUIRED_URL).
 - Do not use HTML tags in the content value.
+- Use Markdown bold only for important non-keyword words when emphasis helps.
+- Never bold the primary keyword.
 """
         return_example = '"content": "Intro paragraph with [anchor text](https://example.com).\\n\\n## Heading\\n\\nBody text..."'
     elif post_type == "gutenberg":
@@ -294,6 +303,10 @@ Forum-specific rules:
 - Wrap paragraphs and headings with Gutenberg comments, such as <!-- wp:paragraph --><p>...</p><!-- /wp:paragraph --> and <!-- wp:heading --><h2>...</h2><!-- /wp:heading -->.
 - Use normal paragraph blocks with 2-4 sentences each. Do not create many tiny paragraph blocks.
 - Use this HTML link format once inside the first Gutenberg paragraph block when a brand URL is provided: <a href='REQUIRED_URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
+- Use <b> only for emphasis on important non-keyword words or phrases.
+- Do not use <strong>.
+- Never bold the primary keyword.
+- Do not wrap keywords in <b> or <strong> tags.
 """
         return_example = '"content": "<!-- wp:paragraph --><p>Intro with <a href=\'https://example.com\'>anchor text</a>.</p><!-- /wp:paragraph -->"'
     elif post_type == "text":
@@ -304,6 +317,7 @@ Forum-specific rules:
 - Keep related sentences together in compact paragraphs. Do not put every sentence on its own line.
 - Use only one blank line between sections.
 - Include the brand URL exactly once in the first paragraph as plain text when a brand URL is provided.
+- Do not use HTML or Markdown emphasis.
 """
         return_example = '"content": "Intro paragraph with https://example.com included once.\\n\\nSection heading\\nBody text..."'
     else:
@@ -315,8 +329,42 @@ Forum-specific rules:
 - Do not create a separate <p> tag for every sentence.
 - Do not add unnecessary newline characters between HTML tags.
 - Use this HTML link format once inside the first paragraph when a brand URL is provided: <a href='REQUIRED_URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
+- Use <b> only for emphasis on important non-keyword words or phrases.
+- Do not use <strong>.
+- Never bold the primary keyword.
+- Do not wrap keywords in <b> or <strong> tags.
 """
         return_example = '"content": "<p>Intro with <a href=\'https://example.com\'>anchor text</a>.</p><h2>Heading</h2><p>Body text...</p>"'
+
+    compact_medium = bool(max_words and max_words <= 300)
+    short_medium = bool(max_words and max_words <= 700)
+    if compact_medium:
+        structure_rules = """
+- Write a compact informational post, not a full long-form article.
+- Do not use a 60-80 word introduction.
+- Do not force 3-4 sections.
+- Use one short opening paragraph, then 1-2 brief points only if the word limit allows.
+- Avoid CTA sections. End with a useful informational closing sentence.
+- Keep every part necessary, complete, and within the selected word limit.
+"""
+    elif short_medium:
+        structure_rules = """
+- Write a concise informational article, not a full long-form article.
+- Start with a brief introduction of 35-55 words.
+- Use 2-3 short sections at most.
+- Keep each section compact and useful.
+- End with one short Conclusion or Final Thoughts section.
+- Keep every part necessary, complete, and within the selected word limit.
+"""
+    else:
+        structure_rules = """
+- Start with an engaging introduction of 60-80 words that explains the reader's problem or need.
+- Add detailed explanations, useful examples, and practical context in each section to support the word count naturally.
+- Structure the article in this order: introduction, 3-4 main sections with subheadings, then exactly one ending section that best fits the page intent.
+- Use exactly one ending section only: FAQs, Conclusion, or Final Thoughts.
+- Do not use these sections together in the same page.
+- Choose the ending section that best matches the page type and search intent.
+"""
 
     money_site_section = ""
     if cleaned_money_site_url:
@@ -339,7 +387,7 @@ Instructions for the required brand link:
 """
 
     return f"""
-You are a professional blogger and reviewer who creates SEO-friendly, human-sounding medium and guest-post content.
+You are a professional informational writer who creates SEO-friendly, human-sounding medium and guest-post content.
 
 Write a complete blog article for this title:
 "{title}"
@@ -357,42 +405,41 @@ Brand: {brand}
 
 Rules:
 {min_word_rule}
-- Start with an engaging introduction of 60–80 words that explains the reader's problem or need.
+{structure_rules}
 - Make the article feel appropriate for an external publisher or guest-post style placement.
 - Adapt the structure, tone, and delivery to the selected website type instead of forcing the same format for every medium.
-- For Tier 1 placements, write like a blogger or publication reviewing, exploring, or discussing the selected brand in a natural editorial voice.
+- Write an informational article, not a promotional article.
+- Do not focus on casino articles. If the source keyword or brand context is casino-related, reframe the topic toward broader gaming platforms, games, entertainment technology, UX, security, product design, mobile apps, or responsible digital play.
+- Suitable topic angles include gaming platforms, game discovery, online entertainment tools, player experience, app technology, payment security, account safety, AI in games, mobile performance, web platforms, and other technology topics.
+- For Tier 1 placements, write like a neutral publication explaining, comparing, or teaching a topic.
 - Write in third person. Do not write as the brand or from the brand's point of view.
-- Avoid brand-name stuffing. After the first natural mention, use varied third-person references like "this website", "this platform", "this site", "the platform", "the service", or "the website" when the meaning stays clear.
-- Mention the brand name only when it is truly needed for clarity, usually no more than 2-3 times in a full article.
+- Mention the brand name no more than once in the full article, and only as a natural example.
+- Mention the primary keyword no more than once in the full article, and only as a natural example.
+- Do not put the brand name or exact keyword in headings.
+- Avoid brand-name stuffing. After the single example mention, use neutral category language like "a gaming platform", "a games site", "a mobile app", "a digital entertainment tool", or "an online platform" when the meaning stays clear.
 - Do not repeat the exact article title in the body unless absolutely necessary. However, keep the content closely aligned with the title and main topic.
 - Sentences must be less than 21 words.
-- Use the primary keyword naturally 2–4 times throughout the article. Include it in the introduction, and include it again in the conclusion only if it fits naturally.
 - Avoid keyword stuffing and never force keywords into awkward sentences.
 - Use the main keyword no more than once per paragraph.
 - Do not repeat the same keyword multiple times in a single paragraph.
-- Use <b> only for emphasis on important non-keyword words or phrases.
-- Do not use <strong>.
-- Never bold the primary keyword.
-- Do not wrap keywords in <b> or <strong> tags.
 - Use a natural, human, conversational tone.
 - Write in active voice with short, clear sentences.
 - Write for readability using compact paragraphs, not many tiny one-line paragraphs.
 - Avoid excessive line breaks. Do not place each sentence on a separate line.
 - Keep sections tidy: one heading followed by 1-3 meaningful paragraphs, not a long stack of single-sentence lines.
-- Add detailed explanations, useful examples, and practical context in each section to support the word count naturally.
-- Structure the article in this order: introduction, 3–4 main sections with subheadings, then exactly one ending section that best fits the page intent.
+- Keep examples educational. A brand or keyword may appear once as an example, but the article must remain about the broader informational topic.
 {format_rules}
-- If a brand is provided, reflect the brand positioning and audience naturally without sounding promotional.
-- If a brand is provided, mention the brand sparingly and use third-person substitutes to avoid repetition.
+- If a brand is provided, use the brand context only to understand audience and category. Do not write an advertisement.
+- If a brand is provided, mention the brand at most once as an example and avoid repeating it.
 - If a medium publication name is provided, treat it as the blog or publication name and mention it naturally when relevant, but do not force it repeatedly.
 - If a writer name is provided, use it naturally as the article byline or writer identity when it fits.
-- If the medium tier is Tier 1 and a blog name is provided, include that blog name naturally in the article at least once.
+- If the medium tier is Tier 1 and a blog name is provided, include that blog name only when it feels natural.
 - Do not stuff the brand name, blog name, or writer name into every heading or paragraph.
 - When brand, blog name, and writer name are provided, make them feel intentional and editorially natural.
 - Match the writing style to the website type:
   - forum: discussion-oriented, practical, community-style
   - social_media: punchy, skimmable, conversational
-  - review: editorial, evaluative, experience-driven
+  - review: balanced, criteria-focused, informational
   - news: informative, publication-style, neutral
   - directory: concise, utility-focused
   - community: helpful, shared-insight tone
@@ -408,12 +455,8 @@ Rules:
 - Start the response with "{{" and end it with "}}".
 - Close every HTML tag and every quotation mark properly.
 - Do not truncate, abbreviate, or cut off the article.
-- Check the internet when needed to verify brand, product, platform, or topic details before writing.
 - Do not guess what a brand, game, or platform is.
 - When the selected post type supports HTML attributes, external links and the required brand link must use rel='nofollow noopener noreferrer' and target='_blank'.
-- Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
-- Do not use these sections together in the same page.
-- Choose the ending section that best matches the page type and search intent.
 {completion_word_rule}
 - If a max word count is provided, prioritize staying within that word limit over the normal long-form word target.
 

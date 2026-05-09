@@ -20,28 +20,10 @@ def load_banned_word_bank() -> list[str]:
         terms.append(cleaned_term)
 
     if not WORD_BANK_FILE.exists():
-        return _load_custom_banned_words(terms, seen)
+        return terms
 
     for raw_line in WORD_BANK_FILE.read_text(encoding="utf-8").splitlines():
         add_term(raw_line)
-
-    _load_custom_banned_words(terms, seen)
-    return terms
-
-
-def _load_custom_banned_words(terms: list[str], seen: set[str]) -> list[str]:
-    try:
-        from database import list_custom_banned_words
-    except Exception:
-        return terms
-
-    for custom_term in list_custom_banned_words():
-        cleaned = custom_term.strip()
-        lowered = cleaned.lower()
-        if not cleaned or lowered in seen:
-            continue
-        seen.add(lowered)
-        terms.append(cleaned)
 
     return terms
 

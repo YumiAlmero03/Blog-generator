@@ -78,7 +78,7 @@ def build_backlink_context_section(
             "- The article should feel appropriate for this publishing target.",
             "- Keep the tone and examples broad enough to fit the selected medium or guest-post style placement.",
             "- Do not over-promote the brand. Keep it informative and natural first.",
-            "- If the tier level is Tier 1, write as a blogger or publisher reviewing or discussing the selected brand in a natural editorial way.",
+            "- If the tier level is Tier 1, write like a neutral publisher explaining a broader topic. Do not center the article on the brand.",
             "- If a publication/account name is provided, treat it as the blog, publication, account, or medium identity.",
             "- If a writer name is provided, treat it as the byline or author name.",
             "- If no publication/account name or writer name is provided, do not invent them.",
@@ -134,7 +134,7 @@ def build_backlink_context_section(
     elif website_type == "review":
         lines.extend(
             [
-                "- Lean into an editorial review style with balanced observations, pros, use cases, or experience-driven commentary.",
+                "- Use a balanced editorial style with criteria, examples, and useful context instead of promotional review language.",
             ]
         )
     elif website_type == "news":

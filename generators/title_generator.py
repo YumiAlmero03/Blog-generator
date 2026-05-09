@@ -4,19 +4,27 @@ from utils import extract_json_string
 from logger import logger
 from word_bank import find_banned_terms_in_text
 
-MAX_GENERATION_ATTEMPTS = 3
+def _generate_titles_from_prompt(provider, prompt: str, forbidden_phrases: list[str] | None = None, progress_callback=None):
+    cleaned_forbidden_phrases = [
+        phrase.strip().lower()
+        for phrase in (forbidden_phrases or [])
+        if phrase and phrase.strip()
+    ]
 
-def _generate_titles_from_prompt(provider, prompt: str):
-    last_error = None
-
-    for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+    attempt = 0
+    while True:
+        attempt += 1
         retry_instruction = ""
+        if attempt == 1:
+            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words or phrases.\n"
+                "- Your previous response used banned words, forbidden phrases, or did not follow the title rules.\n"
                 "- Return fresh titles that avoid every banned term completely.\n"
             )
+            if cleaned_forbidden_phrases:
+                retry_instruction += "- Do not mention these phrases in any title: " + ", ".join(cleaned_forbidden_phrases) + ".\n"
 
         raw = provider.generate_json(prompt + retry_instruction)
 
@@ -27,22 +35,49 @@ def _generate_titles_from_prompt(provider, prompt: str):
             combined_titles = "\n".join(title for title in titles if isinstance(title, str))
             banned_terms = find_banned_terms_in_text(combined_titles)
             if banned_terms:
+                _publish_progress(
+                    progress_callback,
+                    f"Title attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
                 logger.warning(
-                    "Generated titles used banned terms %s on attempt %d/%d",
+                    "Generated titles used banned terms %s on attempt %d",
                     ", ".join(banned_terms),
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
+            if cleaned_forbidden_phrases:
+                violating_titles = [
+                    title
+                    for title in titles
+                    if isinstance(title, str)
+                    and any(phrase in title.lower() for phrase in cleaned_forbidden_phrases)
+                ]
+                if violating_titles:
+                    _publish_progress(
+                        progress_callback,
+                        f"Title attempt {attempt}: forbidden phrase found in title. Retrying...",
+                    )
+                    logger.warning(
+                        "Generated titles used forbidden phrases on attempt %d: %s",
+                        attempt,
+                        "; ".join(violating_titles),
+                    )
+                    continue
             return titles
         except Exception as exc:
-            last_error = exc
             logger.exception("generate_titles failed on attempt %d. Raw response: %s", attempt, raw)
+            raise ValueError("Could not parse JSON from model output.") from exc
 
-    if last_error is not None:
-        raise ValueError("Could not parse JSON from model output.") from last_error
 
-    raise ValueError("Generated titles kept using banned words after multiple attempts.")
+def _publish_progress(progress_callback, message: str, kind: str = "status") -> None:
+    if not progress_callback:
+        return
+    try:
+        progress_callback(message, kind=kind)
+    except TypeError:
+        progress_callback(message)
+    except Exception:
+        logger.exception("generation progress callback failed")
 
 
 def generate_titles(
@@ -53,6 +88,7 @@ def generate_titles(
     count: int = 10,
     brand: str = "",
     brand_context: str = "",
+    progress_callback=None,
 ):
     prompt = build_title_prompt(
         keyword=keyword,
@@ -62,7 +98,7 @@ def generate_titles(
         brand=brand,
         brand_context=brand_context,
     )
-    return _generate_titles_from_prompt(provider, prompt)
+    return _generate_titles_from_prompt(provider, prompt, progress_callback=progress_callback)
 
 
 def generate_backlink_titles(
@@ -84,6 +120,7 @@ def generate_backlink_titles(
     backlink_blog_name: str = "",
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
+    progress_callback=None,
 ):
     prompt = build_backlink_title_prompt(
         keyword=keyword,
@@ -104,4 +141,4 @@ def generate_backlink_titles(
         backlink_writer_name=backlink_writer_name,
         backlink_content_guidelines=backlink_content_guidelines,
     )
-    return _generate_titles_from_prompt(provider, prompt)
+    return _generate_titles_from_prompt(provider, prompt, forbidden_phrases=[brand], progress_callback=progress_callback)

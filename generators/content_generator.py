@@ -6,8 +6,6 @@ from logger import logger
 from word_bank import find_banned_terms_in_text
 
 MIN_BLOG_WORDS = 1300
-MAX_GENERATION_ATTEMPTS = 5
-
 
 def count_html_words(html_text: str) -> int:
     """Count words in HTML content by removing tags."""
@@ -115,28 +113,31 @@ def parse_generated_content(raw: str) -> tuple[str, int]:
     return content, word_count
 
 
-def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BLOG_WORDS, max_words: int = 0, validator=None):
-    last_error = None
+def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BLOG_WORDS, max_words: int = 0, validator=None, progress_callback=None):
     last_word_count = 0
     last_validation_error = ""
     last_length_error = ""
     last_failure_detail = ""
 
-    for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+    attempt = 0
+    while True:
+        attempt += 1
         retry_instruction = ""
+        if attempt == 1:
+            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             if min_words:
                 retry_instruction = (
                     f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
                     f"- Your previous response was too short.\n"
-                    f"- Return COMPLETE valid HTML content only inside JSON.\n"
+                    f"- Return COMPLETE content in the required selected format only inside JSON.\n"
                     f"- The article must be at least {min_words} words.\n"
                     f"- Expand each section with more detail, examples, and explanation.\n"
                 )
             else:
                 retry_instruction = (
                     "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                    "- Return COMPLETE valid HTML content only inside JSON.\n"
+                    "- Return COMPLETE content in the required selected format only inside JSON.\n"
                     "- Respect the selected medium's shorter content limit.\n"
                     "- Keep the output concise, complete, and suitable for the medium.\n"
                 )
@@ -144,13 +145,13 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                 retry_instruction += (
                     "\nIMPORTANT RETRY REQUIREMENT:\n"
                     f"- {last_length_error}\n"
-                    "- Return corrected valid HTML content only inside JSON.\n"
+                    "- Return corrected content in the required selected format only inside JSON.\n"
                 )
             if last_validation_error:
                 retry_instruction += (
                     "\nIMPORTANT RETRY REQUIREMENT:\n"
                     f"- {last_validation_error}\n"
-                    "- Return corrected valid HTML content only inside JSON.\n"
+                    "- Return corrected content in the required selected format only inside JSON.\n"
                 )
 
         raw = provider.generate_json(prompt + retry_instruction)
@@ -161,26 +162,32 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
             banned_terms = find_banned_terms_in_text(content)
 
             if banned_terms:
-                last_failure_detail = f"Content used banned terms {', '.join(banned_terms)} on attempt {attempt}/{MAX_GENERATION_ATTEMPTS}."
+                last_failure_detail = f"Content used banned terms {', '.join(banned_terms)} on attempt {attempt}."
+                _publish_progress(
+                    progress_callback,
+                    f"Content attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
                 logger.warning(
-                    "Content used banned terms %s on attempt %d/%d",
+                    "Content used banned terms %s on attempt %d",
                     ", ".join(banned_terms),
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
             if min_words and word_count < min_words:
                 last_failure_detail = (
                     f"Content word count is {word_count} (minimum: {min_words}) "
-                    f"on attempt {attempt}/{MAX_GENERATION_ATTEMPTS}. Raw response length: {len(raw)} chars."
+                    f"on attempt {attempt}. Raw response length: {len(raw)} chars."
+                )
+                _publish_progress(
+                    progress_callback,
+                    f"Content attempt {attempt}: {word_count} words, minimum is {min_words}. Retrying with more detail...",
                 )
                 logger.warning(
-                    "Content word count is %d (minimum: %d) on attempt %d/%d. Raw response length: %d chars",
+                    "Content word count is %d (minimum: %d) on attempt %d. Raw response length: %d chars",
                     word_count,
                     min_words,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                     len(raw),
                 )
                 continue
@@ -189,14 +196,17 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                 last_length_error = f"Your previous response was too long at {word_count} words. Keep it at or below {max_words} words."
                 last_failure_detail = (
                     f"Content word count is {word_count} (maximum: {max_words}) "
-                    f"on attempt {attempt}/{MAX_GENERATION_ATTEMPTS}. Raw response length: {len(raw)} chars."
+                    f"on attempt {attempt}. Raw response length: {len(raw)} chars."
+                )
+                _publish_progress(
+                    progress_callback,
+                    f"Content attempt {attempt}: {word_count} words, maximum is {max_words}. Retrying shorter...",
                 )
                 logger.warning(
-                    "Content word count is %d (maximum: %d) on attempt %d/%d. Raw response length: %d chars",
+                    "Content word count is %d (maximum: %d) on attempt %d. Raw response length: %d chars",
                     word_count,
                     max_words,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                     len(raw),
                 )
                 continue
@@ -206,34 +216,44 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                 if validation_error:
                     last_validation_error = validation_error
                     last_failure_detail = (
-                        f"Content validation failed on attempt {attempt}/{MAX_GENERATION_ATTEMPTS}: {validation_error}"
+                        f"Content validation failed on attempt {attempt}: {validation_error}"
+                    )
+                    _publish_progress(
+                        progress_callback,
+                        f"Content attempt {attempt}: {validation_error} Retrying...",
                     )
                     logger.warning(
-                        "Content validation failed on attempt %d/%d: %s",
+                        "Content validation failed on attempt %d: %s",
                         attempt,
-                        MAX_GENERATION_ATTEMPTS,
                         validation_error,
                     )
                     continue
 
             logger.info(
-                "Content generated successfully with %d words on attempt %d/%d",
+                "Content generated successfully with %d words on attempt %d",
                 word_count,
                 attempt,
-                MAX_GENERATION_ATTEMPTS,
             )
             return content
         except Exception as exc:
-            last_error = exc
             logger.exception("generate_content failed on attempt %d. Raw response: %s", attempt, raw)
-
-    if last_error is not None:
-        raise ValueError("Could not parse JSON from model output.") from last_error
+            raise ValueError("Could not parse JSON from model output.") from exc
 
     raise ValueError(
-        f"Generated article could not satisfy the rules after {MAX_GENERATION_ATTEMPTS} attempts. "
+        "Generated article could not satisfy the rules. "
         f"{last_failure_detail or f'Last attempt was {last_word_count} words.'}"
     )
+
+
+def _publish_progress(progress_callback, message: str, kind: str = "status") -> None:
+    if not progress_callback:
+        return
+    try:
+        progress_callback(message, kind=kind)
+    except TypeError:
+        progress_callback(message)
+    except Exception:
+        logger.exception("generation progress callback failed")
 
 
 def generate_content(
@@ -249,6 +269,7 @@ def generate_content(
     change_request: str = "",
     min_words: int = MIN_BLOG_WORDS,
     max_words: int = 1400,
+    progress_callback=None,
 ):
     prompt = build_content_prompt(
         title=title,
@@ -263,7 +284,13 @@ def generate_content(
         min_words=min_words,
         max_words=max_words,
     )
-    return _generate_content_from_prompt(provider, prompt, min_words=min_words, max_words=max_words)
+    return _generate_content_from_prompt(
+        provider,
+        prompt,
+        min_words=min_words,
+        max_words=max_words,
+        progress_callback=progress_callback,
+    )
 
 
 def keep_required_url_once(content: str, required_url: str) -> str:
@@ -323,6 +350,23 @@ def required_url_in_first_paragraph_error(content: str, required_url: str, post_
     return ""
 
 
+def medium_example_mention_error(content: str, brand: str = "", keyword: str = "") -> str:
+    visible_text = re.sub(r"<[^>]+>", " ", content or "")
+    visible_text = re.sub(r"https?://\S+|www\.\S+", " ", visible_text)
+    checks = [
+        ("brand name", (brand or "").strip()),
+        ("primary keyword", (keyword or "").strip()),
+    ]
+    for label, phrase in checks:
+        if not phrase:
+            continue
+        phrase_pattern = re.compile(rf"(?<!\w){re.escape(phrase)}(?!\w)", flags=re.IGNORECASE)
+        count = len(phrase_pattern.findall(visible_text))
+        if count > 1:
+            return f"The generated medium content mentioned the {label} {count} times. Mention it no more than once as a natural example."
+    return ""
+
+
 def generate_backlink_content(
     provider,
     title: str,
@@ -345,6 +389,7 @@ def generate_backlink_content(
     backlink_content_guidelines: str = "",
     suggested_content: str = "",
     change_request: str = "",
+    progress_callback=None,
 ):
     effective_max_words = _effective_medium_max_words(
         backlink_website_name,
@@ -378,15 +423,19 @@ def generate_backlink_content(
         suggested_content=suggested_content,
         change_request=change_request,
     )
-    validator = None
-    if (money_site_url or "").strip():
-        validator = lambda content: required_url_in_first_paragraph_error(content, money_site_url, backlink_post_type)
+    def validator(content: str) -> str:
+        url_error = required_url_in_first_paragraph_error(content, money_site_url, backlink_post_type)
+        if url_error:
+            return url_error
+        return medium_example_mention_error(content, brand=brand, keyword=keyword)
+
     content = _generate_content_from_prompt(
         provider,
         prompt,
         min_words=validation_min_words ,
         max_words=effective_max_words,
         validator=validator,
+        progress_callback=progress_callback,
     )
     return keep_required_url_once(content, money_site_url)
 

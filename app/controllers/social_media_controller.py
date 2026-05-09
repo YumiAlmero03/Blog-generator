@@ -13,6 +13,7 @@ from generators.social_media_generator import generate_social_media_post
 from logger import logger
 
 from app.controllers.helpers import base_template_context
+from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
 from app.services.provider_service import generation_error_message, get_provider
 
 
@@ -135,12 +136,15 @@ def _handle_generate_social_media_post(state: dict):
     try:
         provider = get_provider()
         brand_name = state["selected_profile"].get("brand_name", "")
+        progress = _progress_callback("Social activator", request.form.get("generation_status_token", ""))
+        progress("Generating social media post...")
         state["result"] = generate_social_media_post(
             provider,
             focus_word=state["focus_word"],
             brand_name=brand_name,
             social_type=state["selected_profile"].get("social_type", ""),
             brand_context=get_brand_context(brand_name),
+            progress_callback=progress,
         )
         post_content = state["result"].get("post_content", "")
         tags = state["result"].get("tags", [])
@@ -177,9 +181,22 @@ def _handle_generate_social_media_post(state: dict):
             content=post_content,
             quality_report=quality_report,
         )
+        clear_generation_status(request.form.get("generation_status_token", ""))
     except Exception as exc:
         logger.exception("social_media_activator generation failed")
         state["error"] = generation_error_message(
             "An error occurred while generating the social media post. Check logs/app.log for details.",
             exc,
         )
+
+
+def _progress_callback(label: str, token: str):
+    cleaned_label = (label or "Generation").strip()
+
+    def publish(message: str, kind: str = "status"):
+        if kind == "prompt":
+            publish_generation_prompt(token, message)
+            return
+        publish_generation_status(token, f"{cleaned_label}: {message}")
+
+    return publish

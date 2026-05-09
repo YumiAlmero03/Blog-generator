@@ -10,7 +10,6 @@ from word_bank import find_banned_terms_in_text
 
 MIN_PAGE_WORDS = 900
 MAX_PAGE_WORDS = 1200
-MAX_GENERATION_ATTEMPTS = 3
 MIN_META_DESCRIPTION_CHARACTERS = 120
 MAX_META_DESCRIPTION_CHARACTERS = 140
 
@@ -61,6 +60,7 @@ def generate_page(
     change_request: str = "",
     min_words: int = MIN_PAGE_WORDS,
     max_words: int = MAX_PAGE_WORDS,
+    progress_callback=None,
 ):
     min_word_count, max_word_count = _normalize_word_limits(min_words, max_words)
     prompt = build_page_prompt(
@@ -75,11 +75,14 @@ def generate_page(
         max_words=max_word_count,
     )
 
-    last_error = None
     last_word_count = 0
 
-    for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+    attempt = 0
+    while True:
+        attempt += 1
         retry_instruction = ""
+        if attempt == 1:
+            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
@@ -103,58 +106,69 @@ def generate_page(
             banned_terms = find_banned_terms_in_text("\n".join([title, meta_description, content]))
 
             if banned_terms:
+                _publish_progress(
+                    progress_callback,
+                    f"Page attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
                 logger.warning(
-                    "Page output used banned terms %s for keyword '%s' on attempt %d/%d",
+                    "Page output used banned terms %s for keyword '%s' on attempt %d",
                     ", ".join(banned_terms),
                     keyword,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
             meta_description_length = len(meta_description)
             if not MIN_META_DESCRIPTION_CHARACTERS <= meta_description_length <= MAX_META_DESCRIPTION_CHARACTERS:
+                _publish_progress(
+                    progress_callback,
+                    f"Page attempt {attempt}: meta description is {meta_description_length} characters, target is 120-140. Retrying...",
+                )
                 logger.warning(
-                    "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d/%d",
+                    "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d",
                     meta_description_length,
                     MIN_META_DESCRIPTION_CHARACTERS,
                     MAX_META_DESCRIPTION_CHARACTERS,
                     keyword,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
             if word_count < min_word_count:
+                _publish_progress(
+                    progress_callback,
+                    f"Page attempt {attempt}: {word_count} words, minimum is {min_word_count}. Retrying...",
+                )
                 logger.warning(
-                    "Page word count is %d (minimum: %d) for keyword '%s' on attempt %d/%d",
+                    "Page word count is %d (minimum: %d) for keyword '%s' on attempt %d",
                     word_count,
                     min_word_count,
                     keyword,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
             if word_count > max_word_count:
+                _publish_progress(
+                    progress_callback,
+                    f"Page attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",
+                )
                 logger.warning(
-                    "Page word count is %d (maximum: %d) for keyword '%s' on attempt %d/%d",
+                    "Page word count is %d (maximum: %d) for keyword '%s' on attempt %d",
                     word_count,
                     max_word_count,
                     keyword,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
             content, injected_count = inject_image_placeholders(content)
             logger.info(
-                "Page generated successfully for keyword '%s' with %d words and %d image placeholders on attempt %d/%d",
+                "Page generated successfully for keyword '%s' with %d words and %d image placeholders on attempt %d",
                 keyword,
                 word_count,
                 injected_count,
                 attempt,
-                MAX_GENERATION_ATTEMPTS,
             )
             return {
                 "title": title,
@@ -163,16 +177,24 @@ def generate_page(
                 "image_count": injected_count,
             }
         except Exception as exc:
-            last_error = exc
             logger.exception("generate_page failed on attempt %d. Raw response: %s", attempt, raw)
-
-    if last_error is not None:
-        raise ValueError("Could not parse JSON from model output.") from last_error
+            raise ValueError("Could not parse JSON from model output.") from exc
 
     raise ValueError(
-        f"Generated page could not satisfy the rules after {MAX_GENERATION_ATTEMPTS} attempts. "
+        "Generated page could not satisfy the rules. "
         f"Last attempt was {last_word_count} words."
     )
+
+
+def _publish_progress(progress_callback, message: str, kind: str = "status") -> None:
+    if not progress_callback:
+        return
+    try:
+        progress_callback(message, kind=kind)
+    except TypeError:
+        progress_callback(message)
+    except Exception:
+        logger.exception("generation progress callback failed")
 
 
 def _normalize_word_limits(min_words: int, max_words: int) -> tuple[int, int]:

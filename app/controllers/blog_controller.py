@@ -10,6 +10,7 @@ from logger import logger
 
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
+from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_blog_word_limits
 
@@ -73,6 +74,8 @@ def _handle_generate_titles(state: dict):
     try:
         provider = get_provider()
         brand_context = get_brand_context(state["brand"])
+        progress = _progress_callback("Title", request.form.get("generation_status_token", ""))
+        progress("Starting title generation...")
         state["titles"] = generate_titles(
             provider,
             keyword=state["keyword"],
@@ -80,7 +83,9 @@ def _handle_generate_titles(state: dict):
             count=state["count"],
             brand=state["brand"],
             brand_context=brand_context,
+            progress_callback=progress,
         )
+        progress("Titles passed validation.")
         state["step"] = "title"
     except Exception as exc:
         logger.exception("generate_titles action failed")
@@ -111,11 +116,13 @@ def _handle_generate_content(state: dict):
     try:
         state["titles"] = json.loads(titles_raw) if titles_raw else []
         provider = get_provider()
+        progress = _progress_callback("Blog", request.form.get("generation_status_token", ""))
         if state["brand"]:
             upsert_brand(state["brand"])
         state["money_site_url"] = get_setting("money_site", "")
         min_words, max_words = get_blog_word_limits()
         brand_context = get_brand_context(state["brand"])
+        progress("Generating meta descriptions...")
         state["meta_descriptions"] = generate_meta_descriptions(
             provider,
             title=state["selected_title"],
@@ -123,6 +130,7 @@ def _handle_generate_content(state: dict):
             count=5,
             brand=state["brand"],
             brand_context=brand_context,
+            progress_callback=progress,
         )
         if state["meta_descriptions"]:
             selected_match = next(
@@ -131,6 +139,7 @@ def _handle_generate_content(state: dict):
             )
             state["meta_description"] = (selected_match or state["meta_descriptions"][0]).get("text", "")
         scoped_change_request = _scoped_change_request(state["change_request"], state["regenerate_scope"])
+        progress("Generating article content...")
         state["content"] = generate_content(
             provider,
             title=state["selected_title"],
@@ -144,7 +153,9 @@ def _handle_generate_content(state: dict):
             change_request=scoped_change_request,
             min_words=min_words,
             max_words=max_words,
+            progress_callback=progress,
         )
+        progress("Content passed validation. Preparing quality report...")
         state["tag_suggestions"] = suggest_content_tags(
             title=state["selected_title"],
             keyword=state["keyword"],
@@ -186,6 +197,7 @@ def _handle_generate_content(state: dict):
             keyword=state["keyword"],
             supporting_keyword=state["supporting_keyword"],
         )
+        clear_generation_status(request.form.get("generation_status_token", ""))
         state["step"] = "content"
     except Exception as exc:
         logger.exception("generate_content action failed")
@@ -224,3 +236,15 @@ def _scoped_change_request(change_request: str, scope: str) -> str:
     if not prefix:
         return cleaned
     return f"{prefix}\n{cleaned}".strip()
+
+
+def _progress_callback(label: str, token: str):
+    cleaned_label = (label or "Generation").strip()
+
+    def publish(message: str, kind: str = "status"):
+        if kind == "prompt":
+            publish_generation_prompt(token, message)
+            return
+        publish_generation_status(token, f"{cleaned_label}: {message}")
+
+    return publish

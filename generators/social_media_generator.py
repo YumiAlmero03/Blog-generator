@@ -7,7 +7,6 @@ from word_bank import find_banned_terms_in_text
 
 
 MAX_SOCIAL_POST_CHARACTERS = 220
-MAX_GENERATION_ATTEMPTS = 3
 GAMBLING_RELATED_TERMS = (
     "slot",
     "slots",
@@ -36,6 +35,7 @@ def generate_social_media_post(
     brand_name: str,
     social_type: str,
     brand_context: str = "",
+    progress_callback=None,
 ) -> dict:
     prompt = build_social_media_post_prompt(
         focus_word=focus_word,
@@ -43,10 +43,12 @@ def generate_social_media_post(
         social_type=social_type,
         brand_context=brand_context,
     )
-    last_error = None
-
-    for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+    attempt = 0
+    while True:
+        attempt += 1
         retry_instruction = ""
+        if attempt == 1:
+            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
@@ -67,11 +69,14 @@ def generate_social_media_post(
             tags = [str(tag).strip() for tag in tags if str(tag).strip()]
 
             if len(post_content) > MAX_SOCIAL_POST_CHARACTERS:
+                _publish_progress(
+                    progress_callback,
+                    f"Social attempt {attempt}: post has {len(post_content)} characters, maximum is {MAX_SOCIAL_POST_CHARACTERS}. Retrying...",
+                )
                 logger.warning(
-                    "Social media post exceeded %d characters on attempt %d/%d: %d",
+                    "Social media post exceeded %d characters on attempt %d: %d",
                     MAX_SOCIAL_POST_CHARACTERS,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                     len(post_content),
                 )
                 continue
@@ -83,19 +88,25 @@ def generate_social_media_post(
                 " ".join([post_content, image_description, " ".join(tags)])
             )
             if restricted_terms:
+                _publish_progress(
+                    progress_callback,
+                    f"Social attempt {attempt}: restricted terms found ({', '.join(restricted_terms)}). Retrying...",
+                )
                 logger.warning(
-                    "Social media post used restricted terms %s on attempt %d/%d",
+                    "Social media post used restricted terms %s on attempt %d",
                     ", ".join(restricted_terms),
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
             if banned_terms:
+                _publish_progress(
+                    progress_callback,
+                    f"Social attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
                 logger.warning(
-                    "Social media post used banned terms %s on attempt %d/%d",
+                    "Social media post used banned terms %s on attempt %d",
                     ", ".join(banned_terms),
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
@@ -106,13 +117,21 @@ def generate_social_media_post(
                 "character_count": len(post_content),
             }
         except Exception as exc:
-            last_error = exc
             logger.exception("generate_social_media_post failed on attempt %d. Raw response: %s", attempt, raw)
-
-    if last_error is not None:
-        raise ValueError("Could not parse JSON from model output.") from last_error
+            raise ValueError("Could not parse JSON from model output.") from exc
 
     raise ValueError("Generated social media post could not satisfy the 220 character limit.")
+
+
+def _publish_progress(progress_callback, message: str, kind: str = "status") -> None:
+    if not progress_callback:
+        return
+    try:
+        progress_callback(message, kind=kind)
+    except TypeError:
+        progress_callback(message)
+    except Exception:
+        logger.exception("generation progress callback failed")
 
 
 def _find_gambling_related_terms(text: str) -> list[str]:

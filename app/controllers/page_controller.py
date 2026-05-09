@@ -7,6 +7,7 @@ from logger import logger
 
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
+from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_page_word_limits
 
@@ -47,6 +48,8 @@ def page_generator():
                     upsert_brand(state["brand"])
                 brand_context = get_brand_context(state["brand"])
                 min_words, max_words = get_page_word_limits()
+                progress = _progress_callback("Page", request.form.get("generation_status_token", ""))
+                progress("Generating page content...")
                 result = generate_page(
                     provider,
                     keyword=state["keyword"],
@@ -58,6 +61,7 @@ def page_generator():
                     change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
                     min_words=min_words,
                     max_words=max_words,
+                    progress_callback=progress,
                 )
                 state["page_title"] = result.get("title", "")
                 state["meta_description"] = result.get("meta_description", "")
@@ -96,6 +100,7 @@ def page_generator():
                     supporting_keywords=state["supporting_keywords"],
                     expectations=state["expectations"],
                 )
+                clear_generation_status(request.form.get("generation_status_token", ""))
             except Exception as exc:
                 logger.exception("page_generator action failed")
                 state["error"] = generation_error_message(
@@ -139,6 +144,8 @@ def simple_page_generator():
                     upsert_brand(state["brand"])
                 brand_context = get_brand_context(state["brand"])
                 min_words, max_words = get_page_word_limits()
+                progress = _progress_callback("Simple page", request.form.get("generation_status_token", ""))
+                progress("Generating simple page...")
                 result = generate_simple_page(
                     provider,
                     page_title=state["page_title"],
@@ -149,6 +156,7 @@ def simple_page_generator():
                     change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
                     min_words=min_words,
                     max_words=max_words,
+                    progress_callback=progress,
                 )
                 state["generated_title"] = result.get("title", "")
                 state["meta_descriptions"] = result.get("meta_descriptions", [])
@@ -186,6 +194,7 @@ def simple_page_generator():
                     supporting_keywords="",
                     expectations=state["expectations"],
                 )
+                clear_generation_status(request.form.get("generation_status_token", ""))
             except Exception as exc:
                 logger.exception("simple_page_generator action failed")
                 state["error"] = generation_error_message(
@@ -209,3 +218,15 @@ def _scoped_change_request(change_request: str, scope: str) -> str:
     if not prefix:
         return cleaned
     return f"{prefix}\n{cleaned}".strip()
+
+
+def _progress_callback(label: str, token: str):
+    cleaned_label = (label or "Generation").strip()
+
+    def publish(message: str, kind: str = "status"):
+        if kind == "prompt":
+            publish_generation_prompt(token, message)
+            return
+        publish_generation_status(token, f"{cleaned_label}: {message}")
+
+    return publish

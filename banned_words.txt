@@ -1,15 +1,24 @@
 # Add one banned word or phrase per line.
 # Lines starting with # are treated as comments.
 
-# delve
-# game-changer
-
+bonus rewards
+cashout balance
+claim rewards
+eligible payout
+game result
+payout potential
+player rewards
+possible returns
+prize pool
+promo reward
+receive payouts
+reward opportunities
 guaranteed
 sure win
 100% win
 fixed
 rigged
-instant
+instant rewards
 hack
 exploit
 cheat

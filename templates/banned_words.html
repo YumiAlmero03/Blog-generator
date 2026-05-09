@@ -4,7 +4,7 @@
 {% block title %}Banned Words{% endblock %}
 {% block eyebrow %}Content Rules{% endblock %}
 {% block hero_title %}Banned Words{% endblock %}
-{% block hero_text %}Add custom banned words or phrases used by prompts, validators, quality checks, titles, pages, blogs, and meta descriptions.{% endblock %}
+{% block hero_text %}Edit banned_words.txt from the app. These words are used by prompts, validators, quality checks, titles, pages, blogs, and meta descriptions.{% endblock %}
 
 {% block content %}
   <div class="grid gap-6 lg:grid-cols-[minmax(320px,1fr)_minmax(280px,420px)]">
@@ -17,7 +17,7 @@
       {% endif %}
 
       <form method="post" class="grid gap-1">
-        <label for="custom_banned_words" class="mb-2 block text-sm font-bold text-sand-900">Custom banned words and phrases</label>
+        <label for="custom_banned_words" class="mb-2 block text-sm font-bold text-sand-900">Banned words and phrases in banned_words.txt</label>
         <textarea
           id="custom_banned_words"
           name="custom_banned_words"
@@ -30,8 +30,8 @@
     </section>
 
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-      <h2 class="mb-3 text-base font-bold text-sand-950">Built-in banned words</h2>
-      <p class="mb-5 text-sm leading-6 text-sand-700">These come from <span class="font-mono text-xs">banned_words.txt</span>. The custom list on the left is added on top of these defaults.</p>
+      <h2 class="mb-3 text-base font-bold text-sand-950">Active banned words</h2>
+      <p class="mb-5 text-sm leading-6 text-sand-700">These are loaded from <span class="font-mono text-xs">banned_words.txt</span>. Saving the list on the left updates that file directly.</p>
       {% if default_banned_words %}
         <div class="flex flex-wrap gap-2">
           {% for term in default_banned_words %}

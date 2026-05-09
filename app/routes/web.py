@@ -1,6 +1,7 @@
 from flask import Blueprint, send_from_directory
 
 from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, dashboard_controller, image_controller, page_controller, settings_controller, social_media_controller, tool_controller
+from app.views import generation_events_view
 from app.services.image_service import UPLOAD_ROOT
 
 
@@ -27,6 +28,8 @@ web.add_url_rule("/settings", view_func=settings_controller.settings, methods=["
 web.add_url_rule("/banned-words", view_func=settings_controller.banned_words, methods=["GET", "POST"])
 web.add_url_rule("/preview", view_func=tool_controller.preview, methods=["POST"])
 web.add_url_rule("/download_doc", view_func=tool_controller.download_doc, methods=["POST"])
+web.add_url_rule("/generation-status/<token>", view_func=generation_events_view.generation_status, methods=["GET"])
+web.add_url_rule("/events/generation/<token>", view_func=generation_events_view.generation_events, methods=["GET"])
 
 
 @web.get("/uploads/<path:filename>")

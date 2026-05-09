@@ -1,6 +1,6 @@
 from flask import render_template, request
 
-from database import get_setting, list_custom_banned_words, replace_custom_banned_words, set_setting
+from database import get_setting, set_setting
 
 from app.controllers.helpers import base_template_context
 from app.services.word_limit_settings import (
@@ -57,23 +57,23 @@ def settings():
 
 def banned_words():
     state = {
-        "custom_banned_words": "\n".join(list_custom_banned_words()),
-        "default_banned_words": _load_default_banned_words(),
+        "custom_banned_words": "\n".join(_load_banned_words_file_terms()),
+        "default_banned_words": _load_banned_words_file_terms(),
         "success": None,
         "error": None,
     }
 
     if request.method == "POST":
         raw_terms = request.form.get("custom_banned_words", "")
-        terms = raw_terms.splitlines()
-        saved_terms = replace_custom_banned_words(terms)
+        saved_terms = _write_banned_words_file(raw_terms.splitlines())
         state["custom_banned_words"] = "\n".join(saved_terms)
-        state["success"] = "Banned words saved."
+        state["default_banned_words"] = saved_terms
+        state["success"] = "Banned words saved to banned_words.txt."
 
     return render_template("banned_words.html", **base_template_context(), **state)
 
 
-def _load_default_banned_words() -> list[str]:
+def _load_banned_words_file_terms() -> list[str]:
     from word_bank import WORD_BANK_FILE
 
     if not WORD_BANK_FILE.exists():
@@ -85,3 +85,28 @@ def _load_default_banned_words() -> list[str]:
         if cleaned and not cleaned.startswith("#"):
             terms.append(cleaned)
     return terms
+
+
+def _write_banned_words_file(raw_terms: list[str]) -> list[str]:
+    from word_bank import WORD_BANK_FILE
+
+    cleaned_terms = []
+    seen = set()
+    for raw_term in raw_terms:
+        cleaned = " ".join((raw_term or "").strip().split())
+        normalized = cleaned.lower()
+        if not normalized or cleaned.startswith("#") or normalized in seen:
+            continue
+        seen.add(normalized)
+        cleaned_terms.append(cleaned)
+
+    file_content = "\n".join(
+        [
+            "# Add one banned word or phrase per line.",
+            "# Lines starting with # are treated as comments.",
+            "",
+            *cleaned_terms,
+        ]
+    )
+    WORD_BANK_FILE.write_text(file_content.rstrip() + "\n", encoding="utf-8")
+    return cleaned_terms

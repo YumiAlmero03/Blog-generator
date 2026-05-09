@@ -146,7 +146,7 @@
         return;
       }
       prepareContentForm();
-      window.AppUi.showLoading("Generating article content...");
+      window.AppUi.startFormLoading(contentForm, "Generating article content...");
       contentForm.submit();
     });
   }

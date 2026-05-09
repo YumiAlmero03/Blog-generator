@@ -8,7 +8,6 @@ from word_bank import find_banned_terms_in_text
 
 MIN_SIMPLE_PAGE_WORDS = 900
 MAX_SIMPLE_PAGE_WORDS = 1200
-MAX_GENERATION_ATTEMPTS = 3
 MIN_META_DESCRIPTION_CHARACTERS = 120
 MAX_META_DESCRIPTION_CHARACTERS = 140
 
@@ -23,6 +22,7 @@ def generate_simple_page(
     change_request: str = "",
     min_words: int = MIN_SIMPLE_PAGE_WORDS,
     max_words: int = MAX_SIMPLE_PAGE_WORDS,
+    progress_callback=None,
 ):
     min_word_count, max_word_count = _normalize_word_limits(min_words, max_words)
     prompt = build_simple_page_prompt(
@@ -36,11 +36,14 @@ def generate_simple_page(
         max_words=max_word_count,
     )
 
-    last_error = None
     last_word_count = 0
 
-    for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+    attempt = 0
+    while True:
+        attempt += 1
         retry_instruction = ""
+        if attempt == 1:
+            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
@@ -64,11 +67,14 @@ def generate_simple_page(
             meta_text = "\n".join(item.get("text", "") for item in meta_descriptions)
             banned_terms = find_banned_terms_in_text("\n".join([title, content, meta_text]))
             if banned_terms:
+                _publish_progress(
+                    progress_callback,
+                    f"Simple page attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
                 logger.warning(
-                    "Simple page used banned terms %s on attempt %d/%d",
+                    "Simple page used banned terms %s on attempt %d",
                     ", ".join(banned_terms),
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
             invalid_meta_lengths = [
@@ -77,42 +83,54 @@ def generate_simple_page(
                 if not MIN_META_DESCRIPTION_CHARACTERS <= len(item.get("text", "")) <= MAX_META_DESCRIPTION_CHARACTERS
             ]
             if invalid_meta_lengths:
+                _publish_progress(
+                    progress_callback,
+                    f"Simple page attempt {attempt}: meta descriptions missed 120-140 characters ({', '.join(str(length) for length in invalid_meta_lengths)} chars). Retrying...",
+                )
                 logger.warning(
-                    "Simple page meta descriptions missed %d-%d characters with lengths %s on attempt %d/%d",
+                    "Simple page meta descriptions missed %d-%d characters with lengths %s on attempt %d",
                     MIN_META_DESCRIPTION_CHARACTERS,
                     MAX_META_DESCRIPTION_CHARACTERS,
                     ", ".join(str(length) for length in invalid_meta_lengths),
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
             h3_count = _count_h3_tags(content)
             if h3_count < 3:
+                _publish_progress(
+                    progress_callback,
+                    f"Simple page attempt {attempt}: only {h3_count} <h3> tags, minimum is 3. Retrying...",
+                )
                 logger.warning(
-                    "Simple page used only %d <h3> tags on attempt %d/%d",
+                    "Simple page used only %d <h3> tags on attempt %d",
                     h3_count,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
             if word_count < min_word_count:
+                _publish_progress(
+                    progress_callback,
+                    f"Simple page attempt {attempt}: {word_count} words, minimum is {min_word_count}. Retrying...",
+                )
                 logger.warning(
-                    "Simple page word count is %d (minimum: %d) on attempt %d/%d",
+                    "Simple page word count is %d (minimum: %d) on attempt %d",
                     word_count,
                     min_word_count,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
             if word_count > max_word_count:
+                _publish_progress(
+                    progress_callback,
+                    f"Simple page attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",
+                )
                 logger.warning(
-                    "Simple page word count is %d (maximum: %d) on attempt %d/%d",
+                    "Simple page word count is %d (maximum: %d) on attempt %d",
                     word_count,
                     max_word_count,
                     attempt,
-                    MAX_GENERATION_ATTEMPTS,
                 )
                 continue
 
@@ -123,16 +141,24 @@ def generate_simple_page(
                 "content": content,
             }
         except Exception as exc:
-            last_error = exc
             logger.exception("generate_simple_page failed on attempt %d. Raw response: %s", attempt, raw)
-
-    if last_error is not None:
-        raise ValueError("Could not parse JSON from model output.") from last_error
+            raise ValueError("Could not parse JSON from model output.") from exc
 
     raise ValueError(
-        f"Generated simple page could not satisfy the rules after multiple attempts. "
+        "Generated simple page could not satisfy the rules. "
         f"Last attempt was {last_word_count} words."
     )
+
+
+def _publish_progress(progress_callback, message: str, kind: str = "status") -> None:
+    if not progress_callback:
+        return
+    try:
+        progress_callback(message, kind=kind)
+    except TypeError:
+        progress_callback(message)
+    except Exception:
+        logger.exception("generation progress callback failed")
 
 
 def _normalize_meta_descriptions(raw_items) -> list[dict]:
