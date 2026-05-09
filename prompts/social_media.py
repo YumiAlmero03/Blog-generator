@@ -1,4 +1,5 @@
 from prompts.shared import build_brand_context_section
+from word_bank import build_banned_words_prompt_section
 
 
 def build_social_media_post_prompt(
@@ -8,6 +9,7 @@ def build_social_media_post_prompt(
     brand_context: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are a social media content assistant.
 
@@ -17,6 +19,7 @@ Focus word: {focus_word}
 Brand: {brand_name}
 Social media type: {social_type}
 {context_section}
+{banned_words_section}
 
 Rules:
 - Return valid JSON only.

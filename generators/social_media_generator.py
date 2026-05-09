@@ -3,6 +3,7 @@ import json
 from logger import logger
 from prompts import build_social_media_post_prompt
 from utils import extract_json_string
+from word_bank import find_banned_terms_in_text
 
 
 MAX_SOCIAL_POST_CHARACTERS = 220
@@ -50,6 +51,7 @@ def generate_social_media_post(
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
                 f"- The post_content must be {MAX_SOCIAL_POST_CHARACTERS} characters or fewer.\n"
+                "- Avoid every term in the forbidden word bank from the original prompt.\n"
                 "- Do not use slot, casino, gambling, betting, jackpot, wager, poker, roulette, sportsbook, lottery, or related terms anywhere.\n"
                 "- Return fresh valid JSON only.\n"
             )
@@ -77,10 +79,21 @@ def generate_social_media_post(
             restricted_terms = _find_gambling_related_terms(
                 " ".join([post_content, image_description, " ".join(tags)])
             )
+            banned_terms = find_banned_terms_in_text(
+                " ".join([post_content, image_description, " ".join(tags)])
+            )
             if restricted_terms:
                 logger.warning(
                     "Social media post used restricted terms %s on attempt %d/%d",
                     ", ".join(restricted_terms),
+                    attempt,
+                    MAX_GENERATION_ATTEMPTS,
+                )
+                continue
+            if banned_terms:
+                logger.warning(
+                    "Social media post used banned terms %s on attempt %d/%d",
+                    ", ".join(banned_terms),
                     attempt,
                     MAX_GENERATION_ATTEMPTS,
                 )

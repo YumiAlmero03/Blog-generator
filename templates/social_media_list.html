@@ -43,9 +43,26 @@
 
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if profiles %}
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div class="mb-5 rounded-2xl bg-sand-100 px-4 py-4">
+          <label for="socialProfileFilter" class="mb-2 block text-sm font-bold text-sand-900">Filter social profiles</label>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input
+              id="socialProfileFilter"
+              type="search"
+              placeholder="Search brand or social media type"
+              class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+            />
+            <button type="button" id="clearSocialProfileFilter" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-white px-4 py-2.5 text-sm font-bold text-sand-700 transition hover:bg-sand-50 hover:text-sand-900">Clear</button>
+          </div>
+          <div id="socialProfileFilterCount" class="mt-3 text-sm font-bold text-sand-700">{{ profiles|length }} profile{% if profiles|length != 1 %}s{% endif %}</div>
+        </div>
+
+        <div id="socialProfileGrid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {% for profile in profiles %}
-            <article class="rounded-[22px] border border-sand-200 bg-white/80 p-5">
+            <article
+              class="rounded-[22px] border border-sand-200 bg-white/80 p-5"
+              data-social-profile-search="{{ [profile.brand_name, profile.social_type]|join(' ')|lower }}"
+            >
               <div class="mb-3 inline-flex rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ profile.social_type }}</div>
               <h3 class="font-display text-2xl text-sand-950">{{ profile.brand_name }}</h3>
               <div class="mt-4 flex flex-wrap gap-2">
@@ -59,6 +76,9 @@
             </article>
           {% endfor %}
         </div>
+        <div id="socialProfileFilterEmpty" class="mt-4 hidden rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          No social media profiles match that filter.
+        </div>
       {% else %}
         <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
           No social media profiles saved yet.
@@ -66,4 +86,50 @@
       {% endif %}
     </section>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const socialProfileFilter = document.getElementById("socialProfileFilter");
+    const clearSocialProfileFilter = document.getElementById("clearSocialProfileFilter");
+    const socialProfileFilterCount = document.getElementById("socialProfileFilterCount");
+    const socialProfileFilterEmpty = document.getElementById("socialProfileFilterEmpty");
+    const socialProfileCards = Array.from(document.querySelectorAll("[data-social-profile-search]"));
+
+    function updateSocialProfileFilter() {
+      if (!socialProfileFilter) {
+        return;
+      }
+      const query = socialProfileFilter.value.trim().toLowerCase();
+      let visibleCount = 0;
+      socialProfileCards.forEach((card) => {
+        const isVisible = !query || card.dataset.socialProfileSearch.includes(query);
+        card.classList.toggle("hidden", !isVisible);
+        if (isVisible) {
+          visibleCount += 1;
+        }
+      });
+      if (socialProfileFilterCount) {
+        socialProfileFilterCount.textContent = `${visibleCount} profile${visibleCount === 1 ? "" : "s"} shown`;
+      }
+      if (socialProfileFilterEmpty) {
+        socialProfileFilterEmpty.classList.toggle("hidden", visibleCount !== 0);
+      }
+    }
+
+    if (socialProfileFilter) {
+      socialProfileFilter.addEventListener("input", updateSocialProfileFilter);
+    }
+
+    if (clearSocialProfileFilter) {
+      clearSocialProfileFilter.addEventListener("click", () => {
+        if (!socialProfileFilter) {
+          return;
+        }
+        socialProfileFilter.value = "";
+        socialProfileFilter.focus();
+        updateSocialProfileFilter();
+      });
+    }
+  </script>
 {% endblock %}
