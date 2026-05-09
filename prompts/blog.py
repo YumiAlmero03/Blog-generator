@@ -197,7 +197,7 @@ Brand: {brand}
 {change_request_section}
 
 Rules:
-- Write a blog article between "{min_word_count}" and "{max_word_count}" words.
+- Write a complete blog article of at least "{min_word_count}" words. Treat "{max_word_count}" words as a soft guide, but prioritize staying over the minimum.
 - Start with an engaging introduction of 60–80 words that explains the reader’s problem or need.
 - Do not repeat the exact article title in the body unless absolutely necessary. However, keep the content closely aligned with the title and main topic.
 - Sentences must be less than 21 words.
@@ -240,7 +240,7 @@ Rules:
 - Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
 - Do not use these sections together in the same page.
 - Choose the ending section that best matches the page type and search intent.
-- Ensure the final article is complete and within the "{min_word_count}"-"{max_word_count}" word range before finishing.
+- Ensure the final article is complete and over "{min_word_count}" words before finishing.
 
 Return valid JSON only in this format:
 {{

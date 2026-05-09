@@ -81,19 +81,19 @@ def generate_page(
     while True:
         attempt += 1
         retry_instruction = ""
-        if attempt == 1:
-            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
                 f"- Your previous page did not satisfy the word-count or meta description rules.\n"
                 f"- Keep the same keyword intent and return valid JSON only.\n"
-                f"- The page content must be between {min_word_count} and {max_word_count} words.\n"
+                f"- The page content must be at least {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
                 f"- The meta_description must be between {MIN_META_DESCRIPTION_CHARACTERS} and {MAX_META_DESCRIPTION_CHARACTERS} characters.\n"
-                f"- Adjust the section depth until the page fits that range naturally.\n"
+                f"- Adjust the section depth until the page is complete and over the minimum naturally.\n"
             )
 
-        raw = provider.generate_json(prompt + retry_instruction)
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
 
         try:
             json_text = extract_json_string(raw)
@@ -148,7 +148,7 @@ def generate_page(
                 )
                 continue
 
-            if word_count > max_word_count:
+            if not min_word_count and word_count > max_word_count:
                 _publish_progress(
                     progress_callback,
                     f"Page attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",

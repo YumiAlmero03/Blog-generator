@@ -272,7 +272,7 @@ def _scoped_change_request(change_request: str, scope: str) -> str:
     cleaned = (change_request or "").strip()
     cleaned_scope = (scope or "full").strip().lower()
     scope_labels = {
-        "intro": "Regenerate only the first paragraph/introduction and keep the required brand URL in that first paragraph.",
+        "intro": "Regenerate only the first paragraph/introduction and keep the required brand URL exactly once anywhere in the article.",
         "section": "Regenerate the weakest body section while keeping the selected medium format and brand URL rule.",
         "conclusion": "Regenerate only the ending section without adding the brand URL again.",
         "tags": "Refresh the tag angle and make the content naturally support better tags.",

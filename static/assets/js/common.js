@@ -24,10 +24,14 @@
     const text = getOverlayText();
     if (!promptPanel && text && text.parentElement) {
       const wrapper = document.createElement("div");
-      wrapper.className = "mt-4 hidden text-left";
+      wrapper.className = "mt-4 text-left";
       wrapper.setAttribute("data-loading-prompt-panel", "");
       wrapper.innerHTML = [
-        '<button type="button" class="inline-flex min-h-9 items-center justify-center rounded-full border border-sand-200 bg-white px-3 py-2 text-xs font-bold text-sand-700" data-loading-prompt-toggle>Show prompt</button>',
+        '<div class="flex flex-wrap items-center gap-2">',
+        '<button type="button" class="inline-flex min-h-9 items-center justify-center rounded-full border border-sand-200 bg-white px-3 py-2 text-xs font-bold text-sand-700 disabled:cursor-not-allowed disabled:opacity-50" disabled data-loading-prompt-toggle>Prompt loading...</button>',
+        '<button type="button" class="inline-flex min-h-9 items-center justify-center rounded-full border border-sand-200 bg-white px-3 py-2 text-xs font-bold text-sand-700 disabled:cursor-not-allowed disabled:opacity-50" disabled data-loading-prompt-copy>Copy prompt</button>',
+        '<span class="text-xs font-bold text-sand-500" data-loading-prompt-copy-status></span>',
+        "</div>",
         '<pre class="mt-3 hidden max-h-[42vh] overflow-auto rounded-2xl border border-sand-200 bg-sand-50 p-4 text-xs leading-5 text-sand-900 whitespace-pre-wrap" data-loading-prompt-text></pre>',
       ].join("");
       text.parentElement.appendChild(wrapper);
@@ -37,6 +41,7 @@
   }
 
   let loadingEventSource = null;
+  let loadingStatusPoll = null;
   let latestLoadingPrompt = "";
 
   function setLoadingStatus(message) {
@@ -51,6 +56,8 @@
     const panel = getOverlayPrompt();
     const promptText = panel ? panel.querySelector("[data-loading-prompt-text]") : null;
     const promptToggle = panel ? panel.querySelector("[data-loading-prompt-toggle]") : null;
+    const promptCopy = panel ? panel.querySelector("[data-loading-prompt-copy]") : null;
+    const promptCopyStatus = panel ? panel.querySelector("[data-loading-prompt-copy-status]") : null;
     if (!panel || !promptText) {
       return;
     }
@@ -59,8 +66,23 @@
     if (!latestLoadingPrompt) {
       promptText.classList.add("hidden");
       if (promptToggle) {
-        promptToggle.textContent = "Show prompt";
+        promptToggle.textContent = "Prompt loading...";
+        promptToggle.disabled = true;
       }
+      if (promptCopy) {
+        promptCopy.disabled = true;
+      }
+      if (promptCopyStatus) {
+        promptCopyStatus.textContent = "";
+      }
+      return;
+    }
+    if (promptToggle) {
+      promptToggle.textContent = promptText.classList.contains("hidden") ? "Show prompt" : "Hide prompt";
+      promptToggle.disabled = false;
+    }
+    if (promptCopy) {
+      promptCopy.disabled = false;
     }
   }
 
@@ -86,6 +108,10 @@
     if (loadingEventSource) {
       loadingEventSource.close();
       loadingEventSource = null;
+    }
+    if (loadingStatusPoll) {
+      window.clearInterval(loadingStatusPoll);
+      loadingStatusPoll = null;
     }
     setLoadingStatus("");
     setLoadingPrompt("");
@@ -124,12 +150,46 @@
         if (payload && payload.message) {
           setLoadingStatus(payload.message);
         }
-        if (payload && payload.prompt) {
+        if (payload && typeof payload.prompt === "string") {
           setLoadingPrompt(payload.prompt);
         }
       } catch (error) {}
     };
     loadingEventSource.onerror = function () {};
+    startStatusPolling(token);
+  }
+
+  function startStatusPolling(token) {
+    if (loadingStatusPoll) {
+      window.clearInterval(loadingStatusPoll);
+    }
+
+    const poll = function () {
+      fetch("/generation-status/" + encodeURIComponent(token), {
+        headers: { Accept: "application/json" },
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            return null;
+          }
+          return response.json();
+        })
+        .then(function (payload) {
+          if (!payload) {
+            return;
+          }
+          if (payload.message) {
+            setLoadingStatus(payload.message);
+          }
+          if (typeof payload.prompt === "string" && payload.prompt) {
+            setLoadingPrompt(payload.prompt);
+          }
+        })
+        .catch(function () {});
+    };
+
+    poll();
+    loadingStatusPoll = window.setInterval(poll, 1500);
   }
 
   function startFormLoading(form, message) {
@@ -194,6 +254,18 @@
   });
 
   document.addEventListener("click", function (event) {
+    const promptCopy = event.target.closest("[data-loading-prompt-copy]");
+    if (promptCopy) {
+      const panel = promptCopy.closest("[data-loading-prompt-panel]");
+      const status = panel ? panel.querySelector("[data-loading-prompt-copy-status]") : null;
+      copyText(latestLoadingPrompt, "Prompt copied.", function (message) {
+        if (status) {
+          status.textContent = message;
+        }
+      });
+      return;
+    }
+
     const promptToggle = event.target.closest("[data-loading-prompt-toggle]");
     if (promptToggle) {
       const panel = promptToggle.closest("[data-loading-prompt-panel]");

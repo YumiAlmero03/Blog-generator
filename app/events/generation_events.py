@@ -86,7 +86,7 @@ def stream_generation_events(token: str = ""):
         while True:
             try:
                 payload = subscriber.get(timeout=_HEARTBEAT_SECONDS)
-                yield _format_event({"message": payload.get("message", "")})
+                yield _format_event(payload)
             except queue.Empty:
                 yield ": keep-alive\n\n"
     finally:

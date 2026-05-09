@@ -242,14 +242,14 @@ Apply this request while keeping the medium content natural, complete, and align
         min_word_rule = f'- Write at least "{min_words}" words for this medium.'
         completion_word_rule = f'- If no max word count is provided, ensure the final article is complete and at least "{min_words}" words before finishing.'
     elif min_words and max_words:
-        min_word_rule = f'- Write between "{min_words}" and "{max_words}" words for this medium. If both cannot be satisfied, stay under the max word count.'
-        completion_word_rule = f'- Aim for at least "{min_words}" words when possible, but prioritize staying within "{max_words}" words.'
+        min_word_rule = f'- Write at least "{min_words}" words for this medium. Treat "{max_words}" words as a soft guide, but prioritize staying over the minimum.'
+        completion_word_rule = f'- Ensure the final article is complete and at least "{min_words}" words before finishing.'
     elif max_words:
-        min_word_rule = f'- Write no more than "{max_words}" words for this medium.'
-        completion_word_rule = f'- Ensure the final article is complete and at or below "{max_words}" words before finishing.'
+        min_word_rule = f'- Keep the article concise for this medium. If possible, stay near "{max_words}" words without cutting useful context.'
+        completion_word_rule = f'- Ensure the final article is complete before finishing.'
     else:
-        min_word_rule = f'- Write a blog article between "{MIN_BLOG_WORDS}" and "{MAX_BLOG_WORDS}" words unless a smaller max word count is provided for the selected medium.'
-        completion_word_rule = f'- If no max word count is provided, ensure the final article is complete and within the "{MIN_BLOG_WORDS}"-"{MAX_BLOG_WORDS}" word range before finishing.'
+        min_word_rule = f'- Write a blog article of at least "{MIN_BLOG_WORDS}" words. Treat "{MAX_BLOG_WORDS}" words as a soft guide, but prioritize staying over the minimum.'
+        completion_word_rule = f'- Ensure the final article is complete and at least "{MIN_BLOG_WORDS}" words before finishing.'
     medium_name_target = f"{backlink_website_name or ''} {backlink_blog_name or ''} {backlink_website_type or ''}".lower()
     platform_rules = ""
     if "twitter" in medium_name_target or "x.com" in medium_name_target or " twitter" in f" {medium_name_target}":
@@ -282,6 +282,21 @@ Forum-specific rules:
 - Avoid corporate phrasing.
 """
     cleaned_money_site_url = (money_site_url or "").strip()
+    required_url = cleaned_money_site_url or "REQUIRED_URL"
+    money_site_section = ""
+    if cleaned_money_site_url:
+        money_site_section = f"""
+
+Required brand URL:
+{cleaned_money_site_url}
+
+Required brand link rules:
+- Insert this exact URL once anywhere in the article.
+- Use natural descriptive anchor text that fits the article topic.
+- Do not use the brand name, website name, or domain as anchor text.
+- Do not include any other URL in the generated content.
+- Before returning, verify this URL appears exactly one time in the content value.
+"""
     post_type = (backlink_post_type or "html").strip().lower()
     if post_type not in {"html", "markdown", "gutenberg", "text"}:
         post_type = "html"
@@ -291,7 +306,7 @@ Forum-specific rules:
 - Use Markdown headings like ## and ###, Markdown lists, and compact paragraphs.
 - Do not put every sentence on its own line. Keep related sentences together in the same paragraph.
 - Use only one blank line between Markdown blocks.
-- Use this Markdown link format once in the first paragraph when a brand URL is provided: [anchor text](REQUIRED_URL).
+- Use this Markdown link format once anywhere in the article when a brand URL is provided: [anchor text]({required_url}).
 - Do not use HTML tags in the content value.
 - Use Markdown bold only for important non-keyword words when emphasis helps.
 - Never bold the primary keyword.
@@ -302,7 +317,7 @@ Forum-specific rules:
 - Write the content value as WordPress Gutenberg block HTML.
 - Wrap paragraphs and headings with Gutenberg comments, such as <!-- wp:paragraph --><p>...</p><!-- /wp:paragraph --> and <!-- wp:heading --><h2>...</h2><!-- /wp:heading -->.
 - Use normal paragraph blocks with 2-4 sentences each. Do not create many tiny paragraph blocks.
-- Use this HTML link format once inside the first Gutenberg paragraph block when a brand URL is provided: <a href='REQUIRED_URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
+- Use this HTML link format once anywhere in the article inside a Gutenberg paragraph block when a brand URL is provided: <a href='{required_url}' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
 - Use <b> only for emphasis on important non-keyword words or phrases.
 - Do not use <strong>.
 - Never bold the primary keyword.
@@ -316,7 +331,7 @@ Forum-specific rules:
 - Use clear section labels on their own lines when needed.
 - Keep related sentences together in compact paragraphs. Do not put every sentence on its own line.
 - Use only one blank line between sections.
-- Include the brand URL exactly once in the first paragraph as plain text when a brand URL is provided.
+- Insert the brand URL exactly once anywhere in the article as plain text when a brand URL is provided: {required_url}.
 - Do not use HTML or Markdown emphasis.
 """
         return_example = '"content": "Intro paragraph with https://example.com included once.\\n\\nSection heading\\nBody text..."'
@@ -328,7 +343,7 @@ Forum-specific rules:
 - Use <ul><li> for bullet lists where helpful.
 - Do not create a separate <p> tag for every sentence.
 - Do not add unnecessary newline characters between HTML tags.
-- Use this HTML link format once inside the first paragraph when a brand URL is provided: <a href='REQUIRED_URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
+- Use this HTML link format once anywhere in the article inside a paragraph when a brand URL is provided: <a href='{required_url}' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
 - Use <b> only for emphasis on important non-keyword words or phrases.
 - Do not use <strong>.
 - Never bold the primary keyword.
@@ -366,50 +381,35 @@ Forum-specific rules:
 - Choose the ending section that best matches the page type and search intent.
 """
 
-    money_site_section = ""
-    if cleaned_money_site_url:
-        money_site_section = f"""
-Required Brand Link:
-- Required URL: {cleaned_money_site_url}
-- Use the link format required by the selected post type exactly once.
-
-Instructions for the required brand link:
-- Include this URL exactly once in the article
-- Insert the required brand link in the first paragraph only.
-- The first paragraph must contain the one and only link to this URL.
-- Do not include this URL in any other anchor tag, plain text, citation, source list, CTA, FAQ, conclusion, or reference section
-- Before returning, verify the exact URL appears one time only in the content
-- Use natural descriptive anchor text that fits the sentence and topic
-- Do not use generic anchor text like 'click here'
-- Do not use the brand name, website name, or domain as anchor text
-- This is the only required link in the article
-- This saved brand URL is the only URL allowed in the content output
-"""
-
     return f"""
 You are a professional informational writer who creates SEO-friendly, human-sounding medium and guest-post content.
 
 Write a complete blog article for this title:
 "{title}"
 
-Keyword: {keyword}
+Topic keyword: {keyword}
+Supporting keyword: {supporting_keyword}
 Brand: {brand}
 {context_section}
 {backlink_section}
-{banned_words_section}
 
-{money_site_section}
+{banned_words_section}
 {suggested_content_section}
+
 {change_request_section}
+
 {platform_rules}
 
 Rules:
 {min_word_rule}
 {structure_rules}
+
 - Make the article feel appropriate for an external publisher or guest-post style placement.
 - Adapt the structure, tone, and delivery to the selected website type instead of forcing the same format for every medium.
 - Write an informational article, not a promotional article.
-- Do not focus on casino articles. If the source keyword or brand context is casino-related, reframe the topic toward broader gaming platforms, games, entertainment technology, UX, security, product design, mobile apps, or responsible digital play.
+- If the title, keyword, or brand context includes casino or betting terms, handle them as neutral examples of app design, interface quality, user experience, account safety, payment security, product design, mobile performance, or responsible digital play.
+- Do not write promotional casino copy, bonus-focused copy, or betting advice.
+- Keep the article centered on the informational angle promised by the title. For example, a casino app interface title should compare navigation, layout, clarity, trust cues, safety controls, and mobile usability.
 - Suitable topic angles include gaming platforms, game discovery, online entertainment tools, player experience, app technology, payment security, account safety, AI in games, mobile performance, web platforms, and other technology topics.
 - For Tier 1 placements, write like a neutral publication explaining, comparing, or teaching a topic.
 - Write in third person. Do not write as the brand or from the brand's point of view.
@@ -418,7 +418,6 @@ Rules:
 - Do not put the brand name or exact keyword in headings.
 - Avoid brand-name stuffing. After the single example mention, use neutral category language like "a gaming platform", "a games site", "a mobile app", "a digital entertainment tool", or "an online platform" when the meaning stays clear.
 - Do not repeat the exact article title in the body unless absolutely necessary. However, keep the content closely aligned with the title and main topic.
-- Sentences must be less than 21 words.
 - Avoid keyword stuffing and never force keywords into awkward sentences.
 - Use the main keyword no more than once per paragraph.
 - Do not repeat the same keyword multiple times in a single paragraph.
@@ -426,9 +425,11 @@ Rules:
 - Write in active voice with short, clear sentences.
 - Write for readability using compact paragraphs, not many tiny one-line paragraphs.
 - Avoid excessive line breaks. Do not place each sentence on a separate line.
-- Keep sections tidy: one heading followed by 1-3 meaningful paragraphs, not a long stack of single-sentence lines.
+- Keep sections tidy: one heading followed by 1-2 meaningful paragraphs, not a long stack of single-sentence lines.
 - Keep examples educational. A brand or keyword may appear once as an example, but the article must remain about the broader informational topic.
+
 {format_rules}
+
 - If a brand is provided, use the brand context only to understand audience and category. Do not write an advertisement.
 - If a brand is provided, mention the brand at most once as an example and avoid repeating it.
 - If a medium publication name is provided, treat it as the blog or publication name and mention it naturally when relevant, but do not force it repeatedly.
@@ -445,10 +446,9 @@ Rules:
   - community: helpful, shared-insight tone
 - If brand database context is provided, avoid repeating existing keyword angles and keep the content aligned with current brand pages.
 - Include the required brand link once in a natural way with relevant anchor text.
-- Place the required brand link inside the first paragraph, not later in the article.
 - The required brand URL must appear exactly once total in the content output.
 - Do not include the medium URL or any other URL in the output.
-- If a max word count is provided for the medium, keep the entire output within that limit and shorten the structure accordingly.
+- If a max word count is provided for the medium, use it as a soft guide for concision, but do not cut the article below the minimum word count.
 - Return only valid JSON with this format: {{"content":"..."}}.
 - The value of "content" must contain complete content in the selected post type format.
 - Do not add any explanation, notes, or text before or after the JSON object.
@@ -458,7 +458,7 @@ Rules:
 - Do not guess what a brand, game, or platform is.
 - When the selected post type supports HTML attributes, external links and the required brand link must use rel='nofollow noopener noreferrer' and target='_blank'.
 {completion_word_rule}
-- If a max word count is provided, prioritize staying within that word limit over the normal long-form word target.
+- If minimum and maximum word guidance conflict, prioritize staying over the minimum word count.
 
 Return valid JSON only in this format:
 {{

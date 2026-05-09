@@ -42,19 +42,19 @@ def generate_simple_page(
     while True:
         attempt += 1
         retry_instruction = ""
-        if attempt == 1:
-            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
                 "- Your previous response used banned words, missed required <h3> tags, missed the word-count range, or missed the meta description character range.\n"
-                f"- The page content must be between {min_word_count} and {max_word_count} words.\n"
+                f"- The page content must be at least {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
                 f"- Every meta description must be between {MIN_META_DESCRIPTION_CHARACTERS} and {MAX_META_DESCRIPTION_CHARACTERS} characters.\n"
                 "- Include at least 3 <h3> subheadings.\n"
                 "- Return a fresh simple page and avoid every banned term completely.\n"
             )
 
-        raw = provider.generate_json(prompt + retry_instruction)
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
 
         try:
             json_text = extract_json_string(raw)
@@ -121,7 +121,7 @@ def generate_simple_page(
                 )
                 continue
 
-            if word_count > max_word_count:
+            if not min_word_count and word_count > max_word_count:
                 _publish_progress(
                     progress_callback,
                     f"Simple page attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",

@@ -15,8 +15,6 @@ def _generate_titles_from_prompt(provider, prompt: str, forbidden_phrases: list[
     while True:
         attempt += 1
         retry_instruction = ""
-        if attempt == 1:
-            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
@@ -26,7 +24,9 @@ def _generate_titles_from_prompt(provider, prompt: str, forbidden_phrases: list[
             if cleaned_forbidden_phrases:
                 retry_instruction += "- Do not mention these phrases in any title: " + ", ".join(cleaned_forbidden_phrases) + ".\n"
 
-        raw = provider.generate_json(prompt + retry_instruction)
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
 
         try:
             json_text = extract_json_string(raw)

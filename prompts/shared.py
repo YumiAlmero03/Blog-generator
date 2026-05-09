@@ -96,14 +96,20 @@ def build_backlink_context_section(
     if title_max_characters:
         lines.append(f"- Keep every generated title at or below {title_max_characters} characters.")
     if max_words:
-        lines.extend(
-            [
-                f"- Keep the full output at or below about {max_words} words.",
-                "- Prioritize a tighter format, shorter sections, and concise delivery when a max word count is provided.",
-            ]
-        )
         if min_words:
-            lines.append("- If the min word count conflicts with the max word count, follow the max word count first.")
+            lines.extend(
+                [
+                    f"- Write at least {min_words} words for this medium.",
+                    f"- Treat {max_words} words as a soft guide for concision, but prioritize staying over the minimum.",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"- Keep the full output near {max_words} words when possible.",
+                    "- Use a tighter format, shorter sections, and concise delivery when a max word count is provided.",
+                ]
+            )
     elif min_words:
         lines.append(f"- Write at least {min_words} words for this medium.")
     if website_type == "forum":

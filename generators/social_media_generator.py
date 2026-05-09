@@ -47,8 +47,6 @@ def generate_social_media_post(
     while True:
         attempt += 1
         retry_instruction = ""
-        if attempt == 1:
-            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
@@ -58,7 +56,9 @@ def generate_social_media_post(
                 "- Return fresh valid JSON only.\n"
             )
 
-        raw = provider.generate_json(prompt + retry_instruction)
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
         try:
             data = json.loads(extract_json_string(raw))
             post_content = str(data.get("post_content", "")).strip()

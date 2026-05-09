@@ -204,7 +204,7 @@ def _medium_presets() -> dict:
             "title_max_characters": 70,
             "min_words": 15,
             "max_characters": 40,
-            "content_guidelines": "Short social post. Keep the title compact, use plain text, include the brand URL once in the first paragraph, and avoid long article sections.",
+            "content_guidelines": "Short social post. Keep the title compact, use plain text, insert the brand URL once anywhere in the article, and avoid long article sections.",
         },
         "google_sites": {
             "label": "Google Sites",
@@ -222,7 +222,7 @@ def _medium_presets() -> dict:
             "title_max_characters": 60,
             "min_words": 800,
             "max_characters": 1200,
-            "content_guidelines": "Use Gutenberg block HTML, editorial sections, compact paragraphs, and one natural first-paragraph brand URL.",
+            "content_guidelines": "Use Gutenberg block HTML, editorial sections, compact paragraphs, and one natural brand URL placement.",
         },
         "forum": {
             "label": "Forum",
@@ -249,6 +249,6 @@ def _medium_presets() -> dict:
             "title_max_characters": 70,
             "min_words": 40,
             "max_characters": 90,
-            "content_guidelines": "Write a short pin-style description with visual language, simple tags, and the brand URL once near the start.",
+            "content_guidelines": "Write a short pin-style description with visual language, simple tags, and insert the brand URL once anywhere in the article.",
         },
     }

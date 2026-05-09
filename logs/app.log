@@ -7754,3 +7754,100 @@ sqlite3.OperationalError: database is locked
 2026-05-09 15:36:52,346 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 468 (minimum: 800) on attempt 1. Raw response length: 3813 chars
 2026-05-09 15:37:54,032 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 116, 109, 105, 105, 110 on attempt 1
 2026-05-09 15:38:52,194 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 600 (minimum: 800) on attempt 2. Raw response length: 4942 chars
+2026-05-09 15:40:10,034 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 116 on attempt 2
+2026-05-09 15:41:15,371 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 647 (minimum: 800) on attempt 3. Raw response length: 5578 chars
+2026-05-09 15:43:10,279 WARNING blog_generator content_generator.py:170 _generate_content_from_prompt() - Content used banned terms free money on attempt 1
+2026-05-09 15:44:13,504 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 674 (minimum: 800) on attempt 4. Raw response length: 5532 chars
+2026-05-09 15:46:37,388 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 736 (minimum: 800) on attempt 2. Raw response length: 5178 chars
+2026-05-09 15:47:29,196 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 480 (minimum: 800) on attempt 5. Raw response length: 4238 chars
+2026-05-09 16:03:40,942 WARNING blog_generator title_generator.py:42 _generate_titles_from_prompt() - Generated titles used banned terms guaranteed on attempt 1
+2026-05-09 16:03:40,943 WARNING blog_generator meta_description_generator.py:67 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions with banned terms guaranteed on attempt 1
+2026-05-09 16:03:40,943 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 9 on attempt 1
+2026-05-09 16:03:40,943 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 7 (minimum: 80) on attempt 1. Raw response length: 83 chars
+2026-05-09 16:03:40,943 INFO blog_generator content_generator.py:232 _generate_content_from_prompt() - Content generated successfully with 93 words on attempt 2
+2026-05-09 16:14:43,675 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 116, 117 on attempt 1
+2026-05-09 16:18:30,136 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 93, 98, 92, 101, 96 on attempt 1
+2026-05-09 16:19:14,451 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 118, 112 on attempt 2
+2026-05-09 16:20:34,040 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 588 (minimum: 800) on attempt 1. Raw response length: 4788 chars
+2026-05-09 16:21:49,848 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 596 (minimum: 800) on attempt 2. Raw response length: 4537 chars
+2026-05-09 16:22:57,427 WARNING blog_generator content_generator.py:170 _generate_content_from_prompt() - Content used banned terms fixed on attempt 3
+2026-05-09 16:24:15,116 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 642 (minimum: 800) on attempt 4. Raw response length: 5143 chars
+2026-05-09 16:25:37,646 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 576 (minimum: 800) on attempt 5. Raw response length: 4766 chars
+2026-05-09 16:26:45,650 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 580 (minimum: 800) on attempt 6. Raw response length: 4653 chars
+2026-05-09 16:27:53,387 WARNING blog_generator content_generator.py:186 _generate_content_from_prompt() - Content word count is 565 (minimum: 800) on attempt 7. Raw response length: 4694 chars
+2026-05-09 16:31:14,124 WARNING blog_generator title_generator.py:42 _generate_titles_from_prompt() - Generated titles used banned terms guaranteed on attempt 1
+2026-05-09 16:31:14,126 WARNING blog_generator meta_description_generator.py:67 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions with banned terms guaranteed on attempt 1
+2026-05-09 16:31:14,126 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 9 on attempt 1
+2026-05-09 16:31:14,127 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 7 (minimum: 80) on attempt 1. Raw response length: 83 chars
+2026-05-09 16:31:14,127 INFO blog_generator content_generator.py:236 _generate_content_from_prompt() - Content generated successfully with 93 words on attempt 2
+2026-05-09 16:33:06,115 WARNING blog_generator title_generator.py:60 _generate_titles_from_prompt() - Generated titles used forbidden phrases on attempt 1: SG77 PH: Secure Online Gaming for Filipino Players; SG77 PH: A Guide to Philippine Online Gaming Trends; SG77 PH: Exploring Mobile Casino Features; SG77 PH: Enhancing Your Online Gaming Experience
+2026-05-09 16:34:43,379 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 156 on attempt 2
+2026-05-09 16:35:59,005 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 602 (minimum: 800) on attempt 1. Raw response length: 4894 chars
+2026-05-09 16:37:04,954 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 522 (minimum: 800) on attempt 2. Raw response length: 4400 chars
+2026-05-09 16:38:18,140 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 686 (minimum: 800) on attempt 3. Raw response length: 5517 chars
+2026-05-09 16:39:45,168 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 651 (minimum: 800) on attempt 4. Raw response length: 5379 chars
+2026-05-09 16:41:17,374 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 704 (minimum: 800) on attempt 5. Raw response length: 5824 chars
+2026-05-09 16:42:35,241 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 740 (minimum: 800) on attempt 6. Raw response length: 5693 chars
+2026-05-09 16:43:57,438 WARNING blog_generator content_generator.py:229 _generate_content_from_prompt() - Content validation failed on attempt 7: The generated medium content mentioned the brand name 2 times. Mention it no more than once as a natural example.
+2026-05-09 16:49:32,237 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 163, 153, 158, 150, 154 on attempt 1
+2026-05-09 16:50:33,190 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 101, 108, 102, 90, 104 on attempt 2
+2026-05-09 16:51:03,398 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 119, 113, 117 on attempt 3
+2026-05-09 16:52:28,431 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 167, 148, 142, 147 on attempt 1
+2026-05-09 16:53:54,626 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 662 (minimum: 800) on attempt 1. Raw response length: 5527 chars
+2026-05-09 16:55:39,056 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 762 (minimum: 800) on attempt 2. Raw response length: 6385 chars
+2026-05-09 16:57:11,415 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 544 (minimum: 800) on attempt 3. Raw response length: 4574 chars
+2026-05-09 16:57:32,025 WARNING blog_generator title_generator.py:42 _generate_titles_from_prompt() - Generated titles used banned terms guaranteed on attempt 1
+2026-05-09 16:57:32,025 WARNING blog_generator meta_description_generator.py:67 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions with banned terms guaranteed on attempt 1
+2026-05-09 16:57:32,025 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 9 on attempt 1
+2026-05-09 16:57:32,026 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 7 (minimum: 80) on attempt 1. Raw response length: 83 chars
+2026-05-09 16:57:32,026 INFO blog_generator content_generator.py:236 _generate_content_from_prompt() - Content generated successfully with 93 words on attempt 2
+2026-05-09 16:58:02,299 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 158, 142, 146, 152, 163 on attempt 1
+2026-05-09 16:59:04,716 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 117, 117, 117, 116 on attempt 2
+2026-05-09 16:59:26,912 WARNING blog_generator title_generator.py:42 _generate_titles_from_prompt() - Generated titles used banned terms guaranteed on attempt 1
+2026-05-09 16:59:26,912 WARNING blog_generator meta_description_generator.py:67 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions with banned terms guaranteed on attempt 1
+2026-05-09 16:59:26,912 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 9 on attempt 1
+2026-05-09 16:59:26,912 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 7 (minimum: 80) on attempt 1. Raw response length: 83 chars
+2026-05-09 16:59:26,913 INFO blog_generator content_generator.py:236 _generate_content_from_prompt() - Content generated successfully with 93 words on attempt 2
+2026-05-09 17:00:42,710 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 677 (minimum: 800) on attempt 1. Raw response length: 5472 chars
+2026-05-09 17:02:51,468 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 760 (minimum: 800) on attempt 2. Raw response length: 6345 chars
+2026-05-09 17:04:25,961 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 528 (minimum: 800) on attempt 1. Raw response length: 4381 chars
+2026-05-09 17:05:18,550 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 703 (minimum: 800) on attempt 3. Raw response length: 5435 chars
+2026-05-09 17:07:15,172 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 775 (minimum: 800) on attempt 2. Raw response length: 6225 chars
+2026-05-09 17:08:37,483 WARNING blog_generator content_generator.py:229 _generate_content_from_prompt() - Content validation failed on attempt 4: The generated medium content mentioned the brand name 3 times. Mention it no more than once as a natural example.
+2026-05-09 17:10:22,838 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 609 (minimum: 800) on attempt 3. Raw response length: 4806 chars
+2026-05-09 17:11:28,222 INFO blog_generator content_generator.py:236 _generate_content_from_prompt() - Content generated successfully with 819 words on attempt 5
+2026-05-09 17:11:33,457 ERROR blog_generator backlink_blog_controller.py:264 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 255, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-09 17:12:58,578 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 765 (minimum: 800) on attempt 4. Raw response length: 6353 chars
+2026-05-09 17:15:09,927 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 119 on attempt 1
+2026-05-09 17:16:32,251 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 494 (minimum: 900) on attempt 1. Raw response length: 4183 chars
+2026-05-09 17:17:55,776 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 747 (minimum: 900) on attempt 2. Raw response length: 6169 chars
+2026-05-09 17:19:27,595 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 841 (minimum: 900) on attempt 3. Raw response length: 6922 chars
+2026-05-09 17:21:37,629 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 601 (minimum: 900) on attempt 4. Raw response length: 5249 chars
+2026-05-09 17:26:52,679 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 116 on attempt 1
+2026-05-09 17:28:01,344 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 585 (minimum: 900) on attempt 1. Raw response length: 4594 chars
+2026-05-09 17:29:15,522 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 785 (minimum: 900) on attempt 2. Raw response length: 6146 chars
+2026-05-09 17:31:44,939 WARNING blog_generator content_generator.py:229 _generate_content_from_prompt() - Content validation failed on attempt 3: The required brand URL must be inserted inside the first paragraph and must not be placed later in the article.
+2026-05-09 17:33:15,840 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 671 (minimum: 900) on attempt 4. Raw response length: 5440 chars
+2026-05-09 17:41:00,247 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 152, 146, 150, 150, 154 on attempt 1
+2026-05-09 17:41:29,320 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 187, 168, 178, 161, 165 on attempt 2
+2026-05-09 17:42:10,110 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 176, 172, 169, 152, 157 on attempt 3
+2026-05-09 17:42:47,230 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 160, 149, 161, 144, 151 on attempt 4

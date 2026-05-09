@@ -123,8 +123,6 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
     while True:
         attempt += 1
         retry_instruction = ""
-        if attempt == 1:
-            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             if min_words:
                 retry_instruction = (
@@ -147,6 +145,10 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                     f"- {last_length_error}\n"
                     "- Return corrected content in the required selected format only inside JSON.\n"
                 )
+                if min_words:
+                    retry_instruction += (
+                        f"- Do not cut useful context below the minimum word count of {min_words} words.\n"
+                    )
             if last_validation_error:
                 retry_instruction += (
                     "\nIMPORTANT RETRY REQUIREMENT:\n"
@@ -154,7 +156,9 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                     "- Return corrected content in the required selected format only inside JSON.\n"
                 )
 
-        raw = provider.generate_json(prompt + retry_instruction)
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
 
         try:
             content, word_count = parse_generated_content(raw)
@@ -192,15 +196,15 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                 )
                 continue
 
-            if max_words and word_count > max_words:
-                last_length_error = f"Your previous response was too long at {word_count} words. Keep it at or below {max_words} words."
+            if max_words and not min_words and word_count > max_words:
+                last_length_error = f"Your previous response was long at {word_count} words. Aim closer to {max_words} words, but prioritize staying over the minimum word count."
                 last_failure_detail = (
                     f"Content word count is {word_count} (maximum: {max_words}) "
                     f"on attempt {attempt}. Raw response length: {len(raw)} chars."
                 )
                 _publish_progress(
                     progress_callback,
-                    f"Content attempt {attempt}: {word_count} words, maximum is {max_words}. Retrying shorter...",
+                    f"Content attempt {attempt}: {word_count} words, soft maximum is {max_words}. Retrying more concise while staying over the minimum...",
                 )
                 logger.warning(
                     "Content word count is %d (maximum: %d) on attempt %d. Raw response length: %d chars",
@@ -329,24 +333,13 @@ def keep_required_url_once(content: str, required_url: str) -> str:
     return re.sub(escaped_url, replace_duplicate_plain_url, cleaned_content)
 
 
-def required_url_in_first_paragraph_error(content: str, required_url: str, post_type: str = "html") -> str:
+def required_url_presence_error(content: str, required_url: str) -> str:
     cleaned_url = (required_url or "").strip()
     if not cleaned_url:
         return ""
 
-    cleaned_post_type = (post_type or "html").strip().lower()
-    if cleaned_post_type in {"html", "gutenberg"}:
-        first_paragraph = re.search(r"<p\b[^>]*>.*?</p>", content or "", flags=re.IGNORECASE | re.DOTALL)
-        if not first_paragraph:
-            return "The generated content must start with a first <p> paragraph that contains the required brand link."
-        first_paragraph_text = first_paragraph.group(0)
-    else:
-        first_paragraph_text = re.split(r"\n\s*\n", (content or "").strip(), maxsplit=1)[0]
-        if not first_paragraph_text:
-            return "The generated content must start with a first paragraph that contains the required brand link."
-
-    if cleaned_url not in first_paragraph_text:
-        return "The required brand URL must be inserted inside the first paragraph and must not be placed later in the article."
+    if cleaned_url not in (content or ""):
+        return "The required brand URL must be inserted exactly once anywhere in the article."
     return ""
 
 
@@ -399,8 +392,6 @@ def generate_backlink_content(
     )
     effective_min_words = _effective_medium_min_words(backlink_min_words)
     validation_min_words = effective_min_words
-    if effective_max_words and validation_min_words > effective_max_words:
-        validation_min_words = effective_max_words
     prompt = build_backlink_content_prompt(
         title=title,
         keyword=keyword,
@@ -424,7 +415,7 @@ def generate_backlink_content(
         change_request=change_request,
     )
     def validator(content: str) -> str:
-        url_error = required_url_in_first_paragraph_error(content, money_site_url, backlink_post_type)
+        url_error = required_url_presence_error(content, money_site_url)
         if url_error:
             return url_error
         return medium_example_mention_error(content, brand=brand, keyword=keyword)

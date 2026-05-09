@@ -14,8 +14,6 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str, target_count:
     while True:
         attempt += 1
         retry_instruction = ""
-        if attempt == 1:
-            _publish_progress(progress_callback, prompt, kind="prompt")
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
@@ -27,7 +25,9 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str, target_count:
             if target_count:
                 retry_instruction += f"- Return {target_count} usable meta descriptions if possible.\n"
 
-        raw = provider.generate_json(prompt + retry_instruction)
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
 
         try:
             json_text = extract_json_string(raw)

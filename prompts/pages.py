@@ -59,7 +59,7 @@ Rules:
 - Title should be catchy, include the main keyword naturally, and be 45–55 characters when possible.
 - Meta description must be useful for search snippets, natural, and between 120 and 140 characters.
 - Introduction should be 60–80 words, engaging, and include the main keyword naturally once.
-- Content should be between {min_word_count} and {max_word_count} words, structured with clear sections and subheadings.
+- Content should be at least {min_word_count} words, structured with clear sections and subheadings. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.
 - Paragraphs should be short and easy to read.
 
 - If a brand is provided, match the brand’s voice, positioning, and audience naturally.
@@ -87,7 +87,7 @@ Rules:
 
 - Do not use markdown.
 - Do not add explanations before or after the JSON.
-- Ensure the content is complete and between {min_word_count} and {max_word_count} words.
+- Ensure the content is complete and over {min_word_count} words.
 - Start your response with '{{' and end with '}}'
 
 Return valid JSON only in this format:
@@ -167,7 +167,7 @@ Rules:
 - Adapt the structure to the page type
 - Do not add image placeholders
 - Do not use markdown
-- Ensure the content is complete and between {min_word_count} and {max_word_count} words.
+- Ensure the content is complete and over {min_word_count} words.
 - Generate exactly 3 meta description options for the page.
 - Each meta description must be useful for search snippets, natural, and between 120 and 140 characters.
 - Do not add explanations before or after the JSON

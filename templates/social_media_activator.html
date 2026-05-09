@@ -6,6 +6,15 @@
 {% block hero_title %}Social Media Activator{% endblock %}
 {% block hero_text %}Generate a short platform-aware post, image idea, and hashtags from a saved social media profile.{% endblock %}
 
+{% block overlay %}
+  <div class="loading-overlay" data-loading-overlay>
+    <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[22px] bg-white/95 px-7 py-7 text-center shadow-2xl">
+      <div class="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-4 border-sand-200 border-t-sand-600"></div>
+      <div class="text-base font-bold text-sand-700" data-loading-text>Generating social post...</div>
+    </div>
+  </div>
+{% endblock %}
+
 {% block content %}
   <div class="grid gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
