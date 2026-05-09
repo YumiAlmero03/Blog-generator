@@ -7851,3 +7851,8 @@ sqlite3.OperationalError: database is locked
 2026-05-09 17:41:29,320 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 187, 168, 178, 161, 165 on attempt 2
 2026-05-09 17:42:10,110 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 176, 172, 169, 152, 157 on attempt 3
 2026-05-09 17:42:47,230 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 160, 149, 161, 144, 151 on attempt 4
+2026-05-09 17:43:27,533 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 166, 155, 141, 142 on attempt 5
+2026-05-09 17:45:18,983 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 606 (minimum: 800) on attempt 1. Raw response length: 5352 chars
+2026-05-09 17:46:33,711 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 603 (minimum: 800) on attempt 2. Raw response length: 4908 chars
+2026-05-09 17:47:56,108 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 513 (minimum: 800) on attempt 3. Raw response length: 4421 chars
+2026-05-09 17:49:07,535 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 568 (minimum: 800) on attempt 4. Raw response length: 4906 chars

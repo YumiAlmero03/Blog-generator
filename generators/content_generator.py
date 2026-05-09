@@ -390,7 +390,7 @@ def generate_backlink_content(
         backlink_website_type,
         backlink_max_characters,
     )
-    effective_min_words = _effective_medium_min_words(backlink_min_words)
+    effective_min_words = _effective_medium_min_words(backlink_min_words) + 100
     validation_min_words = effective_min_words
     prompt = build_backlink_content_prompt(
         title=title,

@@ -382,7 +382,7 @@ Required brand link rules:
 """
 
     return f"""
-You are a professional informational writer who creates SEO-friendly, human-sounding medium and guest-post content.
+You are a professional informational writer who creates SEO-friendly, human-sounding blog articles and guest-post content.
 
 Write a complete blog article for this title:
 "{title}"
