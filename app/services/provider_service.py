@@ -5,6 +5,8 @@ from providers.base import ProviderError
 def generation_error_message(default_message: str, exc: Exception) -> str:
     if isinstance(exc, ProviderError):
         return str(exc)
+    if isinstance(exc, ValueError) and str(exc):
+        return str(exc)
     return default_message
 
 

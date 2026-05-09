@@ -120,6 +120,7 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
     last_word_count = 0
     last_validation_error = ""
     last_length_error = ""
+    last_failure_detail = ""
 
     for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
         retry_instruction = ""
@@ -160,6 +161,7 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
             banned_terms = find_banned_terms_in_text(content)
 
             if banned_terms:
+                last_failure_detail = f"Content used banned terms {', '.join(banned_terms)} on attempt {attempt}/{MAX_GENERATION_ATTEMPTS}."
                 logger.warning(
                     "Content used banned terms %s on attempt %d/%d",
                     ", ".join(banned_terms),
@@ -169,6 +171,10 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                 continue
 
             if min_words and word_count < min_words:
+                last_failure_detail = (
+                    f"Content word count is {word_count} (minimum: {min_words}) "
+                    f"on attempt {attempt}/{MAX_GENERATION_ATTEMPTS}. Raw response length: {len(raw)} chars."
+                )
                 logger.warning(
                     "Content word count is %d (minimum: %d) on attempt %d/%d. Raw response length: %d chars",
                     word_count,
@@ -181,6 +187,10 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
 
             if max_words and word_count > max_words:
                 last_length_error = f"Your previous response was too long at {word_count} words. Keep it at or below {max_words} words."
+                last_failure_detail = (
+                    f"Content word count is {word_count} (maximum: {max_words}) "
+                    f"on attempt {attempt}/{MAX_GENERATION_ATTEMPTS}. Raw response length: {len(raw)} chars."
+                )
                 logger.warning(
                     "Content word count is %d (maximum: %d) on attempt %d/%d. Raw response length: %d chars",
                     word_count,
@@ -195,6 +205,9 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                 validation_error = validator(content)
                 if validation_error:
                     last_validation_error = validation_error
+                    last_failure_detail = (
+                        f"Content validation failed on attempt {attempt}/{MAX_GENERATION_ATTEMPTS}: {validation_error}"
+                    )
                     logger.warning(
                         "Content validation failed on attempt %d/%d: %s",
                         attempt,
@@ -219,7 +232,7 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
 
     raise ValueError(
         f"Generated article could not satisfy the rules after {MAX_GENERATION_ATTEMPTS} attempts. "
-        f"Last attempt was {last_word_count} words."
+        f"{last_failure_detail or f'Last attempt was {last_word_count} words.'}"
     )
 
 

@@ -41,12 +41,14 @@ def brands():
         elif action == "check_keyword":
             _handle_check_keyword(state)
 
+    brand_models = _build_brand_view_models()
     return render_template(
         "brands.html",
         **base_template_context(),
         **state,
         logo_url=image_url(state["logo_path"]),
-        brands=_build_brand_view_models(),
+        brands=brand_models,
+        brand_color_filters=_build_brand_color_filters(brand_models),
         brand_color_palette=brand_color_palette,
         brand_presets=_brand_presets(),
     )
@@ -176,6 +178,19 @@ def _build_brand_view_models() -> list[dict]:
         item["brand_color"] = _normalize_color_input(item.get("brand_color", "")) or _fallback_brand_color(item.get("name", ""))
         brands.append(item)
     return brands
+
+
+def _build_brand_color_filters(brands: list[dict]) -> list[dict]:
+    palette_names = {item["value"]: item["name"] for item in _brand_color_palette()}
+    filters = []
+    seen = set()
+    for brand in brands:
+        color = _normalize_color_input(brand.get("brand_color", ""))
+        if not color or color in seen:
+            continue
+        seen.add(color)
+        filters.append({"name": palette_names.get(color, color), "value": color})
+    return filters
 
 
 def _normalize_color_input(color: str) -> str:

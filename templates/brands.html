@@ -138,10 +138,39 @@
 
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if brands %}
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div class="mb-5 rounded-2xl bg-sand-100 px-4 py-4">
+          <label for="brandFilter" class="mb-2 block text-sm font-bold text-sand-900">Filter brands</label>
+          <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-center">
+            <input
+              id="brandFilter"
+              type="search"
+              placeholder="Search name, website, niche, keywords, tone, or notes"
+              class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+            />
+            <select
+              id="brandColorFilter"
+              class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+            >
+              <option value="">All colors</option>
+              {% for color in brand_color_filters %}
+                <option value="{{ color.value }}">{{ color.name }} ({{ color.value }})</option>
+              {% endfor %}
+            </select>
+            <button type="button" id="clearBrandFilter" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-white px-4 py-2.5 text-sm font-bold text-sand-700 transition hover:bg-sand-50 hover:text-sand-900">Clear</button>
+          </div>
+          <div id="brandFilterCount" class="mt-3 text-sm font-bold text-sand-700">{{ brands|length }} brand{% if brands|length != 1 %}s{% endif %}</div>
+        </div>
+
+        <div id="brandGrid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {% for brand in brands %}
             {% set brand_color_input_id = "brand_color_" ~ loop.index %}
-            <article class="cursor-pointer rounded-[22px] border border-sand-200 bg-white/80 p-5 shadow-sm transition hover:border-sand-400 hover:shadow-soft" style="border-top: 8px solid {{ brand.brand_color }};" data-brand-modal-open="brand_modal_{{ loop.index }}">
+            <article
+              class="cursor-pointer rounded-[22px] border border-sand-200 bg-white/80 p-5 shadow-sm transition hover:border-sand-400 hover:shadow-soft"
+              style="border-top: 8px solid {{ brand.brand_color }};"
+              data-brand-modal-open="brand_modal_{{ loop.index }}"
+              data-brand-search="{{ [brand.name, brand.website, brand.niche, brand.main_keywords, brand.tone, brand.notes]|join(' ')|lower }}"
+              data-brand-color="{{ brand.brand_color }}"
+            >
               {% if brand.logo_path %}
                 <div class="mb-4 flex flex-wrap items-center gap-3">
                   <img src="{{ brand.logo_url }}" alt="{{ brand.name }} logo" class="h-28 w-28 rounded-[18px] border border-sand-200 bg-white p-2 object-contain" />
@@ -244,6 +273,9 @@
             </div>
           {% endfor %}
         </div>
+        <div id="brandFilterEmpty" class="mt-4 hidden rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          No brands match that filter.
+        </div>
       {% else %}
         <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
           No brands saved yet. Add your first brand on the left.
@@ -287,6 +319,59 @@
         }
       });
     });
+
+    const brandFilter = document.getElementById("brandFilter");
+    const brandColorFilter = document.getElementById("brandColorFilter");
+    const clearBrandFilter = document.getElementById("clearBrandFilter");
+    const brandFilterCount = document.getElementById("brandFilterCount");
+    const brandFilterEmpty = document.getElementById("brandFilterEmpty");
+    const brandCards = Array.from(document.querySelectorAll("[data-brand-search]"));
+
+    function updateBrandFilter() {
+      if (!brandFilter) {
+        return;
+      }
+      const query = brandFilter.value.trim().toLowerCase();
+      const selectedColor = brandColorFilter ? brandColorFilter.value.trim().toLowerCase() : "";
+      let visibleCount = 0;
+      brandCards.forEach((card) => {
+        const matchesText = !query || card.dataset.brandSearch.includes(query);
+        const matchesColor = !selectedColor || card.dataset.brandColor === selectedColor;
+        const isVisible = matchesText && matchesColor;
+        card.classList.toggle("hidden", !isVisible);
+        if (isVisible) {
+          visibleCount += 1;
+        }
+      });
+      if (brandFilterCount) {
+        brandFilterCount.textContent = `${visibleCount} brand${visibleCount === 1 ? "" : "s"} shown`;
+      }
+      if (brandFilterEmpty) {
+        brandFilterEmpty.classList.toggle("hidden", visibleCount !== 0);
+      }
+    }
+
+    if (brandFilter) {
+      brandFilter.addEventListener("input", updateBrandFilter);
+    }
+
+    if (brandColorFilter) {
+      brandColorFilter.addEventListener("change", updateBrandFilter);
+    }
+
+    if (clearBrandFilter) {
+      clearBrandFilter.addEventListener("click", () => {
+        if (!brandFilter) {
+          return;
+        }
+        brandFilter.value = "";
+        if (brandColorFilter) {
+          brandColorFilter.value = "";
+        }
+        brandFilter.focus();
+        updateBrandFilter();
+      });
+    }
 
     document.querySelectorAll("[data-brand-modal-open]").forEach((card) => {
       card.addEventListener("click", (event) => {
