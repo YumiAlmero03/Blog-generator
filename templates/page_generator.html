@@ -21,6 +21,9 @@
       {% if error %}
         <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
       {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
+      {% endif %}
 
       <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for landing pages, service pages, about pages, local pages, or any custom WordPress page layout.</p>
 
@@ -54,6 +57,7 @@
         {% endif %}
 
         <div class="flex flex-wrap gap-3">
+          <input type="hidden" name="action" value="generate_page" />
           <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Page</button>
           {% if page_content %}
             <button type="button" id="copyHtmlButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Copy HTML</button>
@@ -74,6 +78,7 @@
               <button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black" data-copy-target="metaOutput" data-copy-message="Meta description copied.">Copy Meta</button>
             {% endif %}
             <button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black" data-copy-target="htmlOutput" data-copy-message="HTML copied. You can now paste it into WordPress Gutenberg.">Copy HTML</button>
+            <button type="submit" form="savePageForm" class="inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Save Generated Page</button>
           </div>
         </div>
 
@@ -93,6 +98,32 @@
 
         <label for="htmlOutput" class="mt-5 mb-2 block text-sm font-bold text-sand-900">HTML output</label>
         <textarea id="htmlOutput" readonly class="mt-0 min-h-[260px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ page_content }}</textarea>
+        <div class="mt-5 grid gap-4 lg:grid-cols-3">
+          <div>
+            <label for="markdownOutput" class="mb-2 block text-sm font-bold text-sand-900">Markdown output</label>
+            <textarea id="markdownOutput" readonly class="min-h-[220px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ html_to_markdown(page_content) }}</textarea>
+          </div>
+          <div>
+            <label for="htmlOutputMirror" class="mb-2 block text-sm font-bold text-sand-900">HTML output</label>
+            <textarea id="htmlOutputMirror" readonly class="min-h-[220px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ page_content }}</textarea>
+          </div>
+          <div>
+            <label for="gutenbergOutput" class="mb-2 block text-sm font-bold text-sand-900">Gutenberg output</label>
+            <textarea id="gutenbergOutput" readonly class="min-h-[220px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ html_to_gutenberg(page_content) }}</textarea>
+          </div>
+        </div>
+        <form id="savePageForm" method="post" class="hidden-form" aria-hidden="true">
+          <input type="hidden" name="action" value="save_generated_blog" />
+          <input type="hidden" name="brand" value="{{ brand }}" />
+          <input type="hidden" name="keyword" value="{{ keyword }}" />
+          <input type="hidden" name="supporting_keywords" value="{{ supporting_keywords }}" />
+          <input type="hidden" name="page_type" value="{{ page_type }}" />
+          <input type="hidden" name="expectations" value="{{ expectations }}" />
+          <input type="hidden" name="page_title" value="{{ page_title }}" />
+          <input type="hidden" name="meta_description" value="{{ meta_description }}" />
+          <input type="hidden" name="image_count" value="{{ image_count }}" />
+          <textarea name="page_content">{{ page_content }}</textarea>
+        </form>
       {% else %}
         <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
           Fill in the keyword, supporting keywords, and page type to generate a full WordPress page.

@@ -100,7 +100,7 @@ def record_blog(
         blog_id = cursor.lastrowid
 
         for index, keyword_value in enumerate(split_keywords(keyword, supporting_keyword)):
-            keyword_record = get_or_create_keyword(keyword_value)
+            keyword_record = get_or_create_keyword(keyword_value, connection=connection)
             if keyword_record:
                 connection.execute(
                     "INSERT INTO blog_keywords (blog_id, keyword_id, is_primary) VALUES (?, ?, ?)",
@@ -145,7 +145,7 @@ def record_page(
         page_id = cursor.lastrowid
 
         for index, keyword_value in enumerate(split_keywords(keyword, supporting_keywords)):
-            keyword_record = get_or_create_keyword(keyword_value)
+            keyword_record = get_or_create_keyword(keyword_value, connection=connection)
             if keyword_record:
                 connection.execute(
                     "INSERT INTO page_keywords (page_id, keyword_id, is_primary) VALUES (?, ?, ?)",

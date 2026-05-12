@@ -1,6 +1,5 @@
 import json
 
-from generators.content_generator import count_html_words
 from logger import logger
 from prompts import build_simple_page_prompt
 from utils import extract_json_string
@@ -24,6 +23,8 @@ def generate_simple_page(
     max_words: int = MAX_SIMPLE_PAGE_WORDS,
     progress_callback=None,
 ):
+    from app.services.content_format_service import count_markdown_heading_level, count_markdown_words, markdown_to_html
+
     min_word_count, max_word_count = _normalize_word_limits(min_words, max_words)
     prompt = build_simple_page_prompt(
         page_title=page_title,
@@ -45,10 +46,10 @@ def generate_simple_page(
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words, missed required <h3> tags, missed the word-count range, or missed the meta description character range.\n"
+                "- Your previous response used banned words, missed required ### subheadings, missed the word-count range, or missed the meta description character range.\n"
                 f"- The page content must be at least {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
                 f"- Every meta description must be between {MIN_META_DESCRIPTION_CHARACTERS} and {MAX_META_DESCRIPTION_CHARACTERS} characters.\n"
-                "- Include at least 3 <h3> subheadings.\n"
+                "- Include at least 3 ### subheadings.\n"
                 "- Return a fresh simple page and avoid every banned term completely.\n"
             )
 
@@ -60,12 +61,12 @@ def generate_simple_page(
             json_text = extract_json_string(raw)
             data = json.loads(json_text)
             title = data.get("title", "").strip()
-            content = data.get("content", "").strip()
-            word_count = count_html_words(content)
+            markdown_content = data.get("content", "").strip()
+            word_count = count_markdown_words(markdown_content)
             last_word_count = word_count
             meta_descriptions = _normalize_meta_descriptions(data.get("meta_descriptions", []))
             meta_text = "\n".join(item.get("text", "") for item in meta_descriptions)
-            banned_terms = find_banned_terms_in_text("\n".join([title, content, meta_text]))
+            banned_terms = find_banned_terms_in_text("\n".join([title, markdown_content, meta_text]))
             if banned_terms:
                 _publish_progress(
                     progress_callback,
@@ -95,14 +96,14 @@ def generate_simple_page(
                     attempt,
                 )
                 continue
-            h3_count = _count_h3_tags(content)
+            h3_count = count_markdown_heading_level(markdown_content, 3)
             if h3_count < 3:
                 _publish_progress(
                     progress_callback,
-                    f"Simple page attempt {attempt}: only {h3_count} <h3> tags, minimum is 3. Retrying...",
+                    f"Simple page attempt {attempt}: only {h3_count} ### subheadings, minimum is 3. Retrying...",
                 )
                 logger.warning(
-                    "Simple page used only %d <h3> tags on attempt %d",
+                    "Simple page used only %d ### subheadings on attempt %d",
                     h3_count,
                     attempt,
                 )
@@ -138,7 +139,7 @@ def generate_simple_page(
             return {
                 "title": title,
                 "meta_descriptions": meta_descriptions,
-                "content": content,
+                "content": markdown_to_html(markdown_content),
             }
         except Exception as exc:
             logger.exception("generate_simple_page failed on attempt %d. Raw response: %s", attempt, raw)
@@ -177,10 +178,6 @@ def _normalize_meta_descriptions(raw_items) -> list[dict]:
         if len(normalized) >= 3:
             break
     return normalized
-
-
-def _count_h3_tags(content: str) -> int:
-    return (content or "").lower().count("<h3")
 
 
 def _normalize_word_limits(min_words: int, max_words: int) -> tuple[int, int]:

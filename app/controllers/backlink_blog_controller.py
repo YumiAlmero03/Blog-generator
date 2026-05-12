@@ -3,7 +3,7 @@ import json
 from flask import render_template, request
 
 from database import get_backlink, get_brand_context, get_brand_record, list_backlinks, list_brand_names, record_blog, record_generation, upsert_brand
-from generators.content_generator import generate_backlink_content, suggest_content_tags
+from generators.content_generator import count_html_words, generate_backlink_content, revise_existing_content, suggest_content_tags
 from generators.meta_description_generator import generate_backlink_meta_descriptions
 from generators.title_generator import generate_backlink_titles
 from logger import logger
@@ -32,6 +32,7 @@ def backlink_blog_generator():
         "change_request": "",
         "regenerate_scope": "full",
         "error": None,
+        "success": None,
         "step": "title",
         "brand_website_url": "",
         "selected_backlink_id": "",
@@ -46,6 +47,8 @@ def backlink_blog_generator():
             _handle_generate_titles(state)
         elif action == "generate_content":
             _handle_generate_content(state)
+        elif action == "save_generated_blog":
+            _handle_save_generated_blog(state)
 
     return render_template("backlink_blog_generator.html", **base_template_context(), **state)
 
@@ -137,7 +140,9 @@ def _handle_generate_content(state: dict):
     state["brand_website_url"] = request.form.get("brand_website_url", "").strip()
     state["selected_backlink_id"] = request.form.get("selected_backlink_id", "").strip()
     titles_raw = request.form.get("titles_json", "").strip()
+    meta_descriptions_raw = request.form.get("meta_descriptions_json", "").strip()
     selected_meta_description = request.form.get("meta_description_choice", "").strip()
+    existing_content = request.form.get("content_html", "").strip()
 
     if not state["selected_title"]:
         state["error"] = "Please select a title first."
@@ -164,7 +169,8 @@ def _handle_generate_content(state: dict):
         return
 
     try:
-        state["titles"] = json.loads(titles_raw) if titles_raw else []
+        state["titles"] = _json_list(titles_raw)
+        state["meta_descriptions"] = _json_list(meta_descriptions_raw)
         provider = get_provider()
         progress = _progress_callback("Medium blog", request.form.get("generation_status_token", ""))
         if state["brand"]:
@@ -183,37 +189,56 @@ def _handle_generate_content(state: dict):
             "backlink_writer_name": state["selected_backlink"].get("writer_name", ""),
             "backlink_content_guidelines": state["selected_backlink"].get("content_guidelines", ""),
         }
-        progress("Generating meta descriptions...")
-        state["meta_descriptions"] = generate_backlink_meta_descriptions(
-            provider,
-            title=state["selected_title"],
-            keyword=state["keyword"],
-            count=5,
-            brand=state["brand"],
-            brand_context=brand_context,
-            **backlink_context,
-            progress_callback=progress,
-        )
+        is_minor_revision = bool(existing_content and state["change_request"])
+        if not is_minor_revision:
+            progress("Generating meta descriptions...")
+            state["meta_descriptions"] = generate_backlink_meta_descriptions(
+                provider,
+                title=state["selected_title"],
+                keyword=state["keyword"],
+                count=5,
+                brand=state["brand"],
+                brand_context=brand_context,
+                **backlink_context,
+                progress_callback=progress,
+            )
         if state["meta_descriptions"]:
             selected_match = next(
                 (item for item in state["meta_descriptions"] if item.get("text", "").strip() == selected_meta_description),
                 None,
             )
             state["meta_description"] = (selected_match or state["meta_descriptions"][0]).get("text", "")
-        progress("Generating medium content...")
-        state["content"] = generate_backlink_content(
-            provider,
-            title=state["selected_title"],
-            keyword=state["keyword"],
-            tone=state["tone"],
-            money_site_url=state["brand_website_url"],
-            brand=state["brand"],
-            brand_context=brand_context,
-            suggested_content=state["suggested_content"],
-            change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
-            **backlink_context,
-            progress_callback=progress,
-        )
+        else:
+            state["meta_description"] = selected_meta_description
+        if is_minor_revision:
+            progress("Applying minor medium content changes...")
+            state["content"] = revise_existing_content(
+                provider,
+                title=state["selected_title"],
+                existing_content=existing_content,
+                change_request=state["change_request"],
+                scope=state["regenerate_scope"],
+                output_format=backlink_context.get("backlink_post_type", "html"),
+                keyword=state["keyword"],
+                brand=state["brand"],
+                required_url=state["brand_website_url"],
+                progress_callback=progress,
+            )
+        else:
+            progress("Generating medium content...")
+            state["content"] = generate_backlink_content(
+                provider,
+                title=state["selected_title"],
+                keyword=state["keyword"],
+                tone=state["tone"],
+                money_site_url=state["brand_website_url"],
+                brand=state["brand"],
+                brand_context=brand_context,
+                suggested_content=state["suggested_content"],
+                change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
+                **backlink_context,
+                progress_callback=progress,
+            )
         progress("Content passed validation. Preparing quality report...")
         state["tag_suggestions"] = suggest_content_tags(
             title=state["selected_title"],
@@ -268,6 +293,83 @@ def _handle_generate_content(state: dict):
         )
 
 
+def _handle_save_generated_blog(state: dict):
+    state["custom_title"] = request.form.get("custom_title", "").strip()
+    state["selected_title"] = state["custom_title"] or request.form.get("selected_title", "").strip()
+    state["keyword"] = request.form.get("keyword", "").strip()
+    state["brand"] = request.form.get("brand", "").strip()
+    state["tone"] = request.form.get("tone", "natural").strip() or "natural"
+    state["suggested_content"] = request.form.get("suggested_content", "").strip()
+    state["change_request"] = request.form.get("change_request", "").strip()
+    state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
+    state["brand_website_url"] = request.form.get("brand_website_url", "").strip()
+    state["selected_backlink_id"] = request.form.get("selected_backlink_id", "").strip()
+    state["content"] = request.form.get("content_html", "").strip()
+    titles_raw = request.form.get("titles_json", "").strip()
+    selected_meta_description = request.form.get("meta_description_choice", "").strip()
+    state["meta_description"] = selected_meta_description
+
+    try:
+        state["titles"] = json.loads(titles_raw) if titles_raw else []
+    except json.JSONDecodeError:
+        state["titles"] = []
+
+    if state["selected_backlink_id"].isdigit():
+        state["selected_backlink"] = get_backlink(int(state["selected_backlink_id"]))
+
+    if not state["selected_title"]:
+        state["error"] = "Please select a title before saving."
+        return
+    if not state["content"]:
+        state["error"] = "There is no generated medium blog content to save."
+        return
+
+    state["tag_suggestions"] = suggest_content_tags(
+        title=state["selected_title"],
+        keyword=state["keyword"],
+        brand=state["brand"],
+        content=state["content"],
+        minimum=10,
+    )
+    max_words = _int_or_zero((state["selected_backlink"] or {}).get("max_characters", 0))
+    min_words = _int_or_zero((state["selected_backlink"] or {}).get("min_words", 0))
+    state["quality_report"] = analyze_generated_content(
+        state["content"],
+        title=state["selected_title"],
+        keyword=state["keyword"],
+        meta_description=state["meta_description"],
+        min_words=min_words,
+        max_words=max_words,
+        required_url=state["brand_website_url"],
+    )
+    record_generation(
+        content_type="Medium Blog",
+        brand_name=state["brand"],
+        title=state["selected_title"],
+        primary_keyword=state["keyword"],
+        medium_name=(state["selected_backlink"] or {}).get("website_name", ""),
+        word_count=state["quality_report"].get("word_count", count_html_words(state["content"])),
+        meta_description=state["meta_description"],
+        tags=state["tag_suggestions"],
+        prompt_inputs={
+            "tone": state["tone"],
+            "suggested_content": state["suggested_content"],
+            "manual_save": True,
+            "medium_id": state["selected_backlink_id"],
+        },
+        content=state["content"],
+        quality_report=state["quality_report"],
+    )
+    record_blog(
+        brand=state["brand"],
+        title=state["selected_title"],
+        keyword=state["keyword"],
+        supporting_keyword="",
+    )
+    state["success"] = "Generated medium blog saved to history."
+    state["step"] = "content"
+
+
 def _scoped_change_request(change_request: str, scope: str) -> str:
     cleaned = (change_request or "").strip()
     cleaned_scope = (scope or "full").strip().lower()
@@ -281,6 +383,14 @@ def _scoped_change_request(change_request: str, scope: str) -> str:
     if not prefix:
         return cleaned
     return f"{prefix}\n{cleaned}".strip()
+
+
+def _json_list(raw: str) -> list:
+    try:
+        parsed = json.loads(raw) if raw else []
+        return parsed if isinstance(parsed, list) else []
+    except json.JSONDecodeError:
+        return []
 
 
 def _int_or_zero(value) -> int:

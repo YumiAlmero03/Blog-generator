@@ -20,6 +20,7 @@ def build_backlink_title_prompt(
     backlink_blog_name: str = "",
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
+    keyword_is_anchor_text: bool = False,
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     backlink_section = build_backlink_context_section(
@@ -36,6 +37,15 @@ def build_backlink_title_prompt(
         backlink_content_guidelines=backlink_content_guidelines,
     )
     banned_words_section = build_banned_words_prompt_section()
+    anchor_title_rule = ""
+    if keyword_is_anchor_text:
+        anchor_title_rule = """
+Tier 2 title rule:
+- Treat the keyword/topic as anchor-text context only.
+- Do not use the exact anchor text in any title.
+- Do not use close variations that read like the anchor text.
+- Create natural broader titles that can support the anchor/link in the article body without showing the anchor text in the title.
+"""
     return f"""
 You are an informational blog title generator for medium and guest-post content.
 
@@ -46,6 +56,7 @@ Brand: {brand}
 {context_section}
 {backlink_section}
 {banned_words_section}
+{anchor_title_rule}
 
 Rules:
 - Return exactly {count} titles
@@ -196,6 +207,8 @@ def build_backlink_content_prompt(
     backlink_content_guidelines: str = "",
     suggested_content: str = "",
     change_request: str = "",
+    required_anchor_text: str = "",
+    required_link_label: str = "brand",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     backlink_section = build_backlink_context_section(
@@ -282,74 +295,59 @@ Forum-specific rules:
 - Avoid corporate phrasing.
 """
     cleaned_money_site_url = (money_site_url or "").strip()
+    cleaned_required_anchor_text = (required_anchor_text or "").strip()
+    cleaned_required_link_label = (required_link_label or "brand").strip() or "brand"
     required_url = cleaned_money_site_url or "REQUIRED_URL"
+    required_anchor = cleaned_required_anchor_text or "anchor text"
+    has_required_anchor = bool(cleaned_required_anchor_text)
+    required_anchor_rules = (
+        f"- Use this exact anchor text for the required link: {required_anchor}\n"
+        "- Do not change, rewrite, pluralize, or add words to the required anchor text."
+        if has_required_anchor
+        else "- Use natural descriptive anchor text that fits the article topic.\n- Do not use the brand name, website name, or domain as anchor text."
+    )
+    required_link_rule = (
+        f"- Include the required {cleaned_required_link_label} link once in a natural way with the exact required anchor text."
+        if has_required_anchor
+        else f"- Include the required {cleaned_required_link_label} link once in a natural way with relevant anchor text."
+    )
+    reference_link_rule = (
+        "- Search the internet for relevant reference links when web access is available.\n"
+        "- Add at least 2 additional reference links with descriptive anchor text that support the article.\n"
+        "- Use only real, existing reference URLs found during research/search.\n"
+        "- Never use placeholder URLs or example domains such as https://example.com/.\n"
+        f"- These reference links must be separate from the required {cleaned_required_link_label} link."
+        if cleaned_required_link_label.lower() == "tier 2"
+        else "- Search the internet for relevant reference links when web access is available.\n- Add 2-3 reference links with descriptive anchor text that support the article.\n- Use only real, existing reference URLs found during research/search.\n- You may use the same reference links you used while working on the article.\n- Never use placeholder URLs or example domains such as https://example.com/.\n- These reference links must be separate from the required brand link."
+    )
     money_site_section = ""
     if cleaned_money_site_url:
         money_site_section = f"""
 
-Required brand URL:
+Required {cleaned_required_link_label} URL:
 {cleaned_money_site_url}
 
-Required brand link rules:
+Required {cleaned_required_link_label} link rules:
 - Insert this exact URL once anywhere in the article.
-- Use natural descriptive anchor text that fits the article topic.
-- Do not use the brand name, website name, or domain as anchor text.
-- Do not include any other URL in the generated content.
+{required_anchor_rules}
+{reference_link_rule}
 - Before returning, verify this URL appears exactly one time in the content value.
 """
     post_type = (backlink_post_type or "html").strip().lower()
     if post_type not in {"html", "markdown", "gutenberg", "text"}:
         post_type = "html"
-    if post_type == "markdown":
-        format_rules = f"""
-- Write the content value in Markdown, not HTML.
+    format_rules = f"""
+- Write the content value in Markdown source, even when the selected medium output type is {post_type}.
+- The app will convert the Markdown to {post_type} with Python after generation.
 - Use Markdown headings like ## and ###, Markdown lists, and compact paragraphs.
 - Do not put every sentence on its own line. Keep related sentences together in the same paragraph.
 - Use only one blank line between Markdown blocks.
-- Use this Markdown link format once anywhere in the article when a brand URL is provided: [anchor text]({required_url}).
-- Do not use HTML tags in the content value.
+- Use this Markdown link format once anywhere in the article when a required URL is provided: [{required_anchor}]({required_url}).
+- Do not use raw HTML tags in the content value.
 - Use Markdown bold only for important non-keyword words when emphasis helps.
 - Never bold the primary keyword.
 """
-        return_example = '"content": "Intro paragraph with [anchor text](https://example.com).\\n\\n## Heading\\n\\nBody text..."'
-    elif post_type == "gutenberg":
-        format_rules = f"""
-- Write the content value as WordPress Gutenberg block HTML.
-- Wrap paragraphs and headings with Gutenberg comments, such as <!-- wp:paragraph --><p>...</p><!-- /wp:paragraph --> and <!-- wp:heading --><h2>...</h2><!-- /wp:heading -->.
-- Use normal paragraph blocks with 2-4 sentences each. Do not create many tiny paragraph blocks.
-- Use this HTML link format once anywhere in the article inside a Gutenberg paragraph block when a brand URL is provided: <a href='{required_url}' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
-- Use <b> only for emphasis on important non-keyword words or phrases.
-- Do not use <strong>.
-- Never bold the primary keyword.
-- Do not wrap keywords in <b> or <strong> tags.
-"""
-        return_example = '"content": "<!-- wp:paragraph --><p>Intro with <a href=\'https://example.com\'>anchor text</a>.</p><!-- /wp:paragraph -->"'
-    elif post_type == "text":
-        format_rules = f"""
-- Write the content value as plain text only.
-- Do not use HTML tags or Markdown syntax.
-- Use clear section labels on their own lines when needed.
-- Keep related sentences together in compact paragraphs. Do not put every sentence on its own line.
-- Use only one blank line between sections.
-- Insert the brand URL exactly once anywhere in the article as plain text when a brand URL is provided: {required_url}.
-- Do not use HTML or Markdown emphasis.
-"""
-        return_example = '"content": "Intro paragraph with https://example.com included once.\\n\\nSection heading\\nBody text..."'
-    else:
-        format_rules = f"""
-- Write the content value in HTML.
-- Use <h2> for main sections and <h3> for subsections.
-- Use <p> for compact paragraphs with 2-4 related sentences each.
-- Use <ul><li> for bullet lists where helpful.
-- Do not create a separate <p> tag for every sentence.
-- Do not add unnecessary newline characters between HTML tags.
-- Use this HTML link format once anywhere in the article inside a paragraph when a brand URL is provided: <a href='{required_url}' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>.
-- Use <b> only for emphasis on important non-keyword words or phrases.
-- Do not use <strong>.
-- Never bold the primary keyword.
-- Do not wrap keywords in <b> or <strong> tags.
-"""
-        return_example = '"content": "<p>Intro with <a href=\'https://example.com\'>anchor text</a>.</p><h2>Heading</h2><p>Body text...</p>"'
+    return_example = '"content": "Intro paragraph with [anchor text](REQUIRED_URL).\\n\\n## Heading\\n\\nBody text..."'
 
     compact_medium = bool(max_words and max_words <= 300)
     short_medium = bool(max_words and max_words <= 700)
@@ -394,6 +392,7 @@ Brand: {brand}
 {backlink_section}
 
 {banned_words_section}
+{money_site_section}
 {suggested_content_section}
 
 {change_request_section}
@@ -445,9 +444,11 @@ Rules:
   - directory: concise, utility-focused
   - community: helpful, shared-insight tone
 - If brand database context is provided, avoid repeating existing keyword angles and keep the content aligned with current brand pages.
-- Include the required brand link once in a natural way with relevant anchor text.
-- The required brand URL must appear exactly once total in the content output.
-- Do not include the medium URL or any other URL in the output.
+{required_link_rule}
+- The required {cleaned_required_link_label} URL must appear exactly once total in the content output.
+{reference_link_rule}
+- Do not include the medium URL in the output.
+- Do not count reference links as the required {cleaned_required_link_label} link; the required {cleaned_required_link_label} URL must still appear exactly once.
 - If a max word count is provided for the medium, use it as a soft guide for concision, but do not cut the article below the minimum word count.
 - Return only valid JSON with this format: {{"content":"..."}}.
 - The value of "content" must contain complete content in the selected post type format.
@@ -456,7 +457,7 @@ Rules:
 - Close every HTML tag and every quotation mark properly.
 - Do not truncate, abbreviate, or cut off the article.
 - Do not guess what a brand, game, or platform is.
-- When the selected post type supports HTML attributes, external links and the required brand link must use rel='nofollow noopener noreferrer' and target='_blank'.
+- When the selected post type supports HTML attributes, external links and the required {cleaned_required_link_label} link must use rel='nofollow noopener noreferrer' and target='_blank'.
 {completion_word_rule}
 - If minimum and maximum word guidance conflict, prioritize staying over the minimum word count.
 

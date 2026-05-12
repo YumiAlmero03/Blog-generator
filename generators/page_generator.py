@@ -2,14 +2,13 @@ import json
 import random
 import re
 
-from generators.content_generator import count_html_words
 from logger import logger
 from prompts import build_page_prompt
 from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
 
-MIN_PAGE_WORDS = 900
-MAX_PAGE_WORDS = 1200
+MIN_PAGE_WORDS = 1000
+MAX_PAGE_WORDS = 19000
 MIN_META_DESCRIPTION_CHARACTERS = 120
 MAX_META_DESCRIPTION_CHARACTERS = 140
 
@@ -45,7 +44,8 @@ def inject_image_placeholders(content: str) -> tuple[str, int]:
         placeholder_count += 1
         return build_image_placeholder(match.group(1))
 
-    processed = re.sub(r"\[IMAGE:\s*(.*?)\s*\]", replace, content, flags=re.IGNORECASE)
+    processed = re.sub(r"<p>\s*\[IMAGE:\s*(.*?)\s*\]\s*</p>", replace, content, flags=re.IGNORECASE)
+    processed = re.sub(r"\[IMAGE:\s*(.*?)\s*\]", replace, processed, flags=re.IGNORECASE)
     return processed, placeholder_count
 
 
@@ -62,6 +62,8 @@ def generate_page(
     max_words: int = MAX_PAGE_WORDS,
     progress_callback=None,
 ):
+    from app.services.content_format_service import count_markdown_words, markdown_to_html
+
     min_word_count, max_word_count = _normalize_word_limits(min_words, max_words)
     prompt = build_page_prompt(
         keyword=keyword,
@@ -86,7 +88,8 @@ def generate_page(
                 f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
                 f"- Your previous page did not satisfy the word-count or meta description rules.\n"
                 f"- Keep the same keyword intent and return valid JSON only.\n"
-                f"- The page content must be at least {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
+                f"- The page content must be more than {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
+                f"- Do not finish at exactly {min_word_count} words; expand until the page exceeds that minimum.\n"
                 f"- The meta_description must be between {MIN_META_DESCRIPTION_CHARACTERS} and {MAX_META_DESCRIPTION_CHARACTERS} characters.\n"
                 f"- Adjust the section depth until the page is complete and over the minimum naturally.\n"
             )
@@ -100,10 +103,10 @@ def generate_page(
             data = json.loads(json_text)
             title = data.get("title", "").strip()
             meta_description = data.get("meta_description", "").strip()
-            content = data.get("content", "").strip()
-            word_count = count_html_words(content)
+            markdown_content = data.get("content", "").strip()
+            word_count = count_markdown_words(markdown_content)
             last_word_count = word_count
-            banned_terms = find_banned_terms_in_text("\n".join([title, meta_description, content]))
+            banned_terms = find_banned_terms_in_text("\n".join([title, meta_description, markdown_content]))
 
             if banned_terms:
                 _publish_progress(
@@ -134,13 +137,13 @@ def generate_page(
                 )
                 continue
 
-            if word_count < min_word_count:
+            if word_count <= min_word_count:
                 _publish_progress(
                     progress_callback,
-                    f"Page attempt {attempt}: {word_count} words, minimum is {min_word_count}. Retrying...",
+                    f"Page attempt {attempt}: {word_count} words, content must be more than {min_word_count}. Retrying...",
                 )
                 logger.warning(
-                    "Page word count is %d (minimum: %d) for keyword '%s' on attempt %d",
+                    "Page word count is %d (must be more than: %d) for keyword '%s' on attempt %d",
                     word_count,
                     min_word_count,
                     keyword,
@@ -162,6 +165,7 @@ def generate_page(
                 )
                 continue
 
+            content = markdown_to_html(markdown_content)
             content, injected_count = inject_image_placeholders(content)
             logger.info(
                 "Page generated successfully for keyword '%s' with %d words and %d image placeholders on attempt %d",

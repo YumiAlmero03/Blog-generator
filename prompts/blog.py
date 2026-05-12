@@ -153,9 +153,7 @@ Reference Links to Include:
 Instructions for including links:
 - Include every provided link at least once using the exact anchor text
 - Use the provided text as anchor text for the link
-- For internal links, format links as <a href='URL'>anchor text</a>
-- For external links, format links as <a href='URL' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>
-- Use single quotes in href attributes so the JSON stays valid
+- Format links in Markdown as [anchor text](URL)
 - Add links naturally; do not force them if they do not fit
 - if they dont fit naturally, add them at the end of the article in a 'References:' with proper formatting or check this link or this one (link) for more info. make it natural and human sounding
 - For external links, brand-name anchor text is allowed when natural.
@@ -172,7 +170,7 @@ Money Site URL:
 
 Instructions for the money site:
 - Include the money site URL exactly once using a natural internal-style anchor text that fits the brand and article topic
-- Format it as <a href='{cleaned_money_site_url}' rel='nofollow noopener noreferrer' target='_blank'>anchor text</a>
+- Format it in Markdown as [anchor text]({cleaned_money_site_url})
 - Do not use generic anchor text like 'click here'
 - Place it naturally where it helps the reader and matches the surrounding content
 - For external links, brand-name anchor text is allowed when natural.
@@ -206,28 +204,27 @@ Rules:
 - Avoid keyword stuffing and never force keywords into awkward sentences.
 - Use the main keyword no more than once per paragraph.
 - Do not repeat the same keyword multiple times in a single paragraph.
-- Use <b> only for emphasis on important non-keyword words or phrases.
-- Do not use <strong>.
+- Use Markdown bold only for emphasis on important non-keyword words or phrases.
 - Never bold the primary keyword or supporting keywords.
-- Do not wrap keywords in <b> or <strong> tags.
 - Use a natural, human, conversational tone.
 - Write in active voice with short, clear sentences.
 - Write for readability using short paragraphs.
 - Add detailed explanations, useful examples, and practical context in each section to support the word count naturally.
 - Structure the article in this order: introduction, 3–4 main sections with subheadings, then exactly one ending section that best fits the page intent.
-- Use HTML only, not Markdown.
-- Use <h2> for main sections and <h3> for subsections.
-- Use <p> for paragraphs.
-- Use <ul><li> for bullet lists where helpful.
+- Write the content value in Markdown source, not HTML.
+- Use Markdown headings like ## and ###.
+- Use Markdown lists where helpful.
 - If a brand is provided, reflect the brand voice, positioning, and audience naturally throughout the article.
 - If brand database context is provided, avoid repeating existing keyword angles and keep the content aligned with current brand pages.
 - You may include relevant reference links only if they fit naturally in the article.
-- When adding links, use HTML anchor tags with single quotes, like <a href='URL'>anchor text</a>.
-- Return only valid JSON with this format: {{"content":"<p>...</p>"}}.
-- The value of "content" must contain complete, valid HTML.
+- When adding links, use Markdown links like [anchor text](URL).
+- Use only real, existing URLs from provided links or research/search.
+- Never use placeholder URLs or example domains such as https://example.com/.
+- Return only valid JSON with this format: {{"content":"## Heading\\n\\nParagraph..."}}.
+- The value of "content" must contain complete Markdown source.
 - Do not add any explanation, notes, or text before or after the JSON object.
 - Start the response with "{" and end it with "}".
-- Close every HTML tag and every quotation mark properly.
+- Close every quotation mark properly.
 - Do not truncate, abbreviate, or cut off the article.
 - Check the internet when needed to verify brand, product, platform, or topic details before writing.
 - If reference links are provided, review them first and use them as the primary context source when they are relevant.
@@ -235,8 +232,7 @@ Rules:
 - Only include a link if it fits naturally in the article and is relevant to the section.
 - If a provided link refers to a specific brand or page, make sure the surrounding content matches that page correctly.
 - If a money site URL is provided, include it once in a natural way with relevant anchor text.
-- External links and the money site URL must use rel='nofollow noopener noreferrer' and target='_blank'.
-- Internal links must not use nofollow unless explicitly requested.
+- External link attributes are added later during Python conversion.
 - Use exactly one ending section only: CTA, FAQs, Conclusion, or Final Thoughts.
 - Do not use these sections together in the same page.
 - Choose the ending section that best matches the page type and search intent.
@@ -244,7 +240,7 @@ Rules:
 
 Return valid JSON only in this format:
 {{
-  "content": "<h2>Your HTML content here</h2><p>...</p>",
+  "content": "## Your Markdown content here\\n\\nParagraph...",
   "word_count": 850
 }}
 """

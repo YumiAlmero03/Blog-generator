@@ -7,9 +7,19 @@ def build_social_media_post_prompt(
     brand_name: str,
     social_type: str,
     brand_context: str = "",
+    reference_link: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     banned_words_section = build_banned_words_prompt_section()
+    cleaned_reference_link = (reference_link or "").strip()
+    reference_link_section = ""
+    if cleaned_reference_link:
+        reference_link_section = f"""
+Reference link:
+{cleaned_reference_link}
+
+Use this reference link as source context for the post. Include the URL in post_content only if it fits naturally for the platform and stays within the character limit.
+"""
     return f"""
 You are a social media content assistant.
 
@@ -19,6 +29,7 @@ Focus word: {focus_word}
 Brand: {brand_name}
 Social media type: {social_type}
 {context_section}
+{reference_link_section}
 {banned_words_section}
 
 Rules:
@@ -29,7 +40,8 @@ Rules:
 - If the focus word or brand context suggests gambling, rewrite the post toward a neutral lifestyle, entertainment, product, or community angle without gambling terms.
 - Make the post natural, concise, and platform-appropriate.
 - Use the focus word naturally.
-- Do not add URLs unless the user provided one in brand context.
+- Do not add URLs unless the user provided a reference link or brand context URL.
+- If a reference link is provided, use it as context and include it only when it improves the post and fits the 220-character limit.
 - Image description should describe one useful visual for the post.
 - Tags/hashtags should be 3-8 short items.
 - Hashtags should include # when appropriate.

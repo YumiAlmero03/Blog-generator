@@ -35,6 +35,7 @@ def generate_social_media_post(
     brand_name: str,
     social_type: str,
     brand_context: str = "",
+    reference_link: str = "",
     progress_callback=None,
 ) -> dict:
     prompt = build_social_media_post_prompt(
@@ -42,6 +43,7 @@ def generate_social_media_post(
         brand_name=brand_name,
         social_type=social_type,
         brand_context=brand_context,
+        reference_link=reference_link,
     )
     attempt = 0
     while True:

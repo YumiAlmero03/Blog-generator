@@ -38,9 +38,17 @@ def split_keywords(*keyword_groups: str) -> list[str]:
 
 
 def get_connection() -> sqlite3.Connection:
-    connection = sqlite3.connect(DB_PATH)
+    connection = sqlite3.connect(DB_PATH, timeout=30)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA busy_timeout = 30000")
+    try:
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+    except sqlite3.OperationalError:
+        # If another process is initializing the database, busy_timeout still
+        # lets normal reads/writes wait instead of failing immediately.
+        pass
     return connection
 
 

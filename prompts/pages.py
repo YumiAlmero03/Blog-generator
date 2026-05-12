@@ -10,13 +10,13 @@ def build_page_prompt(
     brand: str = "",
     brand_context: str = "",
     change_request: str = "",
-    min_words: int | str = 900,
-    max_words: int | str = 1200,
+    min_words: int | str = 1000,
+    max_words: int | str = 19000,
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     banned_words_section = build_banned_words_prompt_section()
-    min_word_count = _positive_int(min_words, 900)
-    max_word_count = _positive_int(max_words, 1200)
+    min_word_count = _positive_int(min_words, 1000)
+    max_word_count = _positive_int(max_words, 19000)
     if max_word_count < min_word_count:
         max_word_count = min_word_count
     change_request_section = ""
@@ -59,19 +59,20 @@ Rules:
 - Title should be catchy, include the main keyword naturally, and be 45–55 characters when possible.
 - Meta description must be useful for search snippets, natural, and between 120 and 140 characters.
 - Introduction should be 60–80 words, engaging, and include the main keyword naturally once.
-- Content should be at least {min_word_count} words, structured with clear sections and subheadings. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.
+- Content must be more than {min_word_count} words, structured with clear sections and subheadings. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.
+- Do not finish at exactly {min_word_count} words; the content must exceed that minimum.
 - Paragraphs should be short and easy to read.
 
 - If a brand is provided, match the brand’s voice, positioning, and audience naturally.
 - When brand database context is provided, avoid duplicating existing pages too closely.
 
-- Return clean HTML that can be copy-pasted into the WordPress Gutenberg editor.
-- Use only simple HTML tags: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>.
+- Return clean Markdown source. The app will convert it to HTML or Gutenberg after generation.
+- Use Markdown headings, paragraphs, lists, bold, emphasis, and blockquotes only.
 - Do not use <b> tags.
-- Use <strong> only for emphasis on non-keyword phrases.
-- Never apply <strong> or <em> to the main or supporting keywords.
+- Use Markdown bold only for emphasis on non-keyword phrases.
+- Never apply bold or emphasis to the main or supporting keywords.
 
-- Include exactly one <h1> at the top.
+- Include exactly one # H1 heading at the top.
 - Structure the page clearly for readability and conversions.
 - Adapt the structure based on the page type naturally.
 - Keep paragraphs short and easy to read.
@@ -85,7 +86,7 @@ Rules:
   [IMAGE: alt text describing the image here]
 - Add no more than 3 image placeholders.
 
-- Do not use markdown.
+- Do not use raw HTML.
 - Do not add explanations before or after the JSON.
 - Ensure the content is complete and over {min_word_count} words.
 - Start your response with '{{' and end with '}}'
@@ -94,7 +95,7 @@ Return valid JSON only in this format:
 {{
   "title": "Page Title",
   "meta_description": "SEO meta description here",
-  "content": "<h1>Page Title</h1><p>...</p>",
+  "content": "# Page Title\\n\\nParagraph...",
   "image_count": 2
 }}
 """
@@ -157,16 +158,16 @@ What to include:
 
 Rules:
 - This generator is for simple pages such as Privacy Policy, Terms and Conditions, Disclaimer, About Us, Contact Us, Refund Policy, Shipping Policy, Cookie Policy, Responsible Gaming, or similar low-complexity pages
-- Write clear, structured HTML that can be pasted directly into the WordPress Gutenberg editor
-- Use only simple HTML tags: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>
-- Include exactly one <h1>
-- Include at least 3 <h3> subheadings in the content.
+- Write clear, structured Markdown source that the app can convert to HTML or Gutenberg
+- Use Markdown headings, paragraphs, lists, bold, emphasis, and blockquotes only
+- Include exactly one # H1 heading
+- Include at least 3 ### H3 subheadings in the content.
 - Keep the tone clear, professional, and easy to understand
 - If a brand is provided, use the brand name naturally where relevant
 - If brand context is provided, align the page with that brand only when it fits naturally
 - Adapt the structure to the page type
 - Do not add image placeholders
-- Do not use markdown
+- Do not use raw HTML
 - Ensure the content is complete and over {min_word_count} words.
 - Generate exactly 3 meta description options for the page.
 - Each meta description must be useful for search snippets, natural, and between 120 and 140 characters.
@@ -181,7 +182,7 @@ Return valid JSON only in this format:
     {{"text": "Second meta description option here."}},
     {{"text": "Third meta description option here."}}
   ],
-  "content": "<h1>Page Title</h1><p>...</p>"
+  "content": "# Page Title\\n\\nParagraph..."
 }}
 """
 

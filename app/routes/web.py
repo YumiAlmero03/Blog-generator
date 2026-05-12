@@ -1,6 +1,6 @@
 from flask import Blueprint, send_from_directory
 
-from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, dashboard_controller, image_controller, page_controller, settings_controller, social_media_controller, tool_controller
+from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, dashboard_controller, image_controller, page_controller, settings_controller, social_media_controller, tier2_blog_controller, tool_controller
 from app.views import generation_events_view
 from app.services.image_service import UPLOAD_ROOT
 
@@ -14,6 +14,8 @@ web.add_url_rule("/generation-history/<int:history_id>", view_func=dashboard_con
 web.add_url_rule("/", view_func=blog_controller.index, methods=["GET", "POST"])
 web.add_url_rule("/medium-blog-generator", view_func=backlink_blog_controller.backlink_blog_generator, methods=["GET", "POST"])
 web.add_url_rule("/backlink-blog-generator", view_func=backlink_blog_controller.backlink_blog_generator, methods=["GET", "POST"])
+web.add_url_rule("/tier-2-blog-generator", view_func=tier2_blog_controller.tier2_blog_generator, methods=["GET", "POST"])
+web.add_url_rule("/tier2-blog-generator", view_func=tier2_blog_controller.tier2_blog_generator, methods=["GET", "POST"])
 web.add_url_rule("/page-generator", view_func=page_controller.page_generator, methods=["GET", "POST"])
 web.add_url_rule("/simple-page-generator", view_func=page_controller.simple_page_generator, methods=["GET", "POST"])
 web.add_url_rule("/text-tools", view_func=tool_controller.text_tools, methods=["GET"])

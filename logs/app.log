@@ -7856,3 +7856,252 @@ sqlite3.OperationalError: database is locked
 2026-05-09 17:46:33,711 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 603 (minimum: 800) on attempt 2. Raw response length: 4908 chars
 2026-05-09 17:47:56,108 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 513 (minimum: 800) on attempt 3. Raw response length: 4421 chars
 2026-05-09 17:49:07,535 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 568 (minimum: 800) on attempt 4. Raw response length: 4906 chars
+2026-05-09 17:52:26,743 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 165, 158, 158, 154, 155 on attempt 1
+2026-05-09 17:52:43,772 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 168, 153, 157, 145, 156 on attempt 1
+2026-05-09 17:54:18,076 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 170, 145 on attempt 2
+2026-05-09 17:54:36,582 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 178, 169, 163, 157 on attempt 2
+2026-05-09 17:56:41,241 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 576 (minimum: 900) on attempt 1. Raw response length: 4780 chars
+2026-05-09 17:57:48,047 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 716 (minimum: 900) on attempt 1. Raw response length: 5954 chars
+2026-05-09 17:59:38,629 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 147, 157, 160, 145, 143 on attempt 1
+2026-05-09 18:00:13,640 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 142, 155, 149, 150 on attempt 2
+2026-05-09 20:01:58,217 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 735 (minimum: 800) on attempt 1. Raw response length: 6142 chars
+2026-05-10 00:54:43,850 INFO blog_generator content_generator.py:236 _generate_content_from_prompt() - Content generated successfully with 1004 words on attempt 2
+2026-05-10 01:10:04,051 ERROR blog_generator backlink_blog_controller.py:264 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 255, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-11 09:08:59,007 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 142, 149, 147, 141 on attempt 1
+2026-05-11 09:10:47,043 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 724 (minimum: 800) on attempt 1. Raw response length: 6016 chars
+2026-05-11 09:12:33,353 WARNING blog_generator content_generator.py:229 _generate_content_from_prompt() - Content validation failed on attempt 2: The required brand URL must be inserted exactly once anywhere in the article.
+2026-05-11 09:13:53,291 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 723 (minimum: 800) on attempt 3. Raw response length: 5907 chars
+2026-05-11 09:15:16,777 INFO blog_generator content_generator.py:236 _generate_content_from_prompt() - Content generated successfully with 820 words on attempt 4
+2026-05-11 09:15:21,994 ERROR blog_generator backlink_blog_controller.py:264 _handle_generate_content() - backlink generate_content action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/backlink_blog_controller.py", line 255, in _handle_generate_content
+    record_blog(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        supporting_keyword="",
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 103, in record_blog
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-11 10:04:21,778 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 113, 105, 111, 104, 95 on attempt 1
+2026-05-11 10:05:10,216 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 114, 115, 118 on attempt 2
+2026-05-11 10:06:10,379 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 551 (minimum: 800) on attempt 1. Raw response length: 3796 chars
+2026-05-11 10:07:50,647 WARNING blog_generator content_generator.py:229 _generate_content_from_prompt() - Content validation failed on attempt 2: The required brand URL must be inserted exactly once anywhere in the article.
+2026-05-11 10:09:28,559 INFO blog_generator content_generator.py:236 _generate_content_from_prompt() - Content generated successfully with 931 words on attempt 3
+2026-05-11 10:39:17,404 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 141 on attempt 1
+2026-05-11 10:40:46,446 INFO blog_generator content_generator.py:236 _generate_content_from_prompt() - Content generated successfully with 919 words on attempt 1
+2026-05-11 11:23:08,098 WARNING blog_generator page_generator.py:142 generate_page() - Page word count is 599 (minimum: 1000) for keyword 'Level Up Lounge' on attempt 1
+2026-05-11 11:24:48,777 WARNING blog_generator page_generator.py:127 generate_page() - Page meta description is 160 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 2
+2026-05-11 11:26:26,771 WARNING blog_generator page_generator.py:127 generate_page() - Page meta description is 109 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 3
+2026-05-11 11:27:23,331 WARNING blog_generator page_generator.py:127 generate_page() - Page meta description is 146 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 4
+2026-05-11 11:28:59,279 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 149 on attempt 1
+2026-05-11 11:30:16,419 WARNING blog_generator page_generator.py:127 generate_page() - Page meta description is 177 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 5
+2026-05-11 11:32:28,565 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 677 (minimum: 800) on attempt 1. Raw response length: 4949 chars
+2026-05-11 11:33:13,427 WARNING blog_generator page_generator.py:142 generate_page() - Page word count is 503 (minimum: 1000) for keyword 'Level Up Lounge' on attempt 6
+2026-05-11 11:37:05,413 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 142 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 1
+2026-05-11 11:38:43,090 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 149 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 2
+2026-05-11 11:39:43,756 WARNING blog_generator page_generator.py:143 generate_page() - Page word count is 595 (must be more than: 1000) for keyword 'Level Up Lounge' on attempt 3
+2026-05-11 11:41:14,059 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 201 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 4
+2026-05-11 11:42:35,898 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 173 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 5
+2026-05-11 11:44:02,628 WARNING blog_generator page_generator.py:143 generate_page() - Page word count is 708 (must be more than: 1000) for keyword 'Level Up Lounge' on attempt 6
+2026-05-11 11:45:26,095 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 161 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 7
+2026-05-11 11:46:29,225 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 154 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 8
+2026-05-11 11:47:41,611 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 169 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 9
+2026-05-11 11:49:03,561 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 149 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 10
+2026-05-11 11:50:36,071 WARNING blog_generator page_generator.py:143 generate_page() - Page word count is 588 (must be more than: 1000) for keyword 'Level Up Lounge' on attempt 11
+2026-05-11 11:52:32,670 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 141 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 12
+2026-05-11 11:52:47,367 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 118, 113 on attempt 1
+2026-05-11 11:54:32,446 WARNING blog_generator page_generator.py:128 generate_page() - Page meta description is 155 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 13
+2026-05-11 11:55:30,392 WARNING blog_generator content_generator.py:190 _generate_content_from_prompt() - Content word count is 661 (minimum: 800) on attempt 1. Raw response length: 5153 chars
+2026-05-11 12:06:08,369 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 475 (must be more than: 1000) for keyword 'Level Up Lounge' on attempt 1
+2026-05-11 12:10:20,951 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 141 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 1
+2026-05-11 12:11:52,504 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 973 (must be more than: 1000) for keyword 'Level Up Lounge' on attempt 2
+2026-05-11 12:13:12,390 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 150 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 3
+2026-05-11 12:14:33,463 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 851 (must be more than: 1000) for keyword 'Level Up Lounge' on attempt 4
+2026-05-11 12:15:44,579 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 524 (must be more than: 1000) for keyword 'Level Up Lounge' on attempt 5
+2026-05-11 12:16:46,891 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 646 (must be more than: 1000) for keyword 'Level Up Lounge' on attempt 6
+2026-05-11 12:19:17,522 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 169 characters (target: 120-140) for keyword 'Level Up Lounge' on attempt 7
+2026-05-11 12:23:14,520 INFO blog_generator page_generator.py:169 generate_page() - Page generated successfully for keyword 'Level Up Lounge' with 1290 words and 3 image placeholders on attempt 8
+2026-05-11 12:23:19,715 ERROR blog_generator page_controller.py:116 page_generator() - page_generator action failed
+Traceback (most recent call last):
+  File "/Users/lanie/Sites/Backend/Blog generator/app/controllers/page_controller.py", line 106, in page_generator
+    record_page(
+    ~~~~~~~~~~~^
+        brand=state["brand"],
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        expectations=state["expectations"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/lanie/Sites/Backend/Blog generator/database/pages.py", line 148, in record_page
+    keyword_record = get_or_create_keyword(keyword_value)
+  File "/Users/lanie/Sites/Backend/Blog generator/database/keywords.py", line 20, in get_or_create_keyword
+    cursor = connection.execute(
+        "INSERT INTO keywords (keyword, normalized_keyword) VALUES (?, ?)",
+        (keyword_value, normalized),
+    )
+sqlite3.OperationalError: database is locked
+2026-05-11 12:23:55,054 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 175, 152, 144, 152, 148 on attempt 1
+2026-05-11 12:24:18,769 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 104, 114, 109, 112, 108 on attempt 2
+2026-05-11 12:26:13,871 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 632 (minimum: 800) on attempt 1. Raw response length: 4771 chars
+2026-05-11 12:27:18,118 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 826 words on attempt 2
+2026-05-11 12:47:41,525 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 174 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 1
+2026-05-11 12:51:48,235 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 143 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 1
+2026-05-11 12:52:07,269 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 163, 148, 153 on attempt 1
+2026-05-11 12:52:24,769 WARNING blog_generator title_generator.py:60 _generate_titles_from_prompt() - Generated titles used forbidden phrases on attempt 1: Troubleshooting SG77 Login Issues; Secure SG77 Login Practices; SG77 Login: A User Experience Guide; Optimizing SG77 Login Efficiency; SG77 Login: Common Challenges Explored; Enhancing SG77 Login Security; SG77 Login: Step-by-Step Setup; SG77 Login: Tips for Smooth Access; Understanding SG77 Login Requirements; SG77 Login: Best Practices for Users; SG77 Login: Security Measures to Know; SG77 Login: How to Avoid Common Errors; SG77 Login: A Guide to Reliable Access; SG77 Login: Troubleshooting for Beginners; SG77 Login: Key Features to Explore; SG77 Login: Enhancing Platform Safety; SG77 Login: FAQs and Solutions; SG77 Login: Tips for First-Time Users; SG77 Login: Securing Your Digital Access; SG77 Login: Navigating Platform Challenges
+2026-05-11 12:56:40,587 INFO blog_generator page_generator.py:169 generate_page() - Page generated successfully for keyword 'The Cozy Desk' with 1292 words and 5 image placeholders on attempt 2
+2026-05-11 12:58:00,193 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 789 (minimum: 800) on attempt 1. Raw response length: 5554 chars
+2026-05-11 12:59:33,911 WARNING blog_generator content_generator.py:175 _generate_content_from_prompt() - Content used banned terms exploit on attempt 2
+2026-05-11 13:00:35,317 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 737 (minimum: 800) on attempt 3. Raw response length: 5178 chars
+2026-05-11 13:01:41,295 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 712 (minimum: 800) on attempt 4. Raw response length: 5023 chars
+2026-05-11 13:03:14,532 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 987 words on attempt 5
+2026-05-11 14:04:31,573 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 208, 218, 213, 212, 213 on attempt 1
+2026-05-11 14:05:06,592 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 149, 148, 155 on attempt 2
+2026-05-11 14:06:19,639 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 702 (minimum: 800) on attempt 1. Raw response length: 4838 chars
+2026-05-11 14:09:29,476 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 175 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 1
+2026-05-11 14:10:32,321 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 760 (minimum: 800) on attempt 2. Raw response length: 5203 chars
+2026-05-11 14:10:50,766 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 141, 159, 152, 156, 154 on attempt 1
+2026-05-11 14:13:39,588 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 154 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 2
+2026-05-11 14:14:42,579 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 853 words on attempt 3
+2026-05-11 14:14:55,821 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 98, 91, 87, 95, 99 on attempt 2
+2026-05-11 14:17:18,439 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 155 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 3
+2026-05-11 14:17:32,331 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 104, 102, 101, 98, 99 on attempt 3
+2026-05-11 14:19:36,276 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 143 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 4
+2026-05-11 14:19:53,976 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 161, 152, 171, 173, 163 on attempt 4
+2026-05-11 14:22:17,377 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 158 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 5
+2026-05-11 14:22:34,687 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 174, 173, 156, 179 on attempt 5
+2026-05-11 14:24:46,282 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 158 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 6
+2026-05-11 14:25:42,622 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 657 (minimum: 800) on attempt 1. Raw response length: 4963 chars
+2026-05-11 14:29:22,923 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 720 (must be more than: 1000) for keyword 'The Cozy Desk' on attempt 1
+2026-05-11 14:30:46,488 WARNING blog_generator title_generator.py:60 _generate_titles_from_prompt() - Generated titles used forbidden phrases on attempt 1: Mastering SG77 Login: A Guide to Smooth Access; Troubleshooting SG77 Login Issues: Expert Tips; Understanding SG77 Login Security Measures; SG77 Login: Optimizing Your Digital Experience; Navigating SG77 Login: A Step-by-Step Breakdown; SG77 Login Essentials: Tips for New Users; Enhancing SG77 Login Security: Best Practices; SG77 Login: Common Challenges and Solutions; Streamlining SG77 Login: User-Friendly Strategies; SG77 Login: How to Avoid Common Pitfalls; The Role of SG77 Login in Digital Platforms; SG77 Login: A Beginner's Guide to Efficiency; SG77 Login: Exploring Platform Accessibility; Securing Your SG77 Login: Key Recommendations; SG77 Login: Understanding Verification Processes; SG77 Login: Tips for Seamless Account Management; SG77 Login: Balancing Convenience and Safety; SG77 Login: How to Resolve Technical Hurdles; SG77 Login: Enhancing User Experience Tips; SG77 Login: A Review of Platform Accessibility
+2026-05-11 14:32:20,117 INFO blog_generator page_generator.py:169 generate_page() - Page generated successfully for keyword 'The Cozy Desk' with 1283 words and 8 image placeholders on attempt 2
+2026-05-11 14:33:08,029 WARNING blog_generator title_generator.py:60 _generate_titles_from_prompt() - Generated titles used forbidden phrases on attempt 2: Troubleshooting SG77 Login Challenges; SG77 Login: A Guide to Secure Access; SG77 Login: Common Issues and Solutions; SG77 Login: Tips for a Smooth Experience; SG77 Login: A Beginner's Guide to Access; SG77 Login: How to Manage Account Settings; SG77 Login: Understanding Verification Steps; SG77 Login: A Step-by-Step Access Guide; SG77 Login: Key Security Considerations; SG77 Login: Troubleshooting Common Errors; SG77 Login: How to Reset Your Password; SG77 Login: Optimizing Account Protection; SG77 Login: A Review of Access Features; SG77 Login: Essential Security Tips for Users
+2026-05-11 14:47:15,590 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 112 on attempt 1
+2026-05-11 14:48:41,837 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 928 words on attempt 1
+2026-05-11 14:53:53,306 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 169 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 1
+2026-05-11 14:55:17,896 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 146 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 2
+2026-05-11 14:56:47,566 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 167 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 3
+2026-05-11 14:58:17,734 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 984 (must be more than: 1000) for keyword 'The Cozy Desk' on attempt 4
+2026-05-11 14:59:47,619 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 146 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 5
+2026-05-11 15:02:15,932 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 864 (must be more than: 1000) for keyword 'The Cozy Desk' on attempt 6
+2026-05-11 15:03:34,726 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 828 (must be more than: 1000) for keyword 'The Cozy Desk' on attempt 7
+2026-05-11 15:05:04,682 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 112, 109, 109, 107, 108 on attempt 1
+2026-05-11 15:06:09,088 WARNING blog_generator page_generator.py:144 generate_page() - Page word count is 934 (must be more than: 1000) for keyword 'The Cozy Desk' on attempt 8
+2026-05-11 15:08:27,353 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 149 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 9
+2026-05-11 15:10:36,251 WARNING blog_generator content_generator.py:230 _generate_content_from_prompt() - Content validation failed on attempt 1: The required brand URL must be inserted exactly once anywhere in the article.
+2026-05-11 15:11:47,927 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 141 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 10
+2026-05-11 15:14:24,776 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 785 (minimum: 800) on attempt 2. Raw response length: 5376 chars
+2026-05-11 15:15:16,716 WARNING blog_generator page_generator.py:129 generate_page() - Page meta description is 159 characters (target: 120-140) for keyword 'The Cozy Desk' on attempt 11
+2026-05-11 15:18:10,401 WARNING blog_generator content_generator.py:230 _generate_content_from_prompt() - Content validation failed on attempt 3: The required brand URL must be inserted exactly once anywhere in the article.
+2026-05-11 15:19:21,935 INFO blog_generator page_generator.py:169 generate_page() - Page generated successfully for keyword 'The Cozy Desk' with 1021 words and 4 image placeholders on attempt 12
+2026-05-11 15:22:02,512 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 850 words on attempt 1
+2026-05-11 15:25:07,509 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 157 characters (target: 120-140) for keyword 'blog' on attempt 1
+2026-05-11 15:26:34,314 WARNING blog_generator page_generator.py:145 generate_page() - Page word count is 646 (must be more than: 1000) for keyword 'blog' on attempt 2
+2026-05-11 15:28:03,259 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 185 characters (target: 120-140) for keyword 'blog' on attempt 3
+2026-05-11 15:29:09,183 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 146 characters (target: 120-140) for keyword 'blog' on attempt 4
+2026-05-11 15:30:15,501 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 148 characters (target: 120-140) for keyword 'blog' on attempt 5
+2026-05-11 15:31:48,037 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 143 on attempt 1
+2026-05-11 15:32:54,920 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 113 characters (target: 120-140) for keyword 'blog' on attempt 6
+2026-05-11 15:35:41,481 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 883 words on attempt 1
+2026-05-11 15:36:30,696 WARNING blog_generator page_generator.py:145 generate_page() - Page word count is 662 (must be more than: 1000) for keyword 'blog' on attempt 7
+2026-05-11 15:38:21,392 INFO blog_generator page_generator.py:170 generate_page() - Page generated successfully for keyword 'blog' with 1101 words and 5 image placeholders on attempt 8
+2026-05-11 16:07:46,099 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 157 characters (target: 120-140) for keyword 'About' on attempt 1
+2026-05-11 16:09:16,294 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 157 characters (target: 120-140) for keyword 'About' on attempt 2
+2026-05-11 16:11:20,401 WARNING blog_generator page_generator.py:145 generate_page() - Page word count is 890 (must be more than: 1000) for keyword 'About' on attempt 3
+2026-05-11 16:13:48,940 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 154 characters (target: 120-140) for keyword 'About' on attempt 4
+2026-05-11 16:14:01,955 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 78, 81, 86, 77, 81 on attempt 1
+2026-05-11 16:16:10,200 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 90 characters (target: 120-140) for keyword 'About' on attempt 5
+2026-05-11 16:16:25,273 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 108, 117, 113, 108, 95 on attempt 2
+2026-05-11 16:18:37,514 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 117 characters (target: 120-140) for keyword 'About' on attempt 6
+2026-05-11 16:18:52,818 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 112, 114, 113, 108 on attempt 3
+2026-05-11 16:21:57,137 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 161 characters (target: 120-140) for keyword 'About' on attempt 7
+2026-05-11 16:22:33,188 WARNING blog_generator content_generator.py:175 _generate_content_from_prompt() - Content used banned terms bypass on attempt 1
+2026-05-11 16:24:48,578 INFO blog_generator page_generator.py:170 generate_page() - Page generated successfully for keyword 'About' with 1135 words and 3 image placeholders on attempt 8
+2026-05-11 16:25:25,252 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 420 words on attempt 2
+2026-05-11 16:39:52,061 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 115, 113, 115 on attempt 1
+2026-05-11 16:41:02,099 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 338 words on attempt 1
+2026-05-11 16:51:40,038 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 153, 115 on attempt 1
+2026-05-11 16:53:10,250 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 1127 words on attempt 1
+2026-05-11 17:17:38,585 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 196, 169, 177, 164, 172 on attempt 1
+2026-05-11 17:18:22,480 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 195, 175, 173, 171, 173 on attempt 1
+2026-05-11 17:19:26,199 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 158, 169, 156, 160, 174 on attempt 1
+2026-05-11 17:20:22,519 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 165, 151 on attempt 2
+2026-05-11 17:21:09,592 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 155, 157, 155, 155, 144 on attempt 2
+2026-05-11 17:21:59,929 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 147, 150, 146, 157, 173 on attempt 2
+2026-05-11 17:23:39,916 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 742 (minimum: 800) on attempt 1. Raw response length: 5362 chars
+2026-05-11 17:24:26,919 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 160, 152, 161, 149, 160 on attempt 3
+2026-05-11 17:25:22,193 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 182, 203, 199, 164, 169 on attempt 3
+2026-05-11 17:27:17,584 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 1093 words on attempt 2
+2026-05-11 17:28:11,186 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 228, 196, 216, 211, 228 on attempt 4
+2026-05-11 17:31:37,595 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 228, 213, 201, 206, 206 on attempt 4
+2026-05-11 17:32:32,740 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 179, 173, 168, 164, 192 on attempt 1
+2026-05-11 17:38:35,472 WARNING blog_generator page_generator.py:130 generate_page() - Page meta description is 115 characters (target: 120-140) for keyword 'The Curious Pad' on attempt 1
+2026-05-11 17:40:00,552 WARNING blog_generator page_generator.py:145 generate_page() - Page word count is 737 (must be more than: 1000) for keyword 'The Curious Pad' on attempt 2
+2026-05-11 17:41:48,019 INFO blog_generator page_generator.py:170 generate_page() - Page generated successfully for keyword 'The Curious Pad' with 1135 words and 7 image placeholders on attempt 3
+2026-05-11 17:53:19,100 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 142, 147, 149 on attempt 1
+2026-05-11 17:55:08,840 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 794 (minimum: 800) on attempt 1. Raw response length: 5519 chars
+2026-05-11 17:56:38,089 INFO blog_generator utils.py:47 extract_json_string() - Successfully repaired truncated JSON response
+2026-05-11 17:56:38,095 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 947 words on attempt 2
+2026-05-11 17:57:52,357 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 188, 199, 172, 176, 184 on attempt 1
+2026-05-11 17:58:24,000 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 166, 158, 161, 162, 161 on attempt 2
+2026-05-11 17:58:50,716 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 105, 93, 94, 90, 83 on attempt 3
+2026-05-11 18:46:58,327 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 754 (minimum: 800) on attempt 1. Raw response length: 5381 chars
+2026-05-11 21:59:02,797 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 793 (minimum: 800) on attempt 2. Raw response length: 5553 chars
+2026-05-12 02:13:26,904 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 907 words on attempt 3
+2026-05-12 09:29:14,898 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 211, 197, 199, 195, 198 on attempt 1
+2026-05-12 09:29:48,982 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 142 on attempt 2
+2026-05-12 09:31:23,256 WARNING blog_generator content_generator.py:175 _generate_content_from_prompt() - Content used banned terms glitch on attempt 1
+2026-05-12 09:32:42,727 INFO blog_generator utils.py:47 extract_json_string() - Successfully repaired truncated JSON response
+2026-05-12 09:32:42,733 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 926 words on attempt 2
+2026-05-12 09:35:31,496 WARNING blog_generator title_generator.py:60 _generate_titles_from_prompt() - Generated titles used forbidden phrases on attempt 1: Optimizing Your Gaming Experience with SG77 PH; Understanding SG77 PH: A Guide for New Users; SG77 PH and the Future of Online Gaming Platforms; Enhancing Player Engagement Through SG77 PH Integration; Troubleshooting Common SG77 PH Setup Issues; SG77 PH: A Deep Dive into Digital Gaming Tools; How SG77 PH Shapes Modern Player Interactions; SG77 PH and the Evolution of Gaming Software; Mastering SG77 PH for Better Digital Experiences; SG77 PH: Exploring Its Role in Online Entertainment; Securing Your SG77 PH Experience with Best Practices; SG77 PH and the Rise of Interactive Gaming Platforms; Navigating SG77 PH: Tips for Smooth Gameplay; The Impact of SG77 PH on Gaming Accessibility; SG77 PH: A Primer on Technology and User Experience; SG77 PH and the Challenges of Digital Platform Integration; How to Maximize SG77 PH Performance for Gamers; SG77 PH: Balancing Innovation and User Safety; SG77 PH and the Trends Shaping Online Gaming Ecosystems; SG77 PH: A Look at Its Influence on Digital Tools
+2026-05-12 09:48:25,476 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 152, 169, 158, 174, 161 on attempt 1
+2026-05-12 09:48:42,554 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 168, 164, 149, 141 on attempt 1
+2026-05-12 09:50:53,866 WARNING blog_generator meta_description_generator.py:108 _generate_meta_descriptions_from_prompt() - Generated meta descriptions missed 120-140 characters with lengths 155, 145, 162, 167, 158 on attempt 2
+2026-05-12 09:51:45,040 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 660 (minimum: 800) on attempt 1. Raw response length: 4640 chars
+2026-05-12 09:53:45,726 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 155 on attempt 3
+2026-05-12 09:54:57,675 WARNING blog_generator content_generator.py:230 _generate_content_from_prompt() - Content validation failed on attempt 2: The required brand URL must be inserted exactly once anywhere in the article.
+2026-05-12 09:56:55,929 WARNING blog_generator title_generator.py:60 _generate_titles_from_prompt() - Generated titles used forbidden phrases on attempt 1: How to Optimize Your Gaming Experience with By Bet; Understanding By Bet's Impact on Digital Gaming Platforms; By Bet: A Guide to Enhancing Player Engagement; The Role of By Bet in Modern Gaming Software; Exploring By Bet's Influence on Online Gaming Trends; By Bet and Its Effect on User Experience Design; Navigating By Bet's Features for Better Gaming; By Bet: Improving Interaction in Digital Platforms; The Benefits of Integrating By Bet into Gaming Apps; By Bet and the Future of Entertainment Technology; How By Bet Shapes Player Behavior in Games; By Bet: A Tool for Enhancing Digital Engagement; The Science Behind By Bet's User Interface Design; By Bet and Its Contribution to Online Safety Standards; A Beginner's Guide to Using By Bet Effectively; By Bet: Balancing Fun and Responsibility in Gaming; The Evolution of By Bet in Entertainment Tech; By Bet and the Rise of Interactive Gaming Experiences; How By Bet Supports Responsible Digital Play; By Bet: Innovating the Way We Engage with Games
+2026-05-12 09:57:56,483 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 754 (minimum: 800) on attempt 1. Raw response length: 5671 chars
+2026-05-12 09:58:57,589 WARNING blog_generator content_generator.py:175 _generate_content_from_prompt() - Content used banned terms guaranteed on attempt 3
+2026-05-12 10:02:55,026 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 1135 words on attempt 2
+2026-05-12 10:04:00,565 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 789 (minimum: 800) on attempt 4. Raw response length: 5576 chars
+2026-05-12 10:05:36,195 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 1070 words on attempt 5
+2026-05-12 10:07:32,788 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 119 on attempt 1
+2026-05-12 10:08:59,468 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 598 (minimum: 800) on attempt 1. Raw response length: 4507 chars
+2026-05-12 10:10:25,201 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 997 words on attempt 2
+2026-05-12 10:12:52,614 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 152, 143, 144 on attempt 1
+2026-05-12 10:14:48,704 WARNING blog_generator content_generator.py:191 _generate_content_from_prompt() - Content word count is 599 (minimum: 800) on attempt 1. Raw response length: 4556 chars
+2026-05-12 10:16:33,150 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 936 words on attempt 2
+2026-05-12 10:25:29,502 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 149, 143 on attempt 1
+2026-05-12 10:26:21,255 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 310 words on attempt 1
+2026-05-12 10:28:48,013 WARNING blog_generator meta_description_generator.py:77 _generate_meta_descriptions_from_prompt() - Ignored meta descriptions outside 120-140 characters with lengths 149 on attempt 1
+2026-05-12 10:29:49,786 INFO blog_generator content_generator.py:237 _generate_content_from_prompt() - Content generated successfully with 520 words on attempt 1

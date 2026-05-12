@@ -1,6 +1,6 @@
 import json
 import re
-from prompts import build_backlink_content_prompt, build_content_prompt
+from prompts import build_backlink_content_prompt, build_content_prompt, build_scoped_content_revision_prompt
 from utils import extract_json_string
 from logger import logger
 from word_bank import find_banned_terms_in_text
@@ -113,7 +113,7 @@ def parse_generated_content(raw: str) -> tuple[str, int]:
     return content, word_count
 
 
-def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BLOG_WORDS, max_words: int = 0, validator=None, progress_callback=None):
+def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BLOG_WORDS, max_words: int = 0, validator=None, progress_callback=None, target_min_words: int | None = None):
     last_word_count = 0
     last_validation_error = ""
     last_length_error = ""
@@ -124,12 +124,13 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
+            retry_min_words = target_min_words or min_words
             if min_words:
                 retry_instruction = (
                     f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
                     f"- Your previous response was too short.\n"
                     f"- Return COMPLETE content in the required selected format only inside JSON.\n"
-                    f"- The article must be at least {min_words} words.\n"
+                    f"- The article should target at least {retry_min_words} words.\n"
                     f"- Expand each section with more detail, examples, and explanation.\n"
                 )
             else:
@@ -147,7 +148,7 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                 )
                 if min_words:
                     retry_instruction += (
-                        f"- Do not cut useful context below the minimum word count of {min_words} words.\n"
+                        f"- Do not cut useful context below the validation minimum word count of {min_words} words.\n"
                     )
             if last_validation_error:
                 retry_instruction += (
@@ -275,6 +276,9 @@ def generate_content(
     max_words: int = 1400,
     progress_callback=None,
 ):
+    from app.services.content_format_service import markdown_to_output
+
+    prompt_min_words = _prompt_min_words_with_buffer(min_words)
     prompt = build_content_prompt(
         title=title,
         keyword=keyword,
@@ -285,16 +289,60 @@ def generate_content(
         brand=brand,
         brand_context=brand_context,
         change_request=change_request,
-        min_words=min_words,
+        min_words=prompt_min_words,
         max_words=max_words,
     )
-    return _generate_content_from_prompt(
+    markdown_content = _generate_content_from_prompt(
         provider,
         prompt,
         min_words=min_words,
         max_words=max_words,
+        target_min_words=prompt_min_words,
         progress_callback=progress_callback,
     )
+    return markdown_to_output(markdown_content, "html")
+
+
+def revise_existing_content(
+    provider,
+    title: str,
+    existing_content: str,
+    change_request: str,
+    scope: str = "full",
+    output_format: str = "html",
+    keyword: str = "",
+    brand: str = "",
+    required_url: str = "",
+    required_anchor_text: str = "",
+    progress_callback=None,
+):
+    prompt = build_scoped_content_revision_prompt(
+        title=title,
+        existing_content=existing_content,
+        change_request=change_request,
+        scope=scope,
+        output_format=output_format,
+        keyword=keyword,
+        brand=brand,
+        required_url=required_url,
+        required_anchor_text=required_anchor_text,
+    )
+
+    def validator(content: str) -> str:
+        url_error = required_url_presence_error(content, required_url)
+        if url_error:
+            return url_error
+        return required_anchor_text_presence_error(content, required_anchor_text)
+
+    revised_content = _generate_content_from_prompt(
+        provider,
+        prompt,
+        min_words=0,
+        max_words=0,
+        validator=validator if required_url or required_anchor_text else None,
+        progress_callback=progress_callback,
+    )
+    return keep_required_url_once(revised_content, required_url)
 
 
 def keep_required_url_once(content: str, required_url: str) -> str:
@@ -343,6 +391,18 @@ def required_url_presence_error(content: str, required_url: str) -> str:
     return ""
 
 
+def required_anchor_text_presence_error(content: str, required_anchor_text: str) -> str:
+    cleaned_anchor = (required_anchor_text or "").strip()
+    if not cleaned_anchor:
+        return ""
+
+    visible_text = re.sub(r"<[^>]+>", " ", content or "")
+    visible_text = re.sub(r"\s+", " ", visible_text).strip()
+    if cleaned_anchor.lower() not in visible_text.lower():
+        return "The required anchor text must be included exactly as provided for the required link."
+    return ""
+
+
 def medium_example_mention_error(content: str, brand: str = "", keyword: str = "") -> str:
     visible_text = re.sub(r"<[^>]+>", " ", content or "")
     visible_text = re.sub(r"https?://\S+|www\.\S+", " ", visible_text)
@@ -384,14 +444,17 @@ def generate_backlink_content(
     change_request: str = "",
     progress_callback=None,
 ):
+    from app.services.content_format_service import markdown_to_output
+
     effective_max_words = _effective_medium_max_words(
         backlink_website_name,
         backlink_blog_name,
         backlink_website_type,
         backlink_max_characters,
     )
-    effective_min_words = _effective_medium_min_words(backlink_min_words) + 100
+    effective_min_words = _effective_medium_min_words(backlink_min_words)
     validation_min_words = effective_min_words
+    prompt_min_words = _prompt_min_words_with_buffer(validation_min_words)
     prompt = build_backlink_content_prompt(
         title=title,
         keyword=keyword,
@@ -405,7 +468,7 @@ def generate_backlink_content(
         backlink_website_type=backlink_website_type,
         backlink_post_type=backlink_post_type,
         backlink_title_max_characters=backlink_title_max_characters,
-        backlink_min_words=effective_min_words,
+        backlink_min_words=prompt_min_words,
         backlink_max_characters=effective_max_words,
         backlink_tier_level=backlink_tier_level,
         backlink_blog_name=backlink_blog_name,
@@ -420,15 +483,91 @@ def generate_backlink_content(
             return url_error
         return medium_example_mention_error(content, brand=brand, keyword=keyword)
 
-    content = _generate_content_from_prompt(
+    markdown_content = _generate_content_from_prompt(
         provider,
         prompt,
         min_words=validation_min_words ,
         max_words=effective_max_words,
         validator=validator,
+        target_min_words=prompt_min_words,
         progress_callback=progress_callback,
     )
-    return keep_required_url_once(content, money_site_url)
+    markdown_content = keep_required_url_once(markdown_content, money_site_url)
+    return markdown_to_output(markdown_content, backlink_post_type)
+
+
+def generate_tier2_content(
+    provider,
+    title: str,
+    anchor_text: str = "",
+    link: str = "",
+    tone: str = "natural",
+    backlink_website_name: str = "",
+    backlink_blog_url: str = "",
+    backlink_website_type: str = "blog",
+    backlink_post_type: str = "html",
+    backlink_title_max_characters: int | str = 0,
+    backlink_min_words: int | str = 0,
+    backlink_max_characters: int | str = 0,
+    backlink_tier_level: str = "Tier 2",
+    backlink_blog_name: str = "",
+    backlink_writer_name: str = "",
+    backlink_content_guidelines: str = "",
+    suggested_content: str = "",
+    change_request: str = "",
+    progress_callback=None,
+):
+    from app.services.content_format_service import markdown_to_output
+
+    effective_max_words = _effective_medium_max_words(
+        backlink_website_name,
+        backlink_blog_name,
+        backlink_website_type,
+        backlink_max_characters,
+    )
+    effective_min_words = _effective_medium_min_words(backlink_min_words)
+    prompt_min_words = _prompt_min_words_with_buffer(effective_min_words)
+    prompt = build_backlink_content_prompt(
+        title=title,
+        keyword=anchor_text,
+        tone=tone,
+        money_site_url=link,
+        brand="",
+        brand_context="",
+        backlink_website_name=backlink_website_name,
+        backlink_blog_url=backlink_blog_url,
+        backlink_website_type=backlink_website_type,
+        backlink_post_type=backlink_post_type,
+        backlink_title_max_characters=backlink_title_max_characters,
+        backlink_min_words=prompt_min_words,
+        backlink_max_characters=effective_max_words,
+        backlink_tier_level=backlink_tier_level or "Tier 2",
+        backlink_blog_name=backlink_blog_name,
+        backlink_writer_name=backlink_writer_name,
+        backlink_content_guidelines=backlink_content_guidelines,
+        suggested_content=suggested_content,
+        change_request=change_request,
+        required_anchor_text=anchor_text,
+        required_link_label="Tier 2",
+    )
+
+    def validator(content: str) -> str:
+        url_error = required_url_presence_error(content, link)
+        if url_error:
+            return url_error
+        return required_anchor_text_presence_error(content, anchor_text)
+
+    markdown_content = _generate_content_from_prompt(
+        provider,
+        prompt,
+        min_words=effective_min_words,
+        max_words=effective_max_words,
+        validator=validator,
+        target_min_words=prompt_min_words,
+        progress_callback=progress_callback,
+    )
+    markdown_content = keep_required_url_once(markdown_content, link)
+    return markdown_to_output(markdown_content, backlink_post_type)
 
 
 def _effective_medium_max_words(
@@ -457,3 +596,13 @@ def _effective_medium_min_words(min_words: int | str) -> int:
         return max(0, int(min_words or 0))
     except (TypeError, ValueError):
         return 0
+
+
+def _prompt_min_words_with_buffer(min_words: int | str, buffer_words: int = 100) -> int:
+    try:
+        cleaned = max(0, int(min_words or 0))
+    except (TypeError, ValueError):
+        cleaned = 0
+    if not cleaned:
+        return 0
+    return cleaned + max(0, int(buffer_words or 0))

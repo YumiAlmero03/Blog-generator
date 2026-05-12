@@ -21,6 +21,9 @@
       {% if error %}
         <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
       {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
+      {% endif %}
 
       <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for straightforward pages that do not need the full SEO landing-page structure.</p>
 
@@ -62,6 +65,7 @@
         {% endif %}
 
         <div class="flex flex-wrap gap-3">
+          <input type="hidden" name="action" value="generate_simple_page" />
           <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Simple Page</button>
           {% if generated_content %}
             <button type="button" id="copySimpleHtmlButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Copy HTML</button>
@@ -72,7 +76,10 @@
 
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if generated_content %}
-        <h2 class="mb-5 font-display text-3xl text-sand-950">{{ generated_title or page_title }}</h2>
+        <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <h2 class="font-display text-3xl text-sand-950">{{ generated_title or page_title }}</h2>
+          <button type="submit" form="saveSimplePageForm" class="inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Save Generated Page</button>
+        </div>
         {% if meta_descriptions %}
           <div class="mb-5 rounded-[22px] border border-sand-200 bg-sand-50/80 p-5">
             <div class="mb-4 flex items-center justify-between gap-3">
@@ -97,6 +104,30 @@
 
         <label for="htmlOutput" class="mb-2 mt-5 block text-sm font-bold text-sand-900">HTML output</label>
         <textarea id="htmlOutput" readonly class="min-h-[260px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ generated_content }}</textarea>
+        <div class="mt-5 grid gap-4 lg:grid-cols-3">
+          <div>
+            <label for="markdownOutput" class="mb-2 block text-sm font-bold text-sand-900">Markdown output</label>
+            <textarea id="markdownOutput" readonly class="min-h-[220px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ html_to_markdown(generated_content) }}</textarea>
+          </div>
+          <div>
+            <label for="htmlOutputMirror" class="mb-2 block text-sm font-bold text-sand-900">HTML output</label>
+            <textarea id="htmlOutputMirror" readonly class="min-h-[220px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ generated_content }}</textarea>
+          </div>
+          <div>
+            <label for="gutenbergOutput" class="mb-2 block text-sm font-bold text-sand-900">Gutenberg output</label>
+            <textarea id="gutenbergOutput" readonly class="min-h-[220px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ html_to_gutenberg(generated_content) }}</textarea>
+          </div>
+        </div>
+        <form id="saveSimplePageForm" method="post" class="hidden-form" aria-hidden="true">
+          <input type="hidden" name="action" value="save_generated_blog" />
+          <input type="hidden" name="brand" value="{{ brand }}" />
+          <input type="hidden" name="page_title" value="{{ page_title }}" />
+          <input type="hidden" name="page_type" value="{{ page_type }}" />
+          <input type="hidden" name="expectations" value="{{ expectations }}" />
+          <input type="hidden" name="generated_title" value="{{ generated_title }}" />
+          <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
+          <textarea name="generated_content">{{ generated_content }}</textarea>
+        </form>
       {% else %}
         <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
           Enter a page title and choose a simple page type to generate content.

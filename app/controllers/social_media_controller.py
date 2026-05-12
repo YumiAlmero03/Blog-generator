@@ -61,15 +61,21 @@ def social_media_list():
 def social_media_activator():
     state = {
         "focus_word": "",
+        "reference_link": "",
         "selected_profile_id": "",
         "selected_profile": None,
         "result": None,
         "error": None,
+        "success": None,
         "profiles": list_social_profiles(),
     }
 
     if request.method == "POST":
-        _handle_generate_social_media_post(state)
+        action = request.form.get("action", "generate_post").strip()
+        if action == "save_generated_blog":
+            _handle_save_social_media_post(state)
+        else:
+            _handle_generate_social_media_post(state)
 
     return render_template("social_media_activator.html", **base_template_context(), **state)
 
@@ -119,6 +125,7 @@ def _handle_delete_social_profile(state: dict):
 
 def _handle_generate_social_media_post(state: dict):
     state["focus_word"] = request.form.get("focus_word", "").strip()
+    state["reference_link"] = request.form.get("reference_link", "").strip()
     state["selected_profile_id"] = request.form.get("selected_profile_id", "").strip()
 
     if not state["focus_word"]:
@@ -144,6 +151,7 @@ def _handle_generate_social_media_post(state: dict):
             brand_name=brand_name,
             social_type=state["selected_profile"].get("social_type", ""),
             brand_context=get_brand_context(brand_name),
+            reference_link=state["reference_link"],
             progress_callback=progress,
         )
         post_content = state["result"].get("post_content", "")
@@ -175,6 +183,7 @@ def _handle_generate_social_media_post(state: dict):
             tags=tags,
             prompt_inputs={
                 "focus_word": state["focus_word"],
+                "reference_link": state["reference_link"],
                 "social_type": state["selected_profile"].get("social_type", ""),
                 "image_description": state["result"].get("image_description", ""),
             },
@@ -188,6 +197,68 @@ def _handle_generate_social_media_post(state: dict):
             "An error occurred while generating the social media post. Check logs/app.log for details.",
             exc,
         )
+
+
+def _handle_save_social_media_post(state: dict):
+    state["focus_word"] = request.form.get("focus_word", "").strip()
+    state["reference_link"] = request.form.get("reference_link", "").strip()
+    state["selected_profile_id"] = request.form.get("selected_profile_id", "").strip()
+    post_content = request.form.get("post_content", "").strip()
+    image_description = request.form.get("image_description", "").strip()
+    tags = [tag.strip() for tag in request.form.get("tags", "").split(",") if tag.strip()]
+
+    if state["selected_profile_id"].isdigit():
+        state["selected_profile"] = get_social_profile(int(state["selected_profile_id"]))
+
+    if not state["selected_profile"]:
+        state["error"] = "The selected social media profile could not be found."
+        return
+    if not post_content:
+        state["error"] = "There is no generated social post to save."
+        return
+
+    state["result"] = {
+        "post_content": post_content,
+        "image_description": image_description,
+        "tags": tags,
+        "character_count": len(post_content),
+    }
+    quality_report = {
+        "word_count": len(post_content.split()),
+        "checks": [
+            {
+                "name": "Character count",
+                "status": "pass" if len(post_content) <= 220 else "fail",
+                "detail": f"{len(post_content)} of 220 characters",
+                "recommendation": "Keep social activator posts at or below 220 characters.",
+            },
+            {
+                "name": "Tags",
+                "status": "pass" if tags else "warn",
+                "detail": f"{len(tags)} tag(s)",
+                "recommendation": "Use a few platform-appropriate tags without cluttering the post.",
+            },
+        ],
+    }
+    record_generation(
+        content_type="Social Post",
+        brand_name=state["selected_profile"].get("brand_name", ""),
+        title=f"{state['selected_profile'].get('social_type', '')} post for {state['focus_word']}",
+        primary_keyword=state["focus_word"],
+        medium_name=state["selected_profile"].get("social_type", ""),
+        word_count=quality_report["word_count"],
+        tags=tags,
+        prompt_inputs={
+            "focus_word": state["focus_word"],
+            "reference_link": state["reference_link"],
+            "social_type": state["selected_profile"].get("social_type", ""),
+            "image_description": image_description,
+            "manual_save": True,
+        },
+        content=post_content,
+        quality_report=quality_report,
+    )
+    state["success"] = "Generated social post saved to history."
 
 
 def _progress_callback(label: str, token: str):

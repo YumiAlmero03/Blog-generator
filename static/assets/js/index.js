@@ -18,8 +18,12 @@
   const linksContainer = document.getElementById("linksContainer");
   const addLinkButton = document.getElementById("addLinkButton");
   const generateContentButton = document.getElementById("generateContentButton");
+  const saveGeneratedButton = document.getElementById("saveGeneratedButton");
+  const contentActionInput = document.getElementById("contentActionInput");
   const previewButton = document.getElementById("previewDocButton");
   const downloadButton = document.getElementById("downloadDocButton");
+  const outputViewButtons = Array.from(document.querySelectorAll("[data-output-view-button]"));
+  const outputViewPanels = Array.from(document.querySelectorAll("[data-output-view-panel]"));
   let quill = null;
   let linkFieldCounter = 0;
 
@@ -78,6 +82,136 @@
     html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     html = html.replace(/\[(.*?)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>');
     return html;
+  }
+
+  function htmlToMarkdown(html) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html || "";
+    const chunks = [];
+
+    function inlineMarkdown(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent || "";
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return "";
+      }
+      const tag = node.tagName.toLowerCase();
+      const inner = Array.from(node.childNodes).map(inlineMarkdown).join("");
+      if (tag === "a") {
+        const href = node.getAttribute("href") || "";
+        return href ? "[" + inner + "](" + href + ")" : inner;
+      }
+      if (tag === "strong" || tag === "b") {
+        return "**" + inner + "**";
+      }
+      if (tag === "em" || tag === "i") {
+        return "*" + inner + "*";
+      }
+      return inner;
+    }
+
+    Array.from(wrapper.childNodes).forEach(function (node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent.trim();
+        if (text) {
+          chunks.push(text);
+        }
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return;
+      }
+      const tag = node.tagName.toLowerCase();
+      const text = inlineMarkdown(node).trim();
+      if (!text) {
+        return;
+      }
+      if (tag === "h1") {
+        chunks.push("# " + text);
+      } else if (tag === "h2") {
+        chunks.push("## " + text);
+      } else if (tag === "h3") {
+        chunks.push("### " + text);
+      } else if (tag === "li") {
+        chunks.push("- " + text);
+      } else if (tag === "ul" || tag === "ol") {
+        const items = Array.from(node.querySelectorAll(":scope > li")).map(function (item) {
+          return "- " + inlineMarkdown(item).trim();
+        });
+        chunks.push(items.join("\n"));
+      } else if (tag === "blockquote") {
+        chunks.push("> " + text);
+      } else {
+        chunks.push(text);
+      }
+    });
+    return chunks.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function htmlToGutenberg(html) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html || "";
+    const parts = [];
+    Array.from(wrapper.children).forEach(function (node) {
+      const tag = node.tagName.toLowerCase();
+      const outer = node.outerHTML;
+      if (tag === "p") {
+        parts.push("<!-- wp:paragraph -->" + outer + "<!-- /wp:paragraph -->");
+      } else if (tag === "h2") {
+        parts.push("<!-- wp:heading -->" + outer + "<!-- /wp:heading -->");
+      } else if (tag === "h3") {
+        parts.push('<!-- wp:heading {"level":3} -->' + outer + "<!-- /wp:heading -->");
+      } else if (tag === "ul" || tag === "ol") {
+        parts.push("<!-- wp:list -->" + outer + "<!-- /wp:list -->");
+      } else if (tag === "blockquote") {
+        parts.push("<!-- wp:quote -->" + outer + "<!-- /wp:quote -->");
+      } else {
+        parts.push(outer);
+      }
+    });
+    return parts.join("");
+  }
+
+  function refreshOutputViews() {
+    if (!quill) {
+      return;
+    }
+    const html = quill.root.innerHTML;
+    const markdown = htmlToMarkdown(html);
+    const markdownView = document.getElementById("markdownOutputView");
+    const htmlView = document.getElementById("htmlOutputView");
+    const gutenbergView = document.getElementById("gutenbergOutputView");
+    if (markdownView) {
+      markdownView.value = markdown;
+    }
+    if (htmlView) {
+      htmlView.value = html;
+    }
+    if (gutenbergView) {
+      gutenbergView.value = htmlToGutenberg(html);
+    }
+  }
+
+  function setOutputView(mode) {
+    const selectedMode = mode || "visual";
+    const editorWrapper = document.getElementById("editorContainer");
+    if (editorWrapper) {
+      editorWrapper.classList.toggle("hidden", selectedMode !== "visual");
+    }
+    outputViewPanels.forEach(function (panel) {
+      panel.classList.toggle("hidden", panel.dataset.outputViewPanel !== selectedMode);
+    });
+    outputViewButtons.forEach(function (button) {
+      const active = button.dataset.outputViewButton === selectedMode;
+      button.classList.toggle("bg-sand-600", active);
+      button.classList.toggle("text-sand-50", active);
+      button.classList.toggle("border", !active);
+      button.classList.toggle("border-sand-200", !active);
+      button.classList.toggle("bg-white", !active);
+      button.classList.toggle("text-sand-700", !active);
+    });
+    refreshOutputViews();
   }
 
   function containsHtmlTags(text) {
@@ -139,6 +273,9 @@
 
   if (generateContentButton && contentForm) {
     generateContentButton.addEventListener("click", function () {
+      if (contentActionInput) {
+        contentActionInput.value = "generate_content";
+      }
       syncCustomTitleRadio();
       const selectedTitle = getSelectedTitle();
       if (!selectedTitle) {
@@ -147,6 +284,22 @@
       }
       prepareContentForm();
       window.AppUi.startFormLoading(contentForm, "Generating article content...");
+      contentForm.submit();
+    });
+  }
+
+  if (saveGeneratedButton && contentForm) {
+    saveGeneratedButton.addEventListener("click", function () {
+      if (contentActionInput) {
+        contentActionInput.value = "save_generated_blog";
+      }
+      syncCustomTitleRadio();
+      const selectedTitle = getSelectedTitle();
+      if (!selectedTitle) {
+        window.alert("Please select a title before saving.");
+        return;
+      }
+      prepareContentForm();
       contentForm.submit();
     });
   }
@@ -223,8 +376,18 @@
 
     quill.root.innerHTML = cleanHtml;
     updateEditorWordCount();
-    quill.on("text-change", updateEditorWordCount);
+    refreshOutputViews();
+    quill.on("text-change", function () {
+      updateEditorWordCount();
+      refreshOutputViews();
+    });
   }
+
+  outputViewButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      setOutputView(button.dataset.outputViewButton);
+    });
+  });
 
   if (addLinkButton) {
     addLinkButton.addEventListener("click", function () {

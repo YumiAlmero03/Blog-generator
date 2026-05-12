@@ -1,6 +1,9 @@
+import json
+
 from flask import render_template, request
 
 from database import get_brand_context, list_brand_names, record_generation, record_page, upsert_brand
+from generators.content_generator import count_html_words, revise_existing_content
 from generators.page_generator import generate_page
 from generators.simple_page_generator import generate_simple_page
 from logger import logger
@@ -27,10 +30,12 @@ def page_generator():
         "regenerate_scope": "full",
         "image_count": 0,
         "error": None,
+        "success": None,
         "brand_names": list_brand_names(),
     }
 
     if request.method == "POST":
+        action = request.form.get("action", "generate_page").strip()
         state["keyword"] = request.form.get("keyword", "").strip()
         state["brand"] = request.form.get("brand", "").strip()
         state["supporting_keywords"] = request.form.get("supporting_keywords", "").strip()
@@ -38,8 +43,14 @@ def page_generator():
         state["expectations"] = request.form.get("expectations", "").strip()
         state["change_request"] = request.form.get("change_request", "").strip()
         state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
+        state["page_title"] = request.form.get("page_title", "").strip()
+        state["meta_description"] = request.form.get("meta_description", "").strip()
+        state["page_content"] = request.form.get("page_content", "").strip()
+        state["image_count"] = _int_or_zero(request.form.get("image_count", "0"))
 
-        if not state["keyword"]:
+        if action == "save_generated_blog":
+            _save_page_generation(state)
+        elif not state["keyword"]:
             state["error"] = "Please enter a keyword."
         else:
             try:
@@ -49,24 +60,39 @@ def page_generator():
                 brand_context = get_brand_context(state["brand"])
                 min_words, max_words = get_page_word_limits()
                 progress = _progress_callback("Page", request.form.get("generation_status_token", ""))
-                progress("Generating page content...")
-                result = generate_page(
-                    provider,
-                    keyword=state["keyword"],
-                    brand=state["brand"],
-                    supporting_keywords=state["supporting_keywords"],
-                    page_type=state["page_type"],
-                    expectations=state["expectations"],
-                    brand_context=brand_context,
-                    change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
-                    min_words=min_words,
-                    max_words=max_words,
-                    progress_callback=progress,
-                )
-                state["page_title"] = result.get("title", "")
-                state["meta_description"] = result.get("meta_description", "")
-                state["page_content"] = result.get("content", "")
-                state["image_count"] = result.get("image_count", 0)
+                is_minor_revision = bool(state["page_content"] and state["change_request"])
+                if is_minor_revision:
+                    progress("Applying minor page changes...")
+                    state["page_content"] = revise_existing_content(
+                        provider,
+                        title=state["page_title"] or state["keyword"],
+                        existing_content=state["page_content"],
+                        change_request=state["change_request"],
+                        scope=state["regenerate_scope"],
+                        output_format="html",
+                        keyword=state["keyword"],
+                        brand=state["brand"],
+                        progress_callback=progress,
+                    )
+                else:
+                    progress("Generating page content...")
+                    result = generate_page(
+                        provider,
+                        keyword=state["keyword"],
+                        brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
+                        page_type=state["page_type"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
+                        min_words=min_words,
+                        max_words=max_words,
+                        progress_callback=progress,
+                    )
+                    state["page_title"] = result.get("title", "")
+                    state["meta_description"] = result.get("meta_description", "")
+                    state["page_content"] = result.get("content", "")
+                    state["image_count"] = result.get("image_count", 0)
                 state["quality_report"] = analyze_generated_content(
                     state["page_content"],
                     title=state["page_title"],
@@ -124,18 +150,25 @@ def simple_page_generator():
         "change_request": "",
         "regenerate_scope": "full",
         "error": None,
+        "success": None,
         "brand_names": list_brand_names(),
     }
 
     if request.method == "POST":
+        action = request.form.get("action", "generate_simple_page").strip()
         state["brand"] = request.form.get("brand", "").strip()
         state["page_title"] = request.form.get("page_title", "").strip()
         state["page_type"] = request.form.get("page_type", "").strip()
         state["expectations"] = request.form.get("expectations", "").strip()
         state["change_request"] = request.form.get("change_request", "").strip()
         state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
+        state["generated_title"] = request.form.get("generated_title", "").strip()
+        state["generated_content"] = request.form.get("generated_content", "").strip()
+        state["meta_descriptions"] = _parse_meta_descriptions(request.form.get("meta_descriptions_json", "").strip())
 
-        if not state["page_title"]:
+        if action == "save_generated_blog":
+            _save_simple_page_generation(state)
+        elif not state["page_title"]:
             state["error"] = "Please enter the page title or page name."
         else:
             try:
@@ -145,22 +178,39 @@ def simple_page_generator():
                 brand_context = get_brand_context(state["brand"])
                 min_words, max_words = get_page_word_limits()
                 progress = _progress_callback("Simple page", request.form.get("generation_status_token", ""))
-                progress("Generating simple page...")
-                result = generate_simple_page(
-                    provider,
-                    page_title=state["page_title"],
-                    page_type=state["page_type"],
-                    brand=state["brand"],
-                    expectations=state["expectations"],
-                    brand_context=brand_context,
-                    change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
-                    min_words=min_words,
-                    max_words=max_words,
-                    progress_callback=progress,
-                )
-                state["generated_title"] = result.get("title", "")
-                state["meta_descriptions"] = result.get("meta_descriptions", [])
-                state["generated_content"] = result.get("content", "")
+                is_minor_revision = bool(state["generated_content"] and state["change_request"])
+                if is_minor_revision:
+                    progress("Applying minor simple page changes...")
+                    state["generated_content"] = revise_existing_content(
+                        provider,
+                        title=state["generated_title"] or state["page_title"],
+                        existing_content=state["generated_content"],
+                        change_request=state["change_request"],
+                        scope=state["regenerate_scope"],
+                        output_format="html",
+                        keyword=state["page_title"],
+                        brand=state["brand"],
+                        progress_callback=progress,
+                    )
+                    if not state["generated_title"]:
+                        state["generated_title"] = state["page_title"]
+                else:
+                    progress("Generating simple page...")
+                    result = generate_simple_page(
+                        provider,
+                        page_title=state["page_title"],
+                        page_type=state["page_type"],
+                        brand=state["brand"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
+                        min_words=min_words,
+                        max_words=max_words,
+                        progress_callback=progress,
+                    )
+                    state["generated_title"] = result.get("title", "")
+                    state["meta_descriptions"] = result.get("meta_descriptions", [])
+                    state["generated_content"] = result.get("content", "")
                 selected_meta = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
                 state["quality_report"] = analyze_generated_content(
                     state["generated_content"],
@@ -203,6 +253,112 @@ def simple_page_generator():
                 )
 
     return render_template("simple_page_generator.html", **base_template_context(), **state)
+
+
+def _save_page_generation(state: dict):
+    if not state["page_title"]:
+        state["error"] = "There is no generated page title to save."
+        return
+    if not state["page_content"]:
+        state["error"] = "There is no generated page content to save."
+        return
+
+    min_words, max_words = get_page_word_limits()
+    state["quality_report"] = analyze_generated_content(
+        state["page_content"],
+        title=state["page_title"],
+        keyword=state["keyword"],
+        meta_description=state["meta_description"],
+        min_words=min_words,
+        max_words=max_words,
+    )
+    record_generation(
+        content_type="Page",
+        brand_name=state["brand"],
+        title=state["page_title"],
+        primary_keyword=state["keyword"],
+        word_count=state["quality_report"].get("word_count", count_html_words(state["page_content"])),
+        meta_description=state["meta_description"],
+        prompt_inputs={
+            "page_type": state["page_type"],
+            "supporting_keywords": state["supporting_keywords"],
+            "expectations": state["expectations"],
+            "manual_save": True,
+        },
+        content=state["page_content"],
+        quality_report=state["quality_report"],
+    )
+    record_page(
+        brand=state["brand"],
+        keyword=state["keyword"],
+        page_title=state["page_title"],
+        page_type=state["page_type"],
+        supporting_keywords=state["supporting_keywords"],
+        expectations=state["expectations"],
+    )
+    state["success"] = "Generated page saved to history."
+
+
+def _save_simple_page_generation(state: dict):
+    title = state["generated_title"] or state["page_title"]
+    selected_meta = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+    if not title:
+        state["error"] = "There is no generated simple page title to save."
+        return
+    if not state["generated_content"]:
+        state["error"] = "There is no generated simple page content to save."
+        return
+
+    min_words, max_words = get_page_word_limits()
+    state["quality_report"] = analyze_generated_content(
+        state["generated_content"],
+        title=title,
+        keyword=state["page_title"],
+        meta_description=selected_meta,
+        min_words=min_words,
+        max_words=max_words,
+    )
+    record_generation(
+        content_type="Simple Page",
+        brand_name=state["brand"],
+        title=title,
+        primary_keyword=state["page_title"],
+        word_count=state["quality_report"].get("word_count", count_html_words(state["generated_content"])),
+        meta_description=selected_meta,
+        prompt_inputs={
+            "page_type": state["page_type"],
+            "expectations": state["expectations"],
+            "manual_save": True,
+        },
+        content=state["generated_content"],
+        quality_report=state["quality_report"],
+    )
+    record_page(
+        brand=state["brand"],
+        keyword=state["page_title"],
+        page_title=title,
+        page_type=state["page_type"] or "simple page",
+        supporting_keywords="",
+        expectations=state["expectations"],
+    )
+    state["success"] = "Generated simple page saved to history."
+
+
+def _parse_meta_descriptions(raw: str) -> list[dict]:
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def _int_or_zero(value) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _scoped_change_request(change_request: str, scope: str) -> str:

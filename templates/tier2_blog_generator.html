@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% set active_page = "backlink-blog" %}
+{% set active_page = "tier2-blog" %}
 
-{% block title %}Medium Blog Generator{% endblock %}
+{% block title %}Tier 2 Blog Generator{% endblock %}
 
 {% block head_extras %}
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
@@ -11,14 +11,14 @@
   <div class="loading-overlay" id="loadingOverlay" data-loading-overlay>
     <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[22px] bg-white/95 px-7 py-7 text-center shadow-2xl">
       <div class="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-4 border-sand-200 border-t-sand-600"></div>
-      <div class="text-base font-bold text-sand-700" id="loadingText" data-loading-text>Generating content...</div>
+      <div class="text-base font-bold text-sand-700" id="loadingText" data-loading-text>Generating Tier 2 content...</div>
     </div>
   </div>
 {% endblock %}
 
-{% block eyebrow %}Medium Workflow{% endblock %}
-{% block hero_title %}Medium Blog Generator{% endblock %}
-{% block hero_text %}Generate brand-linked content that adapts to the selected publishing medium, from full guest posts to short social placements.{% endblock %}
+{% block eyebrow %}Tier 2 Workflow{% endblock %}
+{% block hero_title %}Tier 2 Blog Generator{% endblock %}
+{% block hero_text %}Generate supporting blog content for a selected publishing medium with an exact anchor text and link, while allowing relevant internet reference links in the article.{% endblock %}
 
 {% block content %}
   <div class="grid gap-6">
@@ -30,9 +30,9 @@
         <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
       {% endif %}
 
-      <form method="post" id="titlesForm" data-loading-message="Generating titles..." class="grid gap-1">
+      <form method="post" id="titlesForm" data-loading-message="Generating Tier 2 titles..." class="grid gap-1">
         <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 1</span>
-        <h2 class="mb-4 font-display text-3xl text-sand-950">Generate Medium Blog Titles</h2>
+        <h2 class="mb-4 font-display text-3xl text-sand-950">Generate Tier 2 Titles</h2>
 
         <label for="selected_backlink_id" class="mb-2 block text-sm font-bold text-sand-900">Publishing Medium <span class="text-red-600">*</span></label>
         <select id="selected_backlink_id" name="selected_backlink_id" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
@@ -44,9 +44,11 @@
           {% endfor %}
         </select>
 
-        <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand <span class="text-red-600">*</span></label>
-        <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Enter your brand or business name" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
-        <input type="hidden" name="keyword" value="{{ keyword }}" />
+        <label for="anchor_text" class="mb-2 block text-sm font-bold text-sand-900">Anchor Text <span class="text-red-600">*</span></label>
+        <input id="anchor_text" name="anchor_text" type="text" value="{{ anchor_text }}" placeholder="e.g. mobile gaming platform safety" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="link" class="mb-2 block text-sm font-bold text-sand-900">Link <span class="text-red-600">*</span></label>
+        <input id="link" name="link" type="url" value="{{ link }}" placeholder="https://example.com/target-page" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
         <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Tone</label>
         <select id="tone" name="tone" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
@@ -65,18 +67,18 @@
 
     {% if titles %}
       <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-        <form method="post" id="contentForm" data-loading-message="Generating article content..." class="grid gap-6">
+        <form method="post" id="contentForm" data-loading-message="Generating Tier 2 content..." class="grid gap-6">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 2</span>
-              <h2 class="font-display text-3xl text-sand-950">Generate Medium Content</h2>
-              <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose a title, then generate content. The selected medium controls the title length, format, and content length.</p>
+              <h2 class="font-display text-3xl text-sand-950">Generate Tier 2 Content</h2>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose or write a title, then generate content. The article may include relevant internet reference links and must include your exact anchor text and link once.</p>
             </div>
           </div>
 
           {% if selected_backlink %}
             <div class="medium-sticky-context sticky top-3 z-30 rounded-[22px] border border-sand-200 bg-white/95 p-4 shadow-soft backdrop-blur-md">
-              <div class="grid gap-3 md:grid-cols-2">
+              <div class="grid gap-3 md:grid-cols-3">
                 <div>
                   <div class="text-xs font-extrabold uppercase tracking-[0.08em] text-sand-600">Publishing Medium</div>
                   <div class="mt-1 text-sm font-bold text-sand-950">
@@ -87,49 +89,23 @@
                   </div>
                 </div>
                 <div>
-                  <div class="text-xs font-extrabold uppercase tracking-[0.08em] text-sand-600">Brand</div>
-                  <div class="mt-1 text-sm font-bold text-sand-950">{{ brand }}</div>
-                  {% if brand_website_url %}
-                    <div class="mt-1 break-all text-xs font-semibold text-sand-600">{{ brand_website_url }}</div>
-                  {% endif %}
+                  <div class="text-xs font-extrabold uppercase tracking-[0.08em] text-sand-600">Anchor Text</div>
+                  <div class="mt-1 text-sm font-bold text-sand-950">{{ anchor_text }}</div>
+                </div>
+                <div>
+                  <div class="text-xs font-extrabold uppercase tracking-[0.08em] text-sand-600">Target Link</div>
+                  <div class="mt-1 break-all text-xs font-semibold text-sand-600">{{ link }}</div>
                 </div>
               </div>
             </div>
-          {% endif %}
 
-          {% if selected_backlink %}
             <div class="rounded-[24px] border border-moss-200 bg-moss-100/60 p-5">
-              <h3 class="font-display text-2xl text-sand-950">Selected Medium</h3>
+              <h3 class="font-display text-2xl text-sand-950">Tier 2 Setup</h3>
               <div class="mt-3 grid gap-2 text-sm leading-6 text-sand-800">
-                <div><strong class="text-sand-900">Medium:</strong> {{ selected_backlink.website_name }}</div>
-                {% if selected_backlink.blog_name %}
-                  <div><strong class="text-sand-900">Publication/account:</strong> {{ selected_backlink.blog_name }}</div>
-                {% endif %}
-                {% if selected_backlink.writer_name %}
-                  <div><strong class="text-sand-900">Writer:</strong> {{ selected_backlink.writer_name }}</div>
-                {% endif %}
-                {% if selected_backlink.website_type %}
-                  <div><strong class="text-sand-900">Type:</strong> {{ selected_backlink.website_type.replace('_', ' ')|title }}</div>
-                {% endif %}
-                {% if selected_backlink.post_type %}
-                  <div><strong class="text-sand-900">Post type:</strong> {{ selected_backlink.post_type|title }}</div>
-                {% endif %}
-                {% if selected_backlink.max_characters %}
-                  <div><strong class="text-sand-900">Content max words:</strong> {{ selected_backlink.max_characters }}</div>
-                {% endif %}
-                {% if selected_backlink.min_words %}
-                  <div><strong class="text-sand-900">Content min words:</strong> {{ selected_backlink.min_words }}</div>
-                {% endif %}
-                {% if selected_backlink.title_max_characters %}
-                  <div><strong class="text-sand-900">Title max:</strong> {{ selected_backlink.title_max_characters }}</div>
-                {% endif %}
-                <div><strong class="text-sand-900">Tier:</strong> {{ selected_backlink.tier_level }}</div>
-                {% if selected_backlink.content_guidelines %}
-                  <div><strong class="text-sand-900">Medium rules:</strong> {{ selected_backlink.content_guidelines }}</div>
-                {% endif %}
-                {% if brand_website_url %}
-                  <div><strong class="text-sand-900">Required brand link:</strong> {{ brand_website_url }}</div>
-                {% endif %}
+                <div><strong class="text-sand-900">Medium:</strong> {{ selected_backlink.website_name }}{% if selected_backlink.blog_name %} · {{ selected_backlink.blog_name }}{% endif %}</div>
+                <div><strong class="text-sand-900">Anchor text:</strong> {{ anchor_text }}</div>
+                <div><strong class="text-sand-900">Link:</strong> <span class="break-all">{{ link }}</span></div>
+                <div><strong class="text-sand-900">References:</strong> relevant internet reference links are allowed when useful.</div>
               </div>
             </div>
           {% endif %}
@@ -182,17 +158,7 @@
 
           <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
             <label for="suggested_content" class="mb-2 block text-sm font-bold text-sand-900">Suggested content</label>
-            <textarea id="suggested_content" name="suggested_content" placeholder="Add talking points, facts, outline notes, product details, preferred angle, or anything the article should consider." class="min-h-[130px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ suggested_content }}</textarea>
-          </div>
-
-          <div class="rounded-[24px] border border-sand-200 bg-sand-50/80 p-5">
-            <h3 class="font-display text-2xl text-sand-950">Required Brand Link</h3>
-            <p class="mt-2 text-sm leading-6 text-sand-700">This generator uses exactly one URL in the output: the selected brand website. The medium URL is only used as placement context.</p>
-            {% if brand_website_url %}
-              <p class="mt-3 text-sm text-sand-700">Brand website URL: <code class="rounded bg-white px-2 py-1 text-xs text-sand-800">{{ brand_website_url }}</code></p>
-            {% else %}
-              <p class="mt-3 text-sm text-red-700">Save a website for this brand in Brands first so the article can include the required brand link.</p>
-            {% endif %}
+            <textarea id="suggested_content" name="suggested_content" placeholder="Add talking points, facts, preferred reference sources, outline notes, or anything the article should consider." class="min-h-[130px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ suggested_content }}</textarea>
           </div>
 
           {% if content %}
@@ -200,7 +166,7 @@
               <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                   <h3 class="font-display text-2xl text-sand-950">Article Content</h3>
-                  <p class="mt-2 text-sm leading-6 text-sand-700">Edit the generated HTML directly in the editor before previewing or downloading.</p>
+                  <p class="mt-2 text-sm leading-6 text-sand-700">Edit the generated HTML directly in the editor before saving, previewing, or downloading.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                   <button type="button" id="previewDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Print Preview</button>
@@ -244,7 +210,7 @@
                   <option value="conclusion" {% if regenerate_scope == 'conclusion' %}selected{% endif %}>Ending only</option>
                   <option value="tags" {% if regenerate_scope == 'tags' %}selected{% endif %}>Tags angle</option>
                 </select>
-                <textarea id="change_request" name="change_request" placeholder="e.g. make it less promotional, add a softer brand mention, make the review more balanced" class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ change_request }}</textarea>
+                <textarea id="change_request" name="change_request" placeholder="e.g. add more neutral references, make the anchor placement subtler, shorten the conclusion" class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ change_request }}</textarea>
               </div>
             {% endif %}
           </div>
@@ -254,9 +220,8 @@
           </div>
 
           <input type="hidden" name="selected_backlink_id" value="{{ selected_backlink_id }}" />
-          <input type="hidden" name="keyword" value="{{ keyword }}" />
-          <input type="hidden" name="brand" value="{{ brand }}" />
-          <input type="hidden" name="brand_website_url" value="{{ brand_website_url }}" />
+          <input type="hidden" name="anchor_text" value="{{ anchor_text }}" />
+          <input type="hidden" name="link" value="{{ link }}" />
           <input type="hidden" name="tone" value="{{ tone }}" />
           <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
           <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
@@ -267,8 +232,7 @@
 
       <form id="previewForm" method="post" action="/preview" class="hidden-form" aria-hidden="true">
         <input type="hidden" id="previewSelectedTitle" name="selected_title" value="{{ selected_title }}" />
-        <input type="hidden" name="keyword" value="{{ keyword }}" />
-        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="keyword" value="{{ anchor_text }}" />
         <input type="hidden" name="medium_name" value="{% if selected_backlink %}{{ selected_backlink.website_name }}{% endif %}" />
         <input type="hidden" name="tags" value="{{ tag_suggestions|join(', ') }}" />
         <input type="hidden" id="previewMetaDescription" name="meta_description" value="{{ meta_description }}" />
@@ -277,8 +241,7 @@
 
       <form id="downloadForm" method="post" action="/download_doc" class="hidden-form" aria-hidden="true">
         <input type="hidden" id="downloadSelectedTitle" name="selected_title" value="{{ selected_title }}" />
-        <input type="hidden" name="keyword" value="{{ keyword }}" />
-        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="keyword" value="{{ anchor_text }}" />
         <input type="hidden" name="medium_name" value="{% if selected_backlink %}{{ selected_backlink.website_name }}{% endif %}" />
         <input type="hidden" name="tags" value="{{ tag_suggestions|join(', ') }}" />
         <input type="hidden" id="downloadMetaDescription" name="meta_description" value="{{ meta_description }}" />
@@ -287,16 +250,9 @@
     {% endif %}
 
     <div class="text-sm text-sand-700">
-      Manage publishing mediums in <a href="/mediums" class="font-bold text-sand-800 underline decoration-sand-300 underline-offset-2">Mediums</a>, then come back here to generate content for a selected medium.
+      Manage publishing mediums in <a href="/mediums" class="font-bold text-sand-800 underline decoration-sand-300 underline-offset-2">Mediums</a>, then come back here to generate Tier 2 content.
     </div>
   </div>
-
-  <datalist id="brandSuggestions">
-    {% for item in brand_names %}
-      <option value="{{ item }}"></option>
-    {% endfor %}
-  </datalist>
-
 {% endblock %}
 
 {% block scripts %}
