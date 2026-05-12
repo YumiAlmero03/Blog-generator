@@ -9,5 +9,21 @@ build/
 dist/
 .eggs/
 *.egg-info/
-data
-logs
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data and logs
+data/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Local editor and OS files
+.DS_Store
+.vscode/
+.idea/
