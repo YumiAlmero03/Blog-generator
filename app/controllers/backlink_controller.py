@@ -6,7 +6,6 @@ from logger import logger
 from app.controllers.helpers import base_template_context
 
 
-TIER_OPTIONS = ("Tier 1", "Tier 2", "Tier 3")
 POST_TYPE_OPTIONS = (
     ("html", "HTML"),
     ("markdown", "Markdown"),
@@ -39,12 +38,13 @@ def backlinks():
         "min_words": 0,
         "max_characters": 0,
         "blog_url": "",
-        "tier_level": "Tier 1",
+        "posts_per_day": 0,
+        "include_in_tier1": True,
+        "brand_topic_mode": "example",
         "content_guidelines": "",
         "notes": "",
         "success": None,
         "error": None,
-        "tier_options": TIER_OPTIONS,
         "post_type_options": POST_TYPE_OPTIONS,
         "website_type_options": WEBSITE_TYPE_OPTIONS,
         "medium_presets": _medium_presets(),
@@ -84,7 +84,9 @@ def _populate_for_edit(state: dict, backlink_id: int):
     state["min_words"] = backlink.get("min_words", 0) or 0
     state["max_characters"] = backlink.get("max_characters", 0) or 0
     state["blog_url"] = backlink.get("blog_url", "")
-    state["tier_level"] = backlink.get("tier_level", "Tier 1")
+    state["posts_per_day"] = backlink.get("posts_per_day", 0) or 0
+    state["include_in_tier1"] = bool(backlink.get("include_in_tier1", 1))
+    state["brand_topic_mode"] = backlink.get("brand_topic_mode", "example") or "example"
     state["content_guidelines"] = backlink.get("content_guidelines", "")
     state["notes"] = backlink.get("notes", "")
 
@@ -100,7 +102,9 @@ def _handle_save_backlink(state: dict):
     state["min_words"] = request.form.get("min_words", "0").strip()
     state["max_characters"] = request.form.get("max_characters", "0").strip()
     state["blog_url"] = request.form.get("blog_url", "").strip()
-    state["tier_level"] = request.form.get("tier_level", "Tier 1").strip() or "Tier 1"
+    state["posts_per_day"] = request.form.get("posts_per_day", "0").strip()
+    state["include_in_tier1"] = request.form.get("include_in_tier1") == "1"
+    state["brand_topic_mode"] = request.form.get("brand_topic_mode", "example").strip() or "example"
     state["content_guidelines"] = request.form.get("content_guidelines", "").strip()
     state["notes"] = request.form.get("notes", "").strip()
     medium_preset = request.form.get("medium_preset", "").strip()
@@ -110,8 +114,6 @@ def _handle_save_backlink(state: dict):
         state["error"] = "Please enter the medium name."
         return
 
-    if state["tier_level"] not in TIER_OPTIONS:
-        state["tier_level"] = "Tier 1"
     valid_website_types = {value for value, _label in WEBSITE_TYPE_OPTIONS}
     if state["website_type"] not in valid_website_types:
         state["website_type"] = "blog"
@@ -130,6 +132,10 @@ def _handle_save_backlink(state: dict):
         state["max_characters"] = max(0, int(state["max_characters"] or 0))
     except ValueError:
         state["max_characters"] = 0
+    try:
+        state["posts_per_day"] = max(0, int(state["posts_per_day"] or 0))
+    except ValueError:
+        state["posts_per_day"] = 0
 
     backlink_id = int(state["backlink_id"]) if state["backlink_id"].isdigit() else None
     save_backlink(
@@ -142,9 +148,12 @@ def _handle_save_backlink(state: dict):
         min_words=state["min_words"],
         max_characters=state["max_characters"],
         blog_url=state["blog_url"],
-        tier_level=state["tier_level"],
+        tier_level="Tier 1",
+        posts_per_day=state["posts_per_day"],
         content_guidelines=state["content_guidelines"],
         notes=state["notes"],
+        include_in_tier1=state["include_in_tier1"],
+        brand_topic_mode=state["brand_topic_mode"],
         backlink_id=backlink_id,
     )
 
@@ -160,7 +169,9 @@ def _handle_save_backlink(state: dict):
             "min_words": 0,
             "max_characters": 0,
             "blog_url": "",
-            "tier_level": "Tier 1",
+            "posts_per_day": 0,
+            "include_in_tier1": True,
+            "brand_topic_mode": "example",
             "content_guidelines": "",
             "notes": "",
             "success": "Medium saved.",
@@ -188,9 +199,9 @@ def _apply_medium_preset(state: dict, preset_key: str):
     preset = _medium_presets().get(preset_key)
     if not preset:
         return
-    for key in ("website_type", "post_type", "title_max_characters", "min_words", "max_characters", "content_guidelines"):
+    for key in ("website_type", "post_type", "title_max_characters", "min_words", "max_characters", "content_guidelines", "brand_topic_mode"):
         current = str(state.get(key, "")).strip()
-        if current and current not in {"0", "blog", "html"}:
+        if current and current not in {"0", "blog", "html", "example"}:
             continue
         state[key] = preset.get(key, state.get(key, ""))
 
@@ -205,6 +216,33 @@ def _medium_presets() -> dict:
             "min_words": 15,
             "max_characters": 40,
             "content_guidelines": "Short social post. Keep the title compact, use plain text, insert the brand URL once anywhere in the article, and avoid long article sections.",
+        },
+        "facebook": {
+            "label": "Facebook",
+            "website_type": "social_media",
+            "post_type": "text",
+            "title_max_characters": 80,
+            "min_words": 40,
+            "max_characters": 180,
+            "content_guidelines": "Write a friendly, skimmable Facebook-style post with a clear hook, short paragraphs, and natural tags when useful.",
+        },
+        "youtube": {
+            "label": "YouTube",
+            "website_type": "social_media",
+            "post_type": "text",
+            "title_max_characters": 70,
+            "min_words": 60,
+            "max_characters": 220,
+            "content_guidelines": "Write a YouTube community or description-style post with a clear title angle, concise body, and viewer-friendly wording.",
+        },
+        "instagram": {
+            "label": "Instagram",
+            "website_type": "social_media",
+            "post_type": "text",
+            "title_max_characters": 70,
+            "min_words": 25,
+            "max_characters": 120,
+            "content_guidelines": "Write a visual, caption-style Instagram post with concise copy, sensory detail, and a few clean hashtags.",
         },
         "google_sites": {
             "label": "Google Sites",
@@ -223,6 +261,27 @@ def _medium_presets() -> dict:
             "min_words": 800,
             "max_characters": 1200,
             "content_guidelines": "Use Gutenberg block HTML, editorial sections, compact paragraphs, and one natural brand URL placement.",
+            "brand_topic_mode": "example",
+        },
+        "github": {
+            "label": "GitHub",
+            "website_type": "community",
+            "post_type": "markdown",
+            "title_max_characters": 70,
+            "min_words": 500,
+            "max_characters": 900,
+            "content_guidelines": "Write a README or discussion-style Markdown post where the brand can be the main project/topic. Keep it useful and technical, not promotional.",
+            "brand_topic_mode": "main",
+        },
+        "gitbook": {
+            "label": "GitBook",
+            "website_type": "blog",
+            "post_type": "markdown",
+            "title_max_characters": 70,
+            "min_words": 600,
+            "max_characters": 1000,
+            "content_guidelines": "Write a documentation-style Markdown article where the brand can be the main topic. Use clear sections and practical context.",
+            "brand_topic_mode": "main",
         },
         "forum": {
             "label": "Forum",

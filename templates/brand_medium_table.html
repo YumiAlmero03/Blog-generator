@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% set active_page = "brand-medium-table" %}
+
+{% block title %}Brand over Medium{% endblock %}
+{% block eyebrow %}Backlink Follow Up{% endblock %}
+{% block hero_title %}Brand over Medium{% endblock %}
+{% block hero_text %}A simple matrix of selected brands against unique publishing medium names, with saved Tier 1 Medium Blog posts shown in each matching cell.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    {% if imported_count or skipped_count %}
+      <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">
+        Imported {{ imported_count }} post{% if imported_count != 1 %}s{% endif %}. Skipped {{ skipped_count }} row{% if skipped_count != 1 %}s{% endif %}.
+      </div>
+    {% endif %}
+
+    <div class="mb-5 grid gap-4 rounded-[22px] border border-sand-200 bg-sand-50/80 p-4 lg:grid-cols-[1fr_auto_auto] lg:items-end">
+      <form method="post" enctype="multipart/form-data" class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <input type="hidden" name="action" value="import_posts" />
+        <div>
+          <label for="postsFile" class="mb-2 block text-sm font-bold text-sand-900">Import posts</label>
+          <input id="postsFile" name="posts_file" type="file" accept=".csv,text/csv" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-2.5 text-sm text-sand-900 outline-none" />
+        </div>
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Import Post</button>
+      </form>
+      <form method="post">
+        <input type="hidden" name="action" value="download_import_template" />
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-sand-700 ring-1 ring-sand-200 transition hover:bg-sand-50">Export Template</button>
+      </form>
+      <form method="post">
+        <input type="hidden" name="action" value="download_saved_links" />
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Download List</button>
+      </form>
+    </div>
+
+    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <label for="matrixFilter" class="mb-2 block text-sm font-bold text-sand-900">Filter table</label>
+        <input id="matrixFilter" type="search" placeholder="Search brand, medium, title, keyword, or link" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200 sm:min-w-[360px]" />
+      </div>
+      <a href="/brands" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Manage Brands</a>
+    </div>
+
+    {% if brands and mediums %}
+      <div class="max-h-[75vh] overflow-auto rounded-[22px] border border-sand-200 bg-white">
+        <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+          <thead class="bg-sand-100/95 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700 shadow-sm">
+            <tr>
+              <th class="sticky left-0 top-0 z-30 min-w-[220px] bg-sand-100/95 px-4 py-3">Brand</th>
+              {% for medium in mediums %}
+                <th class="sticky top-0 z-20 min-w-[260px] bg-sand-100/95 px-4 py-3">
+                  {{ medium.name }}
+                  {% if medium.count > 1 %}
+                    <span class="ml-1 rounded-full bg-white px-2 py-1 text-[10px] text-sand-600">{{ medium.count }} accounts</span>
+                  {% endif %}
+                </th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody id="matrixBody" class="divide-y divide-sand-100">
+            {% for brand in brands %}
+              <tr class="align-top" data-matrix-row>
+                <th class="sticky left-0 z-10 bg-white px-4 py-4 font-bold text-sand-950">{{ brand.name }}</th>
+                {% for medium in mediums %}
+                  {% set posts = cells.get((brand.id, medium.key), []) %}
+                  <td class="px-4 py-4" data-matrix-cell data-matrix-search="{{ [brand.name, medium.name]|join(' ')|lower }} {% for post in posts %}{{ [post.title, post.primary_keyword, post.medium_name, post.post_link]|join(' ')|lower }} {% endfor %}">
+                    {% if posts %}
+                      <div class="grid gap-2">
+                        {% for post in posts %}
+                          <a href="/generation-history/{{ post.id }}" class="block rounded-2xl border border-sand-200 bg-sand-50/80 px-3 py-3 transition hover:border-sand-500 hover:bg-sand-100">
+                            <span class="block text-sm font-bold leading-5 text-sand-950">{{ post.title or "Untitled Medium Blog" }}</span>
+                            <span class="mt-1 block text-xs font-semibold leading-5 text-sand-700">{{ post.medium_name or medium.name }}</span>
+                            {% if post.primary_keyword %}
+                              <span class="mt-1 block text-xs text-sand-600">{{ post.primary_keyword }}</span>
+                            {% endif %}
+                            {% if post.post_link %}
+                              <span class="mt-1 block break-all text-xs font-bold text-moss-700">{{ post.post_link }}</span>
+                            {% endif %}
+                          </a>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <div class="grid gap-2">
+                        <span class="text-sm font-semibold text-sand-400">No Tier 1 post</span>
+                        <div class="flex flex-wrap gap-2">
+                          <a href="/medium-blog-generator?brand={{ brand.name|urlencode }}{% if medium.count == 1 and medium.ids %}&medium_id={{ medium.ids[0] }}{% endif %}" class="inline-flex min-h-10 w-fit items-center justify-center rounded-full bg-sand-600 px-3 py-2 text-xs font-bold text-sand-50 transition hover:bg-sand-700">Create T1 Blog</a>
+                          <button type="button" data-save-link-open data-brand="{{ brand.name }}" data-medium="{{ medium.name }}" class="inline-flex min-h-10 w-fit items-center justify-center rounded-full bg-white px-3 py-2 text-xs font-bold text-sand-700 ring-1 ring-sand-200 transition hover:bg-sand-50">Save Link</button>
+                        </div>
+                      </div>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div id="matrixEmpty" class="mt-4 hidden rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+        No rows match that filter.
+      </div>
+    {% else %}
+      <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+        Add mediums and check “include to backlink follow up” on brands to build this table.
+      </div>
+    {% endif %}
+  </section>
+
+  <div id="saveLinkModal" class="fixed inset-0 z-50 hidden bg-stone-950/60 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="saveLinkTitle">
+    <div class="mx-auto w-full max-w-2xl rounded-[24px] bg-white p-5 shadow-2xl">
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 id="saveLinkTitle" class="font-display text-2xl text-sand-950">Save Link</h2>
+        <button type="button" id="closeSaveLinkModal" class="inline-flex min-h-10 w-fit items-center justify-center rounded-full bg-sand-100 px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-200">Close</button>
+      </div>
+      <form method="post" class="grid gap-4">
+        <input type="hidden" name="action" value="save_link" />
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="saveLinkBrand" class="mb-2 block text-sm font-bold text-sand-900">Brand <span class="text-red-600">*</span></label>
+            <input id="saveLinkBrand" name="brand" type="text" required class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+          <div>
+            <label for="saveLinkMedium" class="mb-2 block text-sm font-bold text-sand-900">Medium <span class="text-red-600">*</span></label>
+            <input id="saveLinkMedium" name="medium" type="text" required class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+        </div>
+        <div>
+          <label for="saveLinkTitleInput" class="mb-2 block text-sm font-bold text-sand-900">Title</label>
+          <input id="saveLinkTitleInput" name="title" type="text" placeholder="Imported post title" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="saveLinkKeyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword</label>
+          <input id="saveLinkKeyword" name="keyword" type="text" placeholder="Brand keyword or anchor" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="saveLinkPostLink" class="mb-2 block text-sm font-bold text-sand-900">Post link <span class="text-red-600">*</span></label>
+          <input id="saveLinkPostLink" name="post_link" type="url" required placeholder="https://example.com/imported-post" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="saveLinkCreatedAt" class="mb-2 block text-sm font-bold text-sand-900">Created at</label>
+          <input id="saveLinkCreatedAt" name="created_at" type="text" placeholder="2026-05-15 09:00:00" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Save Link</button>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const matrixFilter = document.getElementById("matrixFilter");
+    const matrixRows = Array.from(document.querySelectorAll("[data-matrix-row]"));
+    const matrixEmpty = document.getElementById("matrixEmpty");
+    const saveLinkModal = document.getElementById("saveLinkModal");
+    const closeSaveLinkModal = document.getElementById("closeSaveLinkModal");
+    const saveLinkBrand = document.getElementById("saveLinkBrand");
+    const saveLinkMedium = document.getElementById("saveLinkMedium");
+
+    function updateMatrixFilter() {
+      const query = matrixFilter ? matrixFilter.value.trim().toLowerCase() : "";
+      let visibleRows = 0;
+      matrixRows.forEach((row) => {
+        const cells = Array.from(row.querySelectorAll("[data-matrix-cell]"));
+        const rowMatches = !query || cells.some((cell) => cell.dataset.matrixSearch.includes(query));
+        row.classList.toggle("hidden", !rowMatches);
+        if (rowMatches) {
+          visibleRows += 1;
+        }
+      });
+      if (matrixEmpty) {
+        matrixEmpty.classList.toggle("hidden", visibleRows !== 0);
+      }
+    }
+
+    if (matrixFilter) {
+      matrixFilter.addEventListener("input", updateMatrixFilter);
+    }
+
+    document.querySelectorAll("[data-save-link-open]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (saveLinkBrand) {
+          saveLinkBrand.value = button.dataset.brand || "";
+        }
+        if (saveLinkMedium) {
+          saveLinkMedium.value = button.dataset.medium || "";
+        }
+        if (saveLinkModal) {
+          saveLinkModal.classList.remove("hidden");
+          saveLinkModal.classList.add("flex");
+        }
+      });
+    });
+
+    if (closeSaveLinkModal && saveLinkModal) {
+      closeSaveLinkModal.addEventListener("click", () => {
+        saveLinkModal.classList.add("hidden");
+        saveLinkModal.classList.remove("flex");
+      });
+    }
+
+    if (saveLinkModal) {
+      saveLinkModal.addEventListener("click", (event) => {
+        if (event.target === saveLinkModal) {
+          saveLinkModal.classList.add("hidden");
+          saveLinkModal.classList.remove("flex");
+        }
+      });
+    }
+  </script>
+{% endblock %}

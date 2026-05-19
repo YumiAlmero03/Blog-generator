@@ -130,6 +130,10 @@
 
           {% if content %}
             <div class="grid gap-4">
+              <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+                <label for="visual" class="mb-2 block text-sm font-bold text-sand-900">Visual / Image Descriptions</label>
+                <textarea id="visual" name="visual" rows="5" placeholder="Generated image directions for this blog" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ visual }}</textarea>
+              </div>
               <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                 <h3 class="font-display text-2xl text-sand-950">Article Content</h3>
@@ -154,11 +158,7 @@
                   <h3 class="font-display text-2xl text-sand-950">Suggested Tags</h3>
                   <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ tag_suggestions|length }} Tags</span>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                  {% for tag in tag_suggestions %}
-                    <span class="rounded-full border border-sand-200 bg-sand-50 px-3 py-2 text-sm font-bold text-sand-800">{{ tag }}</span>
-                  {% endfor %}
-                </div>
+                <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm font-bold leading-6 text-sand-800">{{ tag_suggestions|join(', ') }}</div>
               </div>
             {% endif %}
 
@@ -191,6 +191,8 @@
           <input type="hidden" name="brand" value="{{ brand }}" />
           <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
           <input type="hidden" name="tone" value="{{ tone }}" />
+          <input type="hidden" name="history_id" value="{{ history_id }}" />
+          <input type="hidden" name="visual" value="{{ visual }}" />
           <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
           <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
           <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />

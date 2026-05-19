@@ -4,20 +4,72 @@
 {% block title %}Generated Content Detail{% endblock %}
 {% block eyebrow %}Saved Output{% endblock %}
 {% block hero_title %}{{ item.title or "Generated Content" }}{% endblock %}
-{% block hero_text %}{{ item.content_type }} · {{ item.created_at }} · {{ item.word_count }} words{% endblock %}
+{% block hero_text %}{{ item.content_type }} · {% if item.post_link %}Validated {{ item.saved_at or item.created_at }}{% else %}Created {{ item.created_at }}{% endif %} · {{ item.word_count }} words{% endblock %}
 
 {% block content %}
   <div class="grid gap-6 lg:grid-cols-[320px_1fr]">
     <aside class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+      {% if error %}
+        <div class="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-4 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
+      {% endif %}
       <dl class="grid gap-3 text-sm">
         <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Brand</dt><dd class="mt-1 text-sand-700">{{ item.brand_name or "Not set" }}</dd></div>
+        <div class="rounded-2xl bg-sand-100 px-4 py-3">
+          <dt class="font-bold text-sand-900">Status</dt>
+          <dd class="mt-1">
+            {% if item.post_link %}
+              <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Saved</span>
+            {% else %}
+              <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-amber-700">Draft</span>
+            {% endif %}
+          </dd>
+        </div>
+        <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Created Date</dt><dd class="mt-1 text-sand-700">{{ item.created_at }}</dd></div>
+        <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Validation Date</dt><dd class="mt-1 text-sand-700">{{ (item.saved_at or item.created_at) if item.post_link else "Not saved yet" }}</dd></div>
         <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Keyword</dt><dd class="mt-1 text-sand-700">{{ item.primary_keyword or "Not set" }}</dd></div>
         <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Medium</dt><dd class="mt-1 text-sand-700">{{ item.medium_name or "Not set" }}</dd></div>
+        <div class="rounded-2xl bg-sand-100 px-4 py-3">
+          <dt class="font-bold text-sand-900">Post Link</dt>
+          <dd class="mt-1 text-sand-700">
+            {% if item.post_link %}
+              <a href="{{ item.post_link }}" target="_blank" rel="noopener noreferrer" class="break-all font-bold text-moss-700 underline decoration-moss-500/40 underline-offset-2 hover:text-moss-500">{{ item.post_link }}</a>
+            {% else %}
+              Not set
+            {% endif %}
+          </dd>
+        </div>
         <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Tags</dt><dd class="mt-1 text-sand-700">{{ item.tags or "None" }}</dd></div>
       </dl>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a href="/generation-history/{{ item.id }}/edit" class="inline-flex min-h-10 items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-bold text-sand-700 ring-1 ring-sand-200 transition hover:bg-sand-50">Edit</a>
+        {% if item.post_link %}
+          <form method="post" action="/generation-history/{{ item.id }}/mark-draft">
+            <input type="hidden" name="return_to" value="detail" />
+            <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-200">Mark Draft</button>
+          </form>
+        {% endif %}
+        <form method="post" action="/generation-history/{{ item.id }}/delete" onsubmit="return confirm('Delete this history item?');">
+          <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-full bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100">Delete</button>
+        </form>
+      </div>
       {% if item.meta_description %}
         <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-sand-800">
           <strong>Meta:</strong> {{ item.meta_description }}
+        </div>
+      {% endif %}
+      {% if not item.post_link %}
+        <form method="post" class="mt-4 rounded-2xl border border-moss-200 bg-moss-100/60 px-4 py-4">
+          <label for="post_link" class="mb-2 block text-sm font-bold text-sand-900">Post link <span class="text-red-600">*</span></label>
+          <input id="post_link" name="post_link" type="url" required placeholder="https://example.com/published-post" class="mb-3 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Save Post Link</button>
+        </form>
+      {% endif %}
+      {% if item.prompt_inputs_data and item.prompt_inputs_data.visual %}
+        <div class="mt-4 rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sm leading-6 text-sand-800">
+          <strong>Visual:</strong> {{ item.prompt_inputs_data.visual }}
         </div>
       {% endif %}
       {% if item.prompt_inputs_data %}

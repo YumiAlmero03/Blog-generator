@@ -81,16 +81,21 @@
                 <div class="grid gap-1">
                   <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Workspace</div>
                   {{ nav_link("/dashboard", "dashboard", "Dashboard") }}
+                  {{ nav_link("/posting-planner", "posting-planner", "Posting Planner") }}
+                  {{ nav_link("/brand-medium-table", "brand-medium-table", "Brand over Medium") }}
                   {{ nav_link("/generation-history", "history", "History") }}
                 </div>
                 <div class="grid gap-1">
-                  <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Generators</div>
+                  <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">On Page</div>
                   {{ nav_link("/", "blog", "Blog Generator") }}
-                  {{ nav_link("/medium-blog-generator", "backlink-blog", "Medium Blog") }}
-                  {{ nav_link("/tier-2-blog-generator", "tier2-blog", "Tier 2 Blog") }}
                   {{ nav_link("/page-generator", "page", "Page Generator") }}
                   {{ nav_link("/simple-page-generator", "simple", "Simple Pages") }}
-                  {{ nav_link("/social-media-activator", "social-activator", "Social Activator") }}
+                </div>
+                <div class="grid gap-1">
+                  <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Off Page Blogs</div>
+                  {{ nav_link("/medium-blog-generator", "backlink-blog", "Medium Blog") }}
+                  {{ nav_link("/tier-2-blog-generator", "tier2-blog", "Tier 2 Blog") }}
+                  {{ nav_link("/neutral-blog-generator", "neutral-blog", "Neutral Blog") }}
                 </div>
                 <div class="grid gap-1">
                   <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Tools</div>
@@ -102,7 +107,6 @@
                   <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Settings</div>
                   {{ nav_link("/brands", "brands", "Brands") }}
                   {{ nav_link("/mediums", "backlinks", "Mediums") }}
-                  {{ nav_link("/social-media-list", "social-list", "Social List") }}
                   {{ nav_link("/banned-words", "banned-words", "Banned Words") }}
                   {{ nav_link("/settings", "settings", "App Settings") }}
                 </div>
@@ -113,16 +117,21 @@
               <div class="grid gap-1">
                 <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Workspace</div>
                 {{ nav_link("/dashboard", "dashboard", "Dashboard") }}
+                {{ nav_link("/posting-planner", "posting-planner", "Posting Planner") }}
+                {{ nav_link("/brand-medium-table", "brand-medium-table", "Brand over Medium") }}
                 {{ nav_link("/generation-history", "history", "History") }}
               </div>
               <div class="grid gap-1">
-                <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Generators</div>
+                <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">On Page</div>
                 {{ nav_link("/", "blog", "Blog Generator") }}
-                {{ nav_link("/medium-blog-generator", "backlink-blog", "Medium Blog") }}
-                {{ nav_link("/tier-2-blog-generator", "tier2-blog", "Tier 2 Blog") }}
                 {{ nav_link("/page-generator", "page", "Page Generator") }}
                 {{ nav_link("/simple-page-generator", "simple", "Simple Pages") }}
-                {{ nav_link("/social-media-activator", "social-activator", "Social Activator") }}
+              </div>
+              <div class="grid gap-1">
+                <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Off Page Blogs</div>
+                {{ nav_link("/medium-blog-generator", "backlink-blog", "Medium Blog") }}
+                {{ nav_link("/tier-2-blog-generator", "tier2-blog", "Tier 2 Blog") }}
+                {{ nav_link("/neutral-blog-generator", "neutral-blog", "Neutral Blog") }}
               </div>
               <div class="grid gap-1">
                 <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Tools</div>
@@ -134,7 +143,6 @@
                 <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Settings</div>
                 {{ nav_link("/brands", "brands", "Brands") }}
                 {{ nav_link("/mediums", "backlinks", "Mediums") }}
-                {{ nav_link("/social-media-list", "social-list", "Social List") }}
                 {{ nav_link("/banned-words", "banned-words", "Banned Words") }}
                 {{ nav_link("/settings", "settings", "App Settings") }}
               </div>
@@ -144,7 +152,7 @@
       {% endblock %}
 
       <main class="w-full px-4 pb-12 pt-5 sm:px-5 lg:px-8 lg:pt-7">
-        <div class="mx-auto max-w-7xl">
+        <div class="mx-auto">
         {% block hero %}
           <section class="mb-6 rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
             <div class="grid gap-5">

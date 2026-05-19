@@ -21,7 +21,7 @@
           {% if brand_name %}
             You are editing an existing brand. Update any fields you want, then save again.
           {% else %}
-            Add a brand name first. Niche, main keywords, and notes will help the generators stay more consistent.
+            Add a brand name first. Niche, main keywords, and rules will help the generators stay more consistent.
           {% endif %}
         </p>
 
@@ -73,8 +73,27 @@
           <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Preferred tone</label>
           <input id="tone" name="tone" type="text" value="{{ tone }}" placeholder="e.g. friendly, expert, premium, straightforward" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
-          <label for="notes" class="mb-2 block text-sm font-bold text-sand-900">Brand notes</label>
-          <textarea id="notes" name="notes" placeholder="e.g. family-owned, serves Phoenix metro, focuses on emergency plumbing and same-day repairs" class="mb-4 min-h-[120px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ notes }}</textarea>
+          <label for="notes" class="mb-2 block text-sm font-bold text-sand-900">Rules</label>
+          <textarea id="notes" name="notes" placeholder="e.g. mention service areas, response time, trust signals, FAQs, and clear calls to action where natural" class="mb-4 min-h-[120px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ notes }}</textarea>
+
+          <label for="planner_notes" class="mb-2 block text-sm font-bold text-sand-900">Brand notes</label>
+          <input id="planner_notes" name="planner_notes" type="text" value="{{ planner_notes }}" placeholder="Simple internal note for Posting Planner" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+          <label for="include_in_posting_planner" class="mb-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-sand-200 bg-sand-50/80 px-4 py-3 text-sm leading-6 text-sand-800">
+            <input id="include_in_posting_planner" name="include_in_posting_planner" type="checkbox" value="1" class="mt-1 h-4 w-4 rounded border-sand-400 text-sand-600 focus:ring-sand-500" {% if include_in_posting_planner %}checked{% endif %} />
+            <span>
+              <strong class="block text-sand-950">Include to posting planner</strong>
+              <span class="block text-sand-700">Adds this brand to Posting Planner with 1 post/day.</span>
+            </span>
+          </label>
+
+          <label for="include_in_backlink_follow_up" class="mb-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-sand-200 bg-sand-50/80 px-4 py-3 text-sm leading-6 text-sand-800">
+            <input id="include_in_backlink_follow_up" name="include_in_backlink_follow_up" type="checkbox" value="1" class="mt-1 h-4 w-4 rounded border-sand-400 text-sand-600 focus:ring-sand-500" {% if include_in_backlink_follow_up %}checked{% endif %} />
+            <span>
+              <strong class="block text-sand-950">Include to backlink follow up</strong>
+              <span class="block text-sand-700">Adds this brand as a row in the Brand over Medium table.</span>
+            </span>
+          </label>
 
           <label for="logo_file" class="mb-2 block text-sm font-bold text-sand-900">Logo upload</label>
           <input id="logo_file" name="logo_file" type="file" accept=".png,.jpg,.jpeg,.webp" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none" />
@@ -144,7 +163,7 @@
             <input
               id="brandFilter"
               type="search"
-              placeholder="Search name, website, niche, keywords, tone, or notes"
+              placeholder="Search name, website, niche, keywords, tone, rules, or notes"
               class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
             />
             <select
@@ -168,7 +187,7 @@
               class="cursor-pointer rounded-[22px] border border-sand-200 bg-white/80 p-5 shadow-sm transition hover:border-sand-400 hover:shadow-soft"
               style="border-top: 8px solid {{ brand.brand_color }};"
               data-brand-modal-open="brand_modal_{{ loop.index }}"
-              data-brand-search="{{ [brand.name, brand.website, brand.niche, brand.main_keywords, brand.tone, brand.notes]|join(' ')|lower }}"
+              data-brand-search="{{ [brand.name, brand.website, brand.niche, brand.main_keywords, brand.tone, brand.notes, brand.planner_notes]|join(' ')|lower }}"
               data-brand-color="{{ brand.brand_color }}"
             >
               {% if brand.logo_path %}
@@ -181,6 +200,12 @@
                 <h3 class="font-display text-2xl text-sand-950">{{ brand.name }}</h3>
                 <span class="mt-1 h-6 w-6 shrink-0 rounded-full border-2 border-white shadow ring-1 ring-sand-200" style="background-color: {{ brand.brand_color }};" aria-label="Brand color"></span>
               </div>
+              {% if brand.include_in_posting_planner %}
+                <div class="mt-3 inline-flex rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">Posting Planner · 1/day</div>
+              {% endif %}
+              {% if brand.include_in_backlink_follow_up %}
+                <div class="mt-3 inline-flex rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-sand-700">Backlink Follow Up</div>
+              {% endif %}
               <form method="post" class="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-sand-100 px-3 py-3">
                 <input type="hidden" name="action" value="save_brand_color" />
                 <input type="hidden" name="brand_name" value="{{ brand.name }}" />
@@ -209,7 +234,7 @@
               {% if brand.main_keywords %}
                 <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Main keywords:</strong> {{ brand.main_keywords }}</div>
               {% endif %}
-              {% if not brand.website and not brand.niche and not brand.main_keywords and not brand.tone and not brand.notes and not brand.logo_path %}
+              {% if not brand.website and not brand.niche and not brand.main_keywords and not brand.tone and not brand.notes and not brand.planner_notes and not brand.logo_path %}
                 <div class="mt-2 text-sm leading-6 text-sand-700">No extra details saved yet.</div>
               {% endif %}
               <div class="mt-4 flex flex-wrap gap-2">
@@ -255,7 +280,90 @@
                       <div class="rounded-2xl bg-sand-50 px-4 py-3"><strong class="text-sand-900">Niche:</strong> {{ brand.niche or "Not set" }}</div>
                       <div class="rounded-2xl bg-sand-50 px-4 py-3 md:col-span-2"><strong class="text-sand-900">Main keywords:</strong> {{ brand.main_keywords or "Not set" }}</div>
                       <div class="rounded-2xl bg-sand-50 px-4 py-3 md:col-span-2"><strong class="text-sand-900">Preferred tone:</strong> {{ brand.tone or "Not set" }}</div>
-                      <div class="rounded-2xl bg-sand-50 px-4 py-3 md:col-span-2"><strong class="text-sand-900">Brand notes:</strong> {{ brand.notes or "Not set" }}</div>
+                      <div class="rounded-2xl bg-sand-50 px-4 py-3 md:col-span-2"><strong class="text-sand-900">Rules:</strong> {{ brand.notes or "Not set" }}</div>
+                      <div class="rounded-2xl bg-sand-50 px-4 py-3 md:col-span-2"><strong class="text-sand-900">Brand notes:</strong> {{ brand.planner_notes or "Not set" }}</div>
+                    </div>
+
+                    <div class="mt-6 rounded-[24px] border border-sand-200 bg-white p-5">
+                      <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                        <div>
+                          <h3 class="font-display text-2xl text-sand-950">Pages</h3>
+                          <p class="mt-1 text-sm leading-6 text-sand-700">Import or export this brand's saved page list.</p>
+                        </div>
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <form method="post" enctype="multipart/form-data" class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <input type="hidden" name="action" value="import_brand_pages" />
+                            <input type="hidden" name="brand_name" value="{{ brand.name }}" />
+                            <input name="pages_file" type="file" accept=".csv,text/csv" class="min-h-11 rounded-2xl border border-sand-200 bg-white/95 px-4 py-2.5 text-sm text-sand-900 outline-none" />
+                            <button type="submit" class="inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Import Pages</button>
+                          </form>
+                          <form method="post">
+                            <input type="hidden" name="action" value="download_brand_pages_template" />
+                            <button type="submit" class="inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-white px-4 py-2.5 text-sm font-bold text-sand-700 ring-1 ring-sand-200 transition hover:bg-sand-50 hover:text-sand-900">Download Template</button>
+                          </form>
+                          <form method="post">
+                            <input type="hidden" name="action" value="export_brand_pages" />
+                            <input type="hidden" name="brand_name" value="{{ brand.name }}" />
+                            <button type="submit" class="inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black">Export Pages</button>
+                          </form>
+                        </div>
+                      </div>
+
+                      {% if brand.pages %}
+                        <div class="mt-4 overflow-hidden rounded-[18px] border border-sand-200">
+                          <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+                              <thead class="bg-sand-100 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">
+                                <tr>
+                                  <th class="px-4 py-3">Page Title</th>
+                                  <th class="px-4 py-3">Type</th>
+                                  <th class="px-4 py-3">Primary Keyword</th>
+                                  <th class="px-4 py-3">Supporting Keywords</th>
+                                  <th class="px-4 py-3">Expectations</th>
+                                  <th class="px-4 py-3">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody class="divide-y divide-sand-100 bg-white">
+                                {% for page in brand.pages %}
+                                  <tr class="align-top">
+                                    <td class="max-w-[260px] break-words px-4 py-3 font-bold text-sand-950">{{ page.page_title or "Untitled" }}</td>
+                                    <td class="max-w-[160px] break-words px-4 py-3 text-sand-700">{{ page.page_type or "Not set" }}</td>
+                                    <td class="max-w-[220px] break-words px-4 py-3 text-sand-700">{{ page.primary_keyword or "Not set" }}</td>
+                                    <td class="max-w-[260px] break-words px-4 py-3 text-sand-700">{{ page.supporting_keywords or "Not set" }}</td>
+                                    <td class="max-w-[320px] break-words px-4 py-3 text-sand-700">{{ page.expectations or "Not set" }}</td>
+                                    <td class="min-w-[180px] px-4 py-3">
+                                      <div class="flex flex-wrap gap-2">
+                                        <details class="w-full rounded-2xl bg-sand-50 px-3 py-2">
+                                          <summary class="cursor-pointer text-sm font-bold text-sand-700">Edit</summary>
+                                          <form method="post" class="mt-3 grid gap-2">
+                                            <input type="hidden" name="action" value="update_brand_page" />
+                                            <input type="hidden" name="page_id" value="{{ page.id }}" />
+                                            <input name="page_title" type="text" value="{{ page.page_title }}" placeholder="Page title" class="min-h-10 w-full rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm text-sand-900 outline-none focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+                                            <input name="page_type" type="text" value="{{ page.page_type }}" placeholder="Page type" class="min-h-10 w-full rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm text-sand-900 outline-none focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+                                            <input name="primary_keyword" type="text" value="{{ page.primary_keyword }}" placeholder="Primary keyword" class="min-h-10 w-full rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm text-sand-900 outline-none focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+                                            <textarea name="supporting_keywords" placeholder="Supporting keywords" class="min-h-[80px] w-full rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm text-sand-900 outline-none focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ page.supporting_keywords }}</textarea>
+                                            <textarea name="expectations" placeholder="Expectations" class="min-h-[90px] w-full rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm text-sand-900 outline-none focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ page.expectations }}</textarea>
+                                            <button type="submit" class="inline-flex min-h-10 w-fit items-center rounded-full bg-sand-600 px-3 py-2 text-xs font-bold text-sand-50 transition hover:bg-sand-700">Save Page</button>
+                                          </form>
+                                        </details>
+                                        <form method="post" onsubmit="return confirm('Delete this brand page?');">
+                                          <input type="hidden" name="action" value="delete_brand_page" />
+                                          <input type="hidden" name="page_id" value="{{ page.id }}" />
+                                          <button type="submit" class="inline-flex min-h-10 items-center rounded-full bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100">Delete</button>
+                                        </form>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                {% endfor %}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      {% else %}
+                        <div class="mt-4 rounded-[18px] border-2 border-dashed border-sand-200 bg-sand-50/70 px-5 py-8 text-center text-sm leading-6 text-sand-700">
+                          No pages saved for this brand yet.
+                        </div>
+                      {% endif %}
                     </div>
 
                     <div class="mt-6 flex flex-wrap gap-2">
@@ -273,6 +381,7 @@
             </div>
           {% endfor %}
         </div>
+        <div id="brandPagination" class="mt-5 flex flex-wrap items-center gap-2"></div>
         <div id="brandFilterEmpty" class="mt-4 hidden rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
           No brands match that filter.
         </div>
@@ -326,6 +435,15 @@
     const brandFilterCount = document.getElementById("brandFilterCount");
     const brandFilterEmpty = document.getElementById("brandFilterEmpty");
     const brandCards = Array.from(document.querySelectorAll("[data-brand-search]"));
+    const brandPaginator = window.AppUi && window.AppUi.createPaginator
+      ? window.AppUi.createPaginator({
+          items: brandCards,
+          controls: document.getElementById("brandPagination"),
+          empty: brandFilterEmpty,
+          storageKey: "brands.page",
+          pageSize: 9,
+        })
+      : null;
 
     function updateBrandFilter() {
       if (!brandFilter) {
@@ -338,7 +456,7 @@
         const matchesText = !query || card.dataset.brandSearch.includes(query);
         const matchesColor = !selectedColor || card.dataset.brandColor === selectedColor;
         const isVisible = matchesText && matchesColor;
-        card.classList.toggle("hidden", !isVisible);
+        card.dataset.filterVisible = isVisible ? "1" : "0";
         if (isVisible) {
           visibleCount += 1;
         }
@@ -346,7 +464,9 @@
       if (brandFilterCount) {
         brandFilterCount.textContent = `${visibleCount} brand${visibleCount === 1 ? "" : "s"} shown`;
       }
-      if (brandFilterEmpty) {
+      if (brandPaginator) {
+        brandPaginator.refresh();
+      } else if (brandFilterEmpty) {
         brandFilterEmpty.classList.toggle("hidden", visibleCount !== 0);
       }
     }
@@ -372,6 +492,8 @@
         updateBrandFilter();
       });
     }
+
+    updateBrandFilter();
 
     document.querySelectorAll("[data-brand-modal-open]").forEach((card) => {
       card.addEventListener("click", (event) => {

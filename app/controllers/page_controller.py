@@ -2,7 +2,7 @@ import json
 
 from flask import render_template, request
 
-from database import get_brand_context, list_brand_names, record_generation, record_page, upsert_brand
+from database import get_brand_context, get_generation_history_item, list_brand_names, record_generation, record_page, upsert_brand
 from generators.content_generator import count_html_words, revise_existing_content
 from generators.page_generator import generate_page
 from generators.simple_page_generator import generate_simple_page
@@ -26,6 +26,7 @@ def page_generator():
         "change_request": "",
         "meta_description": "",
         "page_content": "",
+        "history_id": "",
         "quality_report": None,
         "regenerate_scope": "full",
         "image_count": 0,
@@ -33,6 +34,10 @@ def page_generator():
         "success": None,
         "brand_names": list_brand_names(),
     }
+
+    edit_history_id = request.args.get("edit_history_id", "").strip()
+    if request.method == "GET" and edit_history_id.isdigit():
+        _load_page_history_item(state, int(edit_history_id))
 
     if request.method == "POST":
         action = request.form.get("action", "generate_page").strip()
@@ -46,6 +51,7 @@ def page_generator():
         state["page_title"] = request.form.get("page_title", "").strip()
         state["meta_description"] = request.form.get("meta_description", "").strip()
         state["page_content"] = request.form.get("page_content", "").strip()
+        state["history_id"] = request.form.get("history_id", "").strip()
         state["image_count"] = _int_or_zero(request.form.get("image_count", "0"))
 
         if action == "save_generated_blog":
@@ -101,7 +107,7 @@ def page_generator():
                     min_words=min_words,
                     max_words=max_words,
                 )
-                record_generation(
+                state["history_id"] = str(record_generation(
                     content_type="Page",
                     brand_name=state["brand"],
                     title=state["page_title"],
@@ -112,12 +118,14 @@ def page_generator():
                         "page_type": state["page_type"],
                         "supporting_keywords": state["supporting_keywords"],
                         "expectations": state["expectations"],
+                        "image_count": state["image_count"],
                         "regenerate_scope": state["regenerate_scope"],
                         "change_request": state["change_request"],
                     },
                     content=state["page_content"],
                     quality_report=state["quality_report"],
-                )
+                    history_id=state["history_id"],
+                ))
                 record_page(
                     brand=state["brand"],
                     keyword=state["keyword"],
@@ -146,6 +154,7 @@ def simple_page_generator():
         "generated_title": "",
         "meta_descriptions": [],
         "generated_content": "",
+        "history_id": "",
         "quality_report": None,
         "change_request": "",
         "regenerate_scope": "full",
@@ -153,6 +162,10 @@ def simple_page_generator():
         "success": None,
         "brand_names": list_brand_names(),
     }
+
+    edit_history_id = request.args.get("edit_history_id", "").strip()
+    if request.method == "GET" and edit_history_id.isdigit():
+        _load_simple_page_history_item(state, int(edit_history_id))
 
     if request.method == "POST":
         action = request.form.get("action", "generate_simple_page").strip()
@@ -164,6 +177,7 @@ def simple_page_generator():
         state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
         state["generated_title"] = request.form.get("generated_title", "").strip()
         state["generated_content"] = request.form.get("generated_content", "").strip()
+        state["history_id"] = request.form.get("history_id", "").strip()
         state["meta_descriptions"] = _parse_meta_descriptions(request.form.get("meta_descriptions_json", "").strip())
 
         if action == "save_generated_blog":
@@ -220,7 +234,7 @@ def simple_page_generator():
                     min_words=min_words,
                     max_words=max_words,
                 )
-                record_generation(
+                state["history_id"] = str(record_generation(
                     content_type="Simple Page",
                     brand_name=state["brand"],
                     title=state["generated_title"] or state["page_title"],
@@ -235,7 +249,8 @@ def simple_page_generator():
                     },
                     content=state["generated_content"],
                     quality_report=state["quality_report"],
-                )
+                    history_id=state["history_id"],
+                ))
                 record_page(
                     brand=state["brand"],
                     keyword=state["page_title"],
@@ -272,7 +287,7 @@ def _save_page_generation(state: dict):
         min_words=min_words,
         max_words=max_words,
     )
-    record_generation(
+    state["history_id"] = str(record_generation(
         content_type="Page",
         brand_name=state["brand"],
         title=state["page_title"],
@@ -283,11 +298,13 @@ def _save_page_generation(state: dict):
             "page_type": state["page_type"],
             "supporting_keywords": state["supporting_keywords"],
             "expectations": state["expectations"],
+            "image_count": state["image_count"],
             "manual_save": True,
         },
         content=state["page_content"],
         quality_report=state["quality_report"],
-    )
+        history_id=state.get("history_id", ""),
+    ))
     record_page(
         brand=state["brand"],
         keyword=state["keyword"],
@@ -318,7 +335,7 @@ def _save_simple_page_generation(state: dict):
         min_words=min_words,
         max_words=max_words,
     )
-    record_generation(
+    state["history_id"] = str(record_generation(
         content_type="Simple Page",
         brand_name=state["brand"],
         title=title,
@@ -332,7 +349,8 @@ def _save_simple_page_generation(state: dict):
         },
         content=state["generated_content"],
         quality_report=state["quality_report"],
-    )
+        history_id=state.get("history_id", ""),
+    ))
     record_page(
         brand=state["brand"],
         keyword=state["page_title"],
@@ -342,6 +360,45 @@ def _save_simple_page_generation(state: dict):
         expectations=state["expectations"],
     )
     state["success"] = "Generated simple page saved to history."
+
+
+def _load_page_history_item(state: dict, history_id: int):
+    item = get_generation_history_item(history_id)
+    if not item:
+        return
+    prompt_inputs = _loads(item.get("prompt_inputs", "{}"))
+    state["history_id"] = str(item.get("id", ""))
+    state["brand"] = item.get("brand_name", "") or ""
+    state["keyword"] = item.get("primary_keyword", "") or ""
+    state["supporting_keywords"] = prompt_inputs.get("supporting_keywords", "")
+    state["page_type"] = prompt_inputs.get("page_type", "")
+    state["expectations"] = prompt_inputs.get("expectations", "")
+    state["change_request"] = prompt_inputs.get("change_request", "")
+    state["regenerate_scope"] = prompt_inputs.get("regenerate_scope", "full") or "full"
+    state["page_title"] = item.get("title", "") or ""
+    state["meta_description"] = item.get("meta_description", "") or ""
+    state["page_content"] = item.get("content", "") or ""
+    state["image_count"] = _int_or_zero(prompt_inputs.get("image_count", 0))
+    state["quality_report"] = _loads(item.get("quality_report", "{}"))
+
+
+def _load_simple_page_history_item(state: dict, history_id: int):
+    item = get_generation_history_item(history_id)
+    if not item:
+        return
+    prompt_inputs = _loads(item.get("prompt_inputs", "{}"))
+    meta_description = item.get("meta_description", "") or ""
+    state["history_id"] = str(item.get("id", ""))
+    state["brand"] = item.get("brand_name", "") or ""
+    state["page_title"] = item.get("primary_keyword", "") or item.get("title", "") or ""
+    state["page_type"] = prompt_inputs.get("page_type", "")
+    state["expectations"] = prompt_inputs.get("expectations", "")
+    state["change_request"] = prompt_inputs.get("change_request", "")
+    state["regenerate_scope"] = prompt_inputs.get("regenerate_scope", "full") or "full"
+    state["generated_title"] = item.get("title", "") or ""
+    state["meta_descriptions"] = [{"text": meta_description, "character_count": len(meta_description)}] if meta_description else []
+    state["generated_content"] = item.get("content", "") or ""
+    state["quality_report"] = _loads(item.get("quality_report", "{}"))
 
 
 def _parse_meta_descriptions(raw: str) -> list[dict]:
@@ -359,6 +416,14 @@ def _int_or_zero(value) -> int:
         return max(0, int(value or 0))
     except (TypeError, ValueError):
         return 0
+
+
+def _loads(raw: str) -> dict:
+    try:
+        data = json.loads(raw or "{}")
+        return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError:
+        return {}
 
 
 def _scoped_change_request(change_request: str, scope: str) -> str:

@@ -1,6 +1,10 @@
-from flask import render_template, request
+import csv
+from io import StringIO
 
-from database import check_keyword_usage, delete_brand, get_brand_record, list_brand_records, upsert_brand
+from flask import Response, render_template, request
+
+from database import check_keyword_usage, delete_brand, delete_brand_page, get_brand_pages, get_brand_record, list_brand_records, record_page, update_brand_page, upsert_brand
+from database.common import normalize_brand_name
 from logger import logger
 
 from app.controllers.helpers import base_template_context, image_url
@@ -16,8 +20,11 @@ def brands():
         "main_keywords": "",
         "tone": "",
         "notes": "",
+        "planner_notes": "",
         "logo_path": "",
         "brand_color": "#b07042",
+        "include_in_posting_planner": False,
+        "include_in_backlink_follow_up": False,
         "brand_preset": "",
         "check_brand": "",
         "check_keyword": "",
@@ -40,6 +47,16 @@ def brands():
             _handle_delete_brand(state)
         elif action == "check_keyword":
             _handle_check_keyword(state)
+        elif action == "import_brand_pages":
+            _handle_import_brand_pages(state)
+        elif action == "update_brand_page":
+            _handle_update_brand_page(state)
+        elif action == "delete_brand_page":
+            _handle_delete_brand_page(state)
+        elif action == "export_brand_pages":
+            return _export_brand_pages_csv()
+        elif action == "download_brand_pages_template":
+            return _download_brand_pages_template_csv()
 
     brand_models = _build_brand_view_models()
     return render_template(
@@ -65,8 +82,11 @@ def _populate_brand_for_edit(state: dict, brand_name: str):
     state["main_keywords"] = brand_record.get("main_keywords", "")
     state["tone"] = brand_record.get("tone", "")
     state["notes"] = brand_record.get("notes", "")
+    state["planner_notes"] = brand_record.get("planner_notes", "")
     state["logo_path"] = brand_record.get("logo_path", "")
     state["brand_color"] = brand_record.get("brand_color", "") or _fallback_brand_color(state["brand_name"])
+    state["include_in_posting_planner"] = bool(brand_record.get("include_in_posting_planner", 0))
+    state["include_in_backlink_follow_up"] = bool(brand_record.get("include_in_backlink_follow_up", 0))
 
 
 def _handle_save_brand(state: dict):
@@ -76,7 +96,10 @@ def _handle_save_brand(state: dict):
     state["main_keywords"] = request.form.get("main_keywords", "").strip()
     state["tone"] = request.form.get("tone", "").strip()
     state["notes"] = request.form.get("notes", "").strip()
+    state["planner_notes"] = request.form.get("planner_notes", "").strip()
     state["brand_color"] = _normalize_color_input(request.form.get("brand_color", ""))
+    state["include_in_posting_planner"] = request.form.get("include_in_posting_planner") == "1"
+    state["include_in_backlink_follow_up"] = request.form.get("include_in_backlink_follow_up") == "1"
     state["brand_preset"] = request.form.get("brand_preset", "").strip()
     logo_upload = request.files.get("logo_file")
 
@@ -94,10 +117,13 @@ def _handle_save_brand(state: dict):
             website=state["website"],
             tone=state["tone"],
             notes=state["notes"],
+            planner_notes=state["planner_notes"],
             niche=state["niche"],
             main_keywords=state["main_keywords"],
             logo_path=state["logo_path"],
             brand_color=state["brand_color"],
+            include_in_posting_planner=state["include_in_posting_planner"],
+            include_in_backlink_follow_up=state["include_in_backlink_follow_up"],
         )
         saved_name = state["brand_name"]
         state.update(
@@ -108,8 +134,11 @@ def _handle_save_brand(state: dict):
                 "main_keywords": "",
                 "tone": "",
                 "notes": "",
+                "planner_notes": "",
                 "logo_path": "",
                 "brand_color": "#b07042",
+                "include_in_posting_planner": False,
+                "include_in_backlink_follow_up": False,
                 "success": f"Saved brand: {saved_name}",
             }
         )
@@ -170,12 +199,136 @@ def _handle_delete_brand(state: dict):
         state["error"] = "An error occurred while deleting the brand. Check logs/app.log for details."
 
 
+def _handle_import_brand_pages(state: dict):
+    brand_name = request.form.get("brand_name", "").strip()
+    upload = request.files.get("pages_file")
+    if not brand_name:
+        state["error"] = "Please select a brand before importing pages."
+        return
+    if not upload or not upload.filename:
+        state["error"] = "Please choose a CSV file to import."
+        return
+
+    try:
+        text = upload.read().decode("utf-8-sig")
+        reader = csv.DictReader(StringIO(text))
+        imported = 0
+        skipped = 0
+        for row in reader:
+            page_title = (row.get("page_title") or row.get("title") or row.get("Page title") or "").strip()
+            primary_keyword = (row.get("primary_keyword") or row.get("keyword") or row.get("Primary keyword") or "").strip()
+            if not page_title and not primary_keyword:
+                skipped += 1
+                continue
+            record_page(
+                brand=brand_name,
+                keyword=primary_keyword,
+                page_title=page_title,
+                page_type=row.get("page_type", ""),
+                supporting_keywords=row.get("supporting_keywords", ""),
+                expectations=row.get("expectations", ""),
+            )
+            imported += 1
+        state["success"] = f"Imported {imported} page{'s' if imported != 1 else ''} for {brand_name}."
+        if skipped:
+            state["success"] += f" Skipped {skipped} row{'s' if skipped != 1 else ''} without a page title or primary keyword."
+    except UnicodeDecodeError:
+        state["error"] = "Could not read the CSV file. Please upload a UTF-8 CSV."
+    except Exception:
+        logger.exception("brand pages import action failed")
+        state["error"] = "An error occurred while importing brand pages. Check logs/app.log for details."
+
+
+def _handle_update_brand_page(state: dict):
+    page_id = request.form.get("page_id", "").strip()
+    if not page_id.isdigit():
+        state["error"] = "Please select a page to update."
+        return
+
+    try:
+        if update_brand_page(
+            int(page_id),
+            page_title=request.form.get("page_title", ""),
+            page_type=request.form.get("page_type", ""),
+            primary_keyword=request.form.get("primary_keyword", ""),
+            supporting_keywords=request.form.get("supporting_keywords", ""),
+            expectations=request.form.get("expectations", ""),
+        ):
+            state["success"] = "Updated brand page."
+        else:
+            state["error"] = "Brand page not found."
+    except Exception:
+        logger.exception("brand page update action failed")
+        state["error"] = "An error occurred while updating the page. Check logs/app.log for details."
+
+
+def _handle_delete_brand_page(state: dict):
+    page_id = request.form.get("page_id", "").strip()
+    if not page_id.isdigit():
+        state["error"] = "Please select a page to delete."
+        return
+
+    try:
+        if delete_brand_page(int(page_id)):
+            state["success"] = "Deleted brand page."
+        else:
+            state["error"] = "Brand page not found."
+    except Exception:
+        logger.exception("brand page delete action failed")
+        state["error"] = "An error occurred while deleting the page. Check logs/app.log for details."
+
+
+def _export_brand_pages_csv():
+    brand_name = request.form.get("brand_name", "").strip()
+    brand_record = get_brand_record(brand_name)
+    if not brand_record:
+        return Response("Brand not found.\n", status=404, mimetype="text/plain")
+
+    output = StringIO()
+    fieldnames = ["page_title", "page_type", "primary_keyword", "supporting_keywords", "expectations"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for page in get_brand_pages(brand_record["id"]):
+        writer.writerow({field: page.get(field, "") for field in fieldnames})
+
+    filename_brand = "".join(char if char.isalnum() else "-" for char in brand_record.get("name", "brand").lower()).strip("-") or "brand"
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename_brand}-pages.csv"},
+    )
+
+
+def _download_brand_pages_template_csv():
+    output = StringIO()
+    fieldnames = ["page_title", "page_type", "primary_keyword", "supporting_keywords", "expectations"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerow(
+        {
+            "page_title": "Example Service Page",
+            "page_type": "Service",
+            "primary_keyword": "example primary keyword",
+            "supporting_keywords": "supporting keyword one, supporting keyword two",
+            "expectations": "Short notes about what this page should cover.",
+        }
+    )
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=brand-pages-template.csv"},
+    )
+
+
 def _build_brand_view_models() -> list[dict]:
     brands = []
     for brand in list_brand_records():
         item = dict(brand)
         item["logo_url"] = image_url(item.get("logo_path", ""))
         item["brand_color"] = _normalize_color_input(item.get("brand_color", "")) or _fallback_brand_color(item.get("name", ""))
+        item["pages"] = get_brand_pages(item.get("id"))
         brands.append(item)
     return brands
 

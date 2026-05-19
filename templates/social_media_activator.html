@@ -1,22 +1,27 @@
 {% extends "base.html" %}
-{% set active_page = "social-activator" %}
+{% set active_page = "neutral-blog" %}
 
-{% block title %}Social Media Activator{% endblock %}
-{% block eyebrow %}Short Social Posts{% endblock %}
-{% block hero_title %}Social Media Activator{% endblock %}
-{% block hero_text %}Generate a short platform-aware post, image idea, and hashtags from a saved social media profile.{% endblock %}
+{% block title %}Neutral Blog Generator{% endblock %}
+
+{% block head_extras %}
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+{% endblock %}
 
 {% block overlay %}
   <div class="loading-overlay" data-loading-overlay>
     <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[22px] bg-white/95 px-7 py-7 text-center shadow-2xl">
       <div class="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-4 border-sand-200 border-t-sand-600"></div>
-      <div class="text-base font-bold text-sand-700" data-loading-text>Generating social post...</div>
+      <div class="text-base font-bold text-sand-700" data-loading-text>Generating neutral blog...</div>
     </div>
   </div>
 {% endblock %}
 
+{% block eyebrow %}Neutral Publishing Workflow{% endblock %}
+{% block hero_title %}Neutral Blog Generator{% endblock %}
+{% block hero_text %}Generate neutral publisher-style content for a saved medium, using that medium's word limits and output needs without a required target link.{% endblock %}
+
 {% block content %}
-  <div class="grid gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+  <div class="grid gap-6">
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if error %}
         <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
@@ -25,79 +30,151 @@
         <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
       {% endif %}
 
-      <form method="post" class="grid gap-1" data-loading-message="Generating social post...">
-        <label for="focus_word" class="mb-2 block text-sm font-bold text-sand-900">Focus Word <span class="text-red-600">*</span></label>
-        <input id="focus_word" name="focus_word" type="text" value="{{ focus_word }}" placeholder="e.g. launch, summer, speed, comfort" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+      <form method="post" id="contentForm" data-loading-message="Generating neutral blog..." class="grid gap-5">
+        <div class="grid gap-4 lg:grid-cols-2">
+          <div>
+            <label for="topic" class="mb-2 block text-sm font-bold text-sand-900">Topic</label>
+            <input id="topic" name="topic" type="text" value="{{ topic }}" placeholder="Leave blank for a random technical, sports, video games, or online games topic" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+          <div>
+            <label for="selected_medium_id" class="mb-2 block text-sm font-bold text-sand-900">Publishing Medium <span class="text-red-600">*</span></label>
+            <select id="selected_medium_id" name="selected_medium_id" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="">Choose a saved medium</option>
+              {% for medium in mediums %}
+                <option value="{{ medium.id }}" {% if selected_medium_id|string == medium.id|string %}selected{% endif %}>
+                  {{ medium.website_name }}{% if medium.blog_name %} · {{ medium.blog_name }}{% endif %} · {{ medium.website_type.replace('_', ' ')|title }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
 
-        <label for="reference_link" class="mb-2 block text-sm font-bold text-sand-900">Reference Link</label>
-        <input id="reference_link" name="reference_link" type="url" value="{{ reference_link }}" placeholder="https://example.com/reference" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        <div>
+          <label for="suggested_content" class="mb-2 block text-sm font-bold text-sand-900">Suggestion</label>
+          <textarea id="suggested_content" name="suggested_content" rows="4" placeholder="Optional angle, notes, points to include, or style direction for this neutral blog" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ suggested_content }}</textarea>
+        </div>
 
-        <label for="selected_profile_id" class="mb-2 block text-sm font-bold text-sand-900">Social Media Profile <span class="text-red-600">*</span></label>
-        <select id="selected_profile_id" name="selected_profile_id" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
-          <option value="">Choose a profile</option>
-          {% for profile in profiles %}
-            <option value="{{ profile.id }}" {% if selected_profile_id|string == profile.id|string %}selected{% endif %}>{{ profile.brand_name }} · {{ profile.social_type }}</option>
-          {% endfor %}
-        </select>
+        <input type="hidden" id="contentActionInput" name="action" value="generate_content" />
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Neutral Blog</button>
 
-        <input type="hidden" name="action" value="generate_post" />
-        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Post</button>
-      </form>
-
-      <p class="mt-5 text-sm leading-6 text-sand-700">
-        Add profiles in <a href="/social-media-list" class="font-bold text-sand-800 underline decoration-sand-300 underline-offset-2">Social Media List</a>.
-      </p>
-    </section>
-
-    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-      {% if result %}
-        <div class="grid gap-5">
-          {% if selected_profile %}
-            <div class="rounded-[22px] border border-moss-200 bg-moss-100/60 p-4 text-sm leading-6 text-sand-800">
-              <strong class="text-sand-900">Profile:</strong> {{ selected_profile.brand_name }} · {{ selected_profile.social_type }}
-              {% if reference_link %}
-                <div class="mt-1 break-all"><strong class="text-sand-900">Reference:</strong> {{ reference_link }}</div>
+        {% if content %}
+          <div class="grid gap-5">
+            <div class="rounded-[24px] border border-moss-200 bg-moss-100/60 p-5">
+              <div class="grid gap-3 md:grid-cols-2">
+                <div>
+                  <div class="text-xs font-extrabold uppercase tracking-[0.08em] text-sand-600">Title</div>
+                  <h2 class="mt-1 font-display text-2xl text-sand-950">{{ selected_title }}</h2>
+                </div>
+                <div>
+                  <label for="metaDescriptionInput" class="mb-2 block text-xs font-extrabold uppercase tracking-[0.08em] text-sand-600">Meta Description</label>
+                  <textarea id="metaDescriptionInput" name="meta_description" rows="3" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ meta_description }}</textarea>
+                  <div class="mt-1 text-xs font-bold text-sand-700">Target: 120-140 characters</div>
+                </div>
+              </div>
+              {% if selected_medium %}
+                <div class="mt-4 text-sm leading-6 text-sand-800">
+                  <strong class="text-sand-900">Medium:</strong> {{ selected_medium.website_name }}{% if selected_medium.blog_name %} · {{ selected_medium.blog_name }}{% endif %}
+                  {% if selected_medium.min_words or selected_medium.max_characters %}
+                    <span class="ml-2 text-sand-600">Words: {{ selected_medium.min_words or 0 }} min{% if selected_medium.max_characters %}, {{ selected_medium.max_characters }} max{% endif %}</span>
+                  {% endif %}
+                </div>
               {% endif %}
             </div>
-          {% endif %}
 
-          <div>
-            <div class="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 class="font-display text-2xl text-sand-950">Post Content</h2>
-              <button type="submit" form="saveSocialPostForm" class="inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Save Generated Post</button>
+            {% if visual %}
+              <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+                <h3 class="mb-2 font-display text-2xl text-sand-950">Visual Ideas</h3>
+                <p class="text-sm leading-6 text-sand-800">{{ visual }}</p>
+              </div>
+            {% endif %}
+
+            {% if reference_links %}
+              <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+                <h3 class="mb-3 font-display text-2xl text-sand-950">Reference Links</h3>
+                <div class="grid gap-2 text-sm leading-6">
+                  {% for reference in reference_links %}
+                    <a href="{{ reference.url }}" target="_blank" rel="noopener noreferrer" class="break-all font-bold text-sand-800 underline decoration-sand-300 underline-offset-2 hover:text-sand-950">{{ reference.title }} · {{ reference.url }}</a>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <div class="grid gap-4">
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h3 class="font-display text-2xl text-sand-950">Article Content</h3>
+                  <p class="mt-2 text-sm leading-6 text-sand-700">Edit the generated content directly before saving, previewing, or downloading.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <button type="button" id="previewDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Print Preview</button>
+                  <button type="button" id="downloadDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Download .doc</button>
+                </div>
+              </div>
+              <div id="editorContainer">
+                <div id="contentEditor" class="quill-editor rounded-b-2xl">{{ content }}</div>
+              </div>
+              {% include "_output_views.html" %}
+              <div id="editorWordCount" class="text-sm font-medium text-sand-700">Word count: 0</div>
             </div>
-            <div class="rounded-[22px] border border-sand-200 bg-white px-5 py-5 text-base leading-7 text-sand-900">{{ result.post_content }}</div>
-            <div class="mt-2 text-sm font-medium text-sand-700">Characters: {{ result.character_count }}/220</div>
-          </div>
 
-          <div>
-            <h2 class="mb-2 font-display text-2xl text-sand-950">Image Description</h2>
-            <div class="rounded-[22px] border border-sand-200 bg-white px-5 py-5 text-sm leading-6 text-sand-800">{{ result.image_description }}</div>
-          </div>
-
-          <div>
-            <h2 class="mb-2 font-display text-2xl text-sand-950">Tags / Hashtags</h2>
-            <div class="flex flex-wrap gap-2">
-              {% for tag in result.tags %}
-                <span class="rounded-full border border-sand-200 bg-sand-50 px-3 py-2 text-sm font-bold text-sand-800">{{ tag }}</span>
-              {% endfor %}
+            <div class="rounded-[24px] border border-moss-200 bg-moss-100/60 p-5">
+              <label for="post_link" class="mb-2 block text-sm font-bold text-sand-900">Post link <span class="text-red-600">*</span></label>
+              <input id="post_link" name="post_link" type="url" value="{{ post_link }}" placeholder="https://example.com/published-post" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+              <button type="button" id="saveGeneratedButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-moss-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-moss-500">Save Neutral Blog</button>
             </div>
+
+            {% if tag_suggestions %}
+              <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                  <h3 class="font-display text-2xl text-sand-950">Tags</h3>
+                  <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ tag_suggestions|length }} Tags</span>
+                </div>
+                <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm font-bold leading-6 text-sand-800">{{ tag_suggestions|join(', ') }}</div>
+              </div>
+            {% endif %}
+
+            {% include "_quality_report.html" %}
           </div>
-          <form id="saveSocialPostForm" method="post" class="hidden-form" aria-hidden="true">
-            <input type="hidden" name="action" value="save_generated_blog" />
-            <input type="hidden" name="focus_word" value="{{ focus_word }}" />
-            <input type="hidden" name="reference_link" value="{{ reference_link }}" />
-            <input type="hidden" name="selected_profile_id" value="{{ selected_profile_id }}" />
-            <textarea name="post_content">{{ result.post_content }}</textarea>
-            <textarea name="image_description">{{ result.image_description }}</textarea>
-            <input type="hidden" name="tags" value="{{ result.tags|join(', ') }}" />
-          </form>
-        </div>
-      {% else %}
-        <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
-          Generated social content will appear here.
-        </div>
-      {% endif %}
+
+          <input type="radio" name="selected_title" value="{{ selected_title }}" checked class="hidden" />
+          <input type="radio" name="meta_description_choice" value="{{ meta_description }}" checked class="hidden" />
+          <input type="hidden" name="visual" value="{{ visual }}" />
+          <input type="hidden" name="history_id" value="{{ history_id }}" />
+          <input type="hidden" name="tags" value="{{ tag_suggestions|join(', ') }}" />
+          <textarea name="reference_links" class="hidden-form" aria-hidden="true">{% for reference in reference_links %}{{ reference.title }}|{{ reference.url }}
+{% endfor %}</textarea>
+          <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
+        {% endif %}
+      </form>
     </section>
+
+    {% if content %}
+      <form id="previewForm" method="post" action="/preview" class="hidden-form" aria-hidden="true">
+        <input type="hidden" id="previewSelectedTitle" name="selected_title" value="{{ selected_title }}" />
+        <input type="hidden" name="keyword" value="{{ topic }}" />
+        <input type="hidden" name="medium_name" value="{% if selected_medium %}{{ selected_medium.website_name }}{% endif %}" />
+        <input type="hidden" name="tags" value="{{ tag_suggestions|join(', ') }}" />
+        <input type="hidden" id="previewMetaDescription" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="previewContentHtml" name="content_html" value="" />
+      </form>
+
+      <form id="downloadForm" method="post" action="/download_doc" class="hidden-form" aria-hidden="true">
+        <input type="hidden" id="downloadSelectedTitle" name="selected_title" value="{{ selected_title }}" />
+        <input type="hidden" name="keyword" value="{{ topic }}" />
+        <input type="hidden" name="medium_name" value="{% if selected_medium %}{{ selected_medium.website_name }}{% endif %}" />
+        <input type="hidden" name="tags" value="{{ tag_suggestions|join(', ') }}" />
+        <input type="hidden" id="downloadMetaDescription" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="downloadContentHtml" name="content_html" value="" />
+      </form>
+    {% endif %}
+
+    <div class="text-sm text-sand-700">
+      Manage publishing mediums in <a href="/mediums" class="font-bold text-sand-800 underline decoration-sand-300 underline-offset-2">Mediums</a>.
+    </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script src="{{ url_for('static', filename='assets/js/index.js') }}"></script>
 {% endblock %}

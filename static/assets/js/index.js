@@ -20,6 +20,7 @@
   const generateContentButton = document.getElementById("generateContentButton");
   const saveGeneratedButton = document.getElementById("saveGeneratedButton");
   const contentActionInput = document.getElementById("contentActionInput");
+  const postLinkInput = document.getElementById("post_link");
   const previewButton = document.getElementById("previewDocButton");
   const downloadButton = document.getElementById("downloadDocButton");
   const outputViewButtons = Array.from(document.querySelectorAll("[data-output-view-button]"));
@@ -52,6 +53,55 @@
   function prepareContentForm() {
     if (quill && contentHtmlInput) {
       contentHtmlInput.value = quill.root.innerHTML;
+    }
+  }
+
+  function normalizePostLink(value) {
+    const cleaned = (value || "").trim();
+    if (!cleaned) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(cleaned)) {
+      return cleaned;
+    }
+    if (/^(www\.|[a-z0-9-]+\.[a-z]{2,})(\S*)$/i.test(cleaned)) {
+      return "https://" + cleaned;
+    }
+    return cleaned;
+  }
+
+  function getValidationMessageBox() {
+    if (!contentForm) {
+      return null;
+    }
+    let box = document.getElementById("generatorValidationMessage");
+    if (box) {
+      return box;
+    }
+    box = document.createElement("div");
+    box.id = "generatorValidationMessage";
+    box.className = "hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700";
+    contentForm.insertBefore(box, contentForm.firstChild);
+    return box;
+  }
+
+  function showValidationMessage(message, focusElement) {
+    const box = getValidationMessageBox();
+    if (box) {
+      box.textContent = message;
+      box.classList.remove("hidden");
+      box.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (focusElement && typeof focusElement.focus === "function") {
+      focusElement.focus();
+    }
+  }
+
+  function clearValidationMessage() {
+    const box = document.getElementById("generatorValidationMessage");
+    if (box) {
+      box.textContent = "";
+      box.classList.add("hidden");
     }
   }
 
@@ -279,9 +329,10 @@
       syncCustomTitleRadio();
       const selectedTitle = getSelectedTitle();
       if (!selectedTitle) {
-        window.alert("Please select a title first.");
+        showValidationMessage("Please select a title first.");
         return;
       }
+      clearValidationMessage();
       prepareContentForm();
       window.AppUi.startFormLoading(contentForm, "Generating article content...");
       contentForm.submit();
@@ -296,9 +347,17 @@
       syncCustomTitleRadio();
       const selectedTitle = getSelectedTitle();
       if (!selectedTitle) {
-        window.alert("Please select a title before saving.");
+        showValidationMessage("Please select a title before saving.");
         return;
       }
+      if (postLinkInput) {
+        postLinkInput.value = normalizePostLink(postLinkInput.value);
+      }
+      if (postLinkInput && !/^https?:\/\/\S+/i.test(postLinkInput.value.trim())) {
+        showValidationMessage("Please enter a valid post link before saving.", postLinkInput);
+        return;
+      }
+      clearValidationMessage();
       prepareContentForm();
       contentForm.submit();
     });

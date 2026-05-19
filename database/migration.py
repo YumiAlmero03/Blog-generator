@@ -1,7 +1,7 @@
 import json
 import sqlite3
 
-from database.common import LEGACY_DB_PATH, get_connection
+from database.common import LEGACY_DB_PATH, get_connection, normalize_brand_name
 
 
 def migrate_from_tinydb_json_if_needed():
@@ -49,7 +49,7 @@ def migrate_from_tinydb_json_if_needed():
                 "pages",
                 legacy_data.get("pages", {}),
                 [
-                    "brand_name",
+                    "brand_id",
                     "brand_normalized_name",
                     "page_title",
                     "page_type",
@@ -63,7 +63,7 @@ def migrate_from_tinydb_json_if_needed():
                 "blogs",
                 legacy_data.get("blogs", {}),
                 [
-                    "brand_name",
+                    "brand_id",
                     "brand_normalized_name",
                     "title",
                     "primary_keyword",
@@ -87,7 +87,7 @@ def migrate_from_tinydb_json_if_needed():
                 "legacy_used_keywords",
                 legacy_data.get("used_keywords", {}),
                 [
-                    "brand_name",
+                    "brand_id",
                     "brand_normalized_name",
                     "keyword",
                     "normalized_keyword",
@@ -111,6 +111,28 @@ def _migrate_table(connection: sqlite3.Connection, table_name: str, records: dic
     for record_id, payload in sorted(records.items(), key=lambda item: int(item[0])):
         values = [int(record_id)]
         for column in columns:
+            if column == "brand_id":
+                brand_name_value = (payload.get("brand_name", "") or "").strip()
+                normalized = (payload.get("brand_normalized_name", "") or "").strip()
+                if not normalized and brand_name_value:
+                    normalized = normalize_brand_name(brand_name_value)
+
+                brand_id = None
+                if normalized:
+                    existing_brand = connection.execute(
+                        "SELECT id FROM brands WHERE normalized_name = ?",
+                        (normalized,),
+                    ).fetchone()
+                    if existing_brand:
+                        brand_id = existing_brand["id"]
+                    elif normalized:
+                        brand_id = connection.execute(
+                            "INSERT INTO brands (name, normalized_name) VALUES (?, ?)",
+                            (brand_name_value or normalized, normalized),
+                        ).lastrowid
+                values.append(brand_id)
+                continue
+
             value = payload.get(column, "")
             if column == "is_primary":
                 value = int(bool(value))

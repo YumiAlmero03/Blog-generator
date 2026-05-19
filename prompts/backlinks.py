@@ -21,6 +21,7 @@ def build_backlink_title_prompt(
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
     keyword_is_anchor_text: bool = False,
+    brand_topic_mode: str = "example",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     backlink_section = build_backlink_context_section(
@@ -46,6 +47,15 @@ Tier 2 title rule:
 - Do not use close variations that read like the anchor text.
 - Create natural broader titles that can support the anchor/link in the article body without showing the anchor text in the title.
 """
+    brand_is_main_topic = (brand_topic_mode or "").strip().lower() == "main"
+    brand_title_rules = """
+- The selected medium allows the brand to be the main topic.
+- You may include the brand name in titles when it makes the title clearer and editorial.
+- Keep titles informational and neutral, not sales-focused.
+""" if brand_is_main_topic else """
+- Never mention the brand name in any title.
+- Use the brand context only to understand the audience. Do not include the brand name in titles.
+"""
     return f"""
 You are an informational blog title generator for medium and guest-post content.
 
@@ -61,7 +71,7 @@ Brand: {brand}
 Rules:
 - Return exactly {count} titles
 - Create informational titles only.
-- Never mention the brand name in any title.
+{brand_title_rules}
 - Do not make titles promotional, sales-focused, or casino-focused.
 - Prefer topics about gaming platforms, games, player experience, software, apps, digital tools, online safety, or technology.
 - If the keyword is casino-related, reframe the title toward broader gaming platforms, games, entertainment technology, UX, security, or responsible digital play.
@@ -71,7 +81,6 @@ Rules:
 - Clear and clickable
 - Make the title feel appropriate for an external publisher or guest-post style article
 - Let the title style match the website type when one is provided, such as more discussion-oriented for forums or more editorial for review sites
-- Use the brand context only to understand the audience. Do not include the brand name in titles.
 - If a medium publication name is provided, let some title options reflect that publisher context naturally when it improves fit
 - If the medium tier is Tier 1 and a publication name is provided, make some title options feel like they belong on that blog or publication
 - Avoid repeating titles or keyword angles that were already used for this brand when the context shows previous usage
@@ -121,6 +130,7 @@ def build_backlink_meta_description_prompt(
     backlink_blog_name: str = "",
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
+    brand_topic_mode: str = "example",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     backlink_section = build_backlink_context_section(
@@ -137,6 +147,15 @@ def build_backlink_meta_description_prompt(
         backlink_content_guidelines=backlink_content_guidelines,
     )
     banned_words_section = build_banned_words_prompt_section()
+    brand_is_main_topic = (brand_topic_mode or "").strip().lower() == "main"
+    brand_meta_rules = """
+- The selected medium allows the brand to be the main topic.
+- You may include the brand name if it is needed for clarity, but keep the wording neutral and informational.
+- Avoid promotional claims, sales language, and brand-name stuffing.
+""" if brand_is_main_topic else """
+- Do not include the exact brand name.
+- If a brand or keyword is provided, use it only as private context for relevance, not as wording to place in the meta description.
+"""
     return f"""
 You are an informational SEO meta description writer for medium and guest-post content.
 
@@ -153,8 +172,9 @@ Rules:
 - Each meta description must be between 120 and 140 characters long.
 - Count characters carefully before finishing.
 - Keep the description informational, neutral, and helpful.
-- Include the main keyword only if it fits naturally.
-- Do not mention the brand name unless the title itself makes that unavoidable.
+{brand_meta_rules}
+- Do not include the exact main keyword phrase.
+- Use broader topical wording instead of repeating the brand name or keyword.
 - Do not make it promotional, sales-focused, or casino-focused.
 - Prefer a gaming platform, games, digital tools, online safety, user experience, or technology angle.
 - If the keyword is casino-related, reframe the wording toward broader gaming platforms, games, entertainment technology, UX, security, or responsible digital play.
@@ -162,7 +182,6 @@ Rules:
 - Use active voice.
 - Make it sound human and natural.
 - Let the wording match the website type naturally.
-- If a brand is provided, use it only as audience context.
 - If a medium publication name is provided, you may reflect that publishing context naturally, but do not force it.
 - If the medium tier is Tier 1 and a publication name is provided, the description may sound like it belongs on that blog or publication, but keep it natural.
 - Vary the approach for each variant.
@@ -209,6 +228,7 @@ def build_backlink_content_prompt(
     change_request: str = "",
     required_anchor_text: str = "",
     required_link_label: str = "brand",
+    brand_topic_mode: str = "example",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     backlink_section = build_backlink_context_section(
@@ -225,6 +245,7 @@ def build_backlink_content_prompt(
         backlink_content_guidelines=backlink_content_guidelines,
     )
     banned_words_section = build_banned_words_prompt_section()
+    brand_is_main_topic = (brand_topic_mode or "").strip().lower() == "main"
     suggested_content_section = ""
     cleaned_suggested_content = (suggested_content or "").strip()
     if cleaned_suggested_content:
@@ -378,6 +399,25 @@ Required {cleaned_required_link_label} link rules:
 - Do not use these sections together in the same page.
 - Choose the ending section that best matches the page type and search intent.
 """
+    if brand_is_main_topic:
+        brand_usage_rules = """
+- This selected medium allows the brand to be the main topic.
+- Make the article primarily about the brand, product, project, documentation, repository, or platform named by the brand field when the title supports it.
+- It is okay to mention the brand naturally more than once when needed for clarity, but avoid repetitive brand-name stuffing.
+- You may use the brand name in headings when it reads like documentation, a GitHub README, a GitBook guide, or a project article.
+- Stay neutral and informational. Do not write an advertisement, exaggerated claims, or sales copy.
+- Use category language when useful, but do not replace the main subject so much that the article becomes only a generic example.
+"""
+    else:
+        brand_usage_rules = """
+- Mention the brand name no more than once in the full article, and only as a natural example.
+- Mention the primary keyword no more than once in the full article, and only as a natural example.
+- Do not put the brand name or exact keyword in headings.
+- Avoid brand-name stuffing. After the single example mention, use neutral category language like "a gaming platform", "a games site", "a mobile app", "a digital entertainment tool", or "an online platform" when the meaning stays clear.
+- Keep examples educational. A brand or keyword may appear once as an example, but the article must remain about the broader informational topic.
+- If a brand is provided, use the brand context only to understand audience and category. Do not write an advertisement.
+- If a brand is provided, mention the brand at most once as an example and avoid repeating it.
+"""
 
     return f"""
 You are a professional informational writer who creates SEO-friendly, human-sounding blog articles and guest-post content.
@@ -412,10 +452,7 @@ Rules:
 - Suitable topic angles include gaming platforms, game discovery, online entertainment tools, player experience, app technology, payment security, account safety, AI in games, mobile performance, web platforms, and other technology topics.
 - For Tier 1 placements, write like a neutral publication explaining, comparing, or teaching a topic.
 - Write in third person. Do not write as the brand or from the brand's point of view.
-- Mention the brand name no more than once in the full article, and only as a natural example.
-- Mention the primary keyword no more than once in the full article, and only as a natural example.
-- Do not put the brand name or exact keyword in headings.
-- Avoid brand-name stuffing. After the single example mention, use neutral category language like "a gaming platform", "a games site", "a mobile app", "a digital entertainment tool", or "an online platform" when the meaning stays clear.
+{brand_usage_rules}
 - Do not repeat the exact article title in the body unless absolutely necessary. However, keep the content closely aligned with the title and main topic.
 - Avoid keyword stuffing and never force keywords into awkward sentences.
 - Use the main keyword no more than once per paragraph.
@@ -425,12 +462,9 @@ Rules:
 - Write for readability using compact paragraphs, not many tiny one-line paragraphs.
 - Avoid excessive line breaks. Do not place each sentence on a separate line.
 - Keep sections tidy: one heading followed by 1-2 meaningful paragraphs, not a long stack of single-sentence lines.
-- Keep examples educational. A brand or keyword may appear once as an example, but the article must remain about the broader informational topic.
 
 {format_rules}
 
-- If a brand is provided, use the brand context only to understand audience and category. Do not write an advertisement.
-- If a brand is provided, mention the brand at most once as an example and avoid repeating it.
 - If a medium publication name is provided, treat it as the blog or publication name and mention it naturally when relevant, but do not force it repeatedly.
 - If a writer name is provided, use it naturally as the article byline or writer identity when it fits.
 - If the medium tier is Tier 1 and a blog name is provided, include that blog name only when it feels natural.

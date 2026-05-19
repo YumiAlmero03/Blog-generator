@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% set active_page = "posting-planner" %}
+
+{% block title %}Posting Planner{% endblock %}
+{% block eyebrow %}Workspace Plan{% endblock %}
+{% block hero_title %}Posting Planner{% endblock %}
+{% block hero_text %}Review every saved publishing medium, daily target, workflow links, and posts saved for the selected date.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <div class="mb-5 grid gap-4 xl:grid-cols-[1fr_auto_auto] xl:items-end">
+      <div>
+        <label for="plannerFilter" class="mb-2 block text-sm font-bold text-sand-900">Filter planner</label>
+        <input
+          id="plannerFilter"
+          type="search"
+          placeholder="Search medium, account, brand, type, tier, or workflow"
+          class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+      </div>
+      <form method="get" class="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div>
+          <label for="plannerDate" class="mb-2 block text-sm font-bold text-sand-900">Posted date</label>
+          <input id="plannerDate" name="date" type="date" value="{{ selected_date }}" class="min-h-12 rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">View</button>
+        <button type="button" id="openExportTable" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Export</button>
+      </form>
+      <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold text-sand-800">
+        {{ rows|length }} medium{% if rows|length != 1 %}s{% endif %} · {{ total_posts_per_day }} target/day · {{ total_posts_sent }} posted
+      </div>
+    </div>
+
+    {% if rows %}
+      <div class="overflow-x-auto rounded-[22px] border border-sand-200 bg-white">
+        <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+          <thead class="bg-sand-100/80 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">
+            <tr>
+              <th class="px-4 py-3">Medium</th>
+              <th class="px-4 py-3">Account / Brand</th>
+              <th class="px-4 py-3">Type</th>
+              <th class="px-4 py-3">Posts / Day</th>
+              <th class="px-4 py-3">Post Sent</th>
+              <th class="px-4 py-3">Matched Workflow</th>
+              <th class="px-4 py-3">Notes</th>
+              <th class="px-4 py-3">Post</th>
+            </tr>
+          </thead>
+          <tbody id="plannerTableBody" class="divide-y divide-sand-100">
+            {% for row in rows %}
+              <tr
+                class="align-top"
+                data-planner-search="{{ [row.name, row.account, row.brand, row.type, row.source, row.notes, 'blog generator' if row.blog_url else '', 'medium blog tier 1' if row.medium_blog_url else '', 'tier 2 blog' if row.tier2_blog_url else '', 'neutral blog' if row.neutral_url else '']|join(' ')|lower }}"
+              >
+                <td class="px-4 py-4 font-bold text-sand-950">{{ row.name }}</td>
+                <td class="px-4 py-4 text-sand-700">
+                  {% if row.account %}
+                    {{ row.account }}
+                  {% else %}
+                    <span class="text-sand-400">Not set</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-4 text-sand-700">{{ row.type }}</td>
+                <td class="px-4 py-4">
+                  <span class="inline-flex min-w-10 justify-center rounded-full bg-moss-100 px-3 py-1 text-sm font-bold text-moss-700">{{ row.posts_per_day }}</span>
+                </td>
+                <td class="px-4 py-4">
+                  <span class="inline-flex min-w-10 justify-center rounded-full bg-sand-100 px-3 py-1 text-sm font-bold text-sand-800">{{ row.post_sent }}</span>
+                </td>
+                <td class="px-4 py-4">
+                  <div class="flex min-w-[260px] flex-wrap gap-2">
+                    {% if row.blog_url %}
+                      <a href="{{ row.blog_url }}" class="inline-flex items-center rounded-full bg-sand-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-sand-700">Blog</a>
+                    {% endif %}
+                    {% if row.medium_blog_url %}
+                      <a href="{{ row.medium_blog_url }}" class="inline-flex items-center rounded-full bg-sand-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-sand-700">Tier 1</a>
+                    {% endif %}
+                    {% if row.tier2_blog_url %}
+                      <a href="{{ row.tier2_blog_url }}" class="inline-flex items-center rounded-full bg-sand-100 px-3 py-2 text-xs font-bold text-sand-800 transition hover:bg-sand-200">Tier 2</a>
+                    {% endif %}
+                    {% if row.neutral_url %}
+                      <a href="{{ row.neutral_url }}" class="inline-flex items-center rounded-full bg-moss-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-moss-500">Neutral</a>
+                    {% endif %}
+                  </div>
+                </td>
+                <td class="px-4 py-4">
+                  <form method="post" class="grid min-w-[240px] gap-2">
+                    <input type="hidden" name="source" value="{{ row.source }}" />
+                    <input type="hidden" name="item_id" value="{{ row.id }}" />
+                    <input type="hidden" name="date" value="{{ selected_date }}" />
+                    <textarea name="notes" rows="4" placeholder="Add notes" class="w-full resize-y rounded-2xl border border-sand-200 bg-white/95 px-3 py-2 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ row.notes }}</textarea>
+                    <button type="submit" class="inline-flex min-h-9 w-fit items-center rounded-full bg-sand-600 px-3 py-2 text-xs font-bold text-sand-50 transition hover:bg-sand-700">Save Notes</button>
+                  </form>
+                </td>
+                <td class="px-4 py-4">
+                  {% if row.posts %}
+                    <div class="grid min-w-[260px] gap-2">
+                      {% for post in row.posts %}
+                        <div class="rounded-2xl border border-sand-200 bg-sand-50/80 px-3 py-2">
+                          <div class="mb-1 flex flex-wrap items-center gap-2">
+                            <span class="rounded-full bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-sand-700">{{ post.content_type }}</span>
+                            {% if post.post_link %}
+                              <span class="rounded-full bg-green-100 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-green-700">Saved</span>
+                            {% else %}
+                              <span class="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-amber-700">Draft</span>
+                            {% endif %}
+                            <span class="text-xs font-bold text-sand-600">{{ post.saved_at if post.post_link else post.created_at }}</span>
+                          </div>
+                          <a href="/generation-history/{{ post.id }}" class="block text-sm font-bold leading-5 text-sand-950 underline decoration-sand-300 underline-offset-2 hover:text-sand-700">{{ post.title or "Untitled post" }}</a>
+                          {% if post.post_link %}
+                            <a href="{{ post.post_link }}" target="_blank" rel="noopener noreferrer" class="mt-1 block break-all text-xs font-bold text-moss-700 underline decoration-moss-500/40 underline-offset-2 hover:text-moss-500">{{ post.post_link }}</a>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <span class="text-sm font-semibold text-sand-400">No posts</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div id="plannerEmpty" class="mt-4 hidden rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+        No planner rows match that filter.
+      </div>
+      <div id="plannerPagination" class="mt-5 flex flex-wrap items-center gap-2"></div>
+    {% else %}
+      <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+        Add publishing mediums to build your posting planner.
+      </div>
+    {% endif %}
+  </section>
+
+  <div id="exportTableModal" class="fixed inset-0 z-50 hidden bg-stone-950/60 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="exportTableTitle">
+    <div class="mx-auto flex max-h-[90vh] max-w-6xl flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl">
+      <div class="flex shrink-0 flex-col gap-3 border-b border-sand-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 id="exportTableTitle" class="font-display text-2xl text-sand-950">Posted Export</h2>
+          <p class="mt-1 text-sm font-semibold text-sand-600">{{ selected_date }} · {{ export_rows|length }} sent post{% if export_rows|length != 1 %}s{% endif %}</p>
+        </div>
+        <button type="button" id="closeExportTable" class="inline-flex min-h-10 w-fit items-center justify-center rounded-full bg-sand-100 px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-200">Close</button>
+      </div>
+      <div class="min-h-0 flex-1 overflow-auto p-5">
+        {% if export_rows %}
+          <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+            <thead class="bg-sand-100/80 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">
+              <tr>
+                <th class="px-4 py-3">Medium</th>
+                <th class="px-4 py-3">Brand / Anchor / Keyword</th>
+                <th class="px-4 py-3">Link</th>
+                <th class="px-4 py-3">Date Saved</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-sand-100 bg-white">
+              {% for item in export_rows %}
+                <tr class="align-top">
+                  <td class="px-4 py-3 font-bold text-sand-950">{{ item.medium }}</td>
+                  <td class="px-4 py-3 text-sand-700">{{ item.subject or "Not set" }}</td>
+                  <td class="px-4 py-3">
+                    <div class="grid gap-2">
+                      <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="break-all font-bold text-moss-700 underline decoration-moss-500/40 underline-offset-2 hover:text-moss-500">{{ item.link }}</a>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" data-copy-link="{{ item.link }}" class="inline-flex min-h-9 w-fit items-center justify-center rounded-full bg-sand-100 px-3 py-2 text-xs font-bold text-sand-700 transition hover:bg-sand-200">Copy Link</button>
+                        <span class="text-xs font-bold text-moss-700" data-copy-link-status></span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-sand-700">{{ item.saved_at }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-sand-50/70 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+            No sent posts with post links for {{ selected_date }}.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const plannerFilter = document.getElementById("plannerFilter");
+    const plannerRows = Array.from(document.querySelectorAll("[data-planner-search]"));
+    const plannerEmpty = document.getElementById("plannerEmpty");
+    const exportTableModal = document.getElementById("exportTableModal");
+    const openExportTable = document.getElementById("openExportTable");
+    const closeExportTable = document.getElementById("closeExportTable");
+    const plannerPaginator = window.AppUi && window.AppUi.createPaginator
+      ? window.AppUi.createPaginator({
+          items: plannerRows,
+          controls: document.getElementById("plannerPagination"),
+          empty: plannerEmpty,
+          storageKey: "postingPlanner.page",
+          pageSize: 9,
+        })
+      : null;
+
+    function updatePlannerFilter() {
+      if (!plannerFilter) {
+        return;
+      }
+      const query = plannerFilter.value.trim().toLowerCase();
+      let visibleCount = 0;
+      plannerRows.forEach((row) => {
+        const isVisible = !query || row.dataset.plannerSearch.includes(query);
+        row.dataset.filterVisible = isVisible ? "1" : "0";
+        if (isVisible) {
+          visibleCount += 1;
+        }
+      });
+      if (plannerPaginator) {
+        plannerPaginator.refresh();
+      } else if (plannerEmpty) {
+        plannerEmpty.classList.toggle("hidden", visibleCount !== 0);
+      }
+    }
+
+    if (plannerFilter) {
+      plannerFilter.addEventListener("input", updatePlannerFilter);
+    }
+
+    document.querySelectorAll("[data-copy-link]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const status = button.parentElement ? button.parentElement.querySelector("[data-copy-link-status]") : null;
+        window.AppUi.copyText(button.dataset.copyLink || "", "Link copied.", (message) => {
+          if (status) {
+            status.textContent = message;
+            window.setTimeout(() => {
+              status.textContent = "";
+            }, 1800);
+          }
+        });
+      });
+    });
+
+    if (openExportTable && exportTableModal) {
+      openExportTable.addEventListener("click", () => {
+        exportTableModal.classList.remove("hidden");
+        exportTableModal.classList.add("flex");
+      });
+    }
+
+    if (closeExportTable && exportTableModal) {
+      closeExportTable.addEventListener("click", () => {
+        exportTableModal.classList.add("hidden");
+        exportTableModal.classList.remove("flex");
+      });
+    }
+
+    if (exportTableModal) {
+      exportTableModal.addEventListener("click", (event) => {
+        if (event.target === exportTableModal) {
+          exportTableModal.classList.add("hidden");
+          exportTableModal.classList.remove("flex");
+        }
+      });
+    }
+
+    updatePlannerFilter();
+  </script>
+{% endblock %}

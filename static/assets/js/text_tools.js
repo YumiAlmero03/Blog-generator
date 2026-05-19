@@ -24,6 +24,21 @@
     return value.replace(/_/g, " ");
   }
 
+  function delimiterText(value, delimiter) {
+    return value
+      .trim()
+      .replace(/[_\-\s]+/g, delimiter)
+      .replace(new RegExp("\\" + delimiter + "{2,}", "g"), delimiter);
+  }
+
+  function snakeText(value) {
+    return delimiterText(value, "_");
+  }
+
+  function hyphenText(value) {
+    return delimiterText(value, "-");
+  }
+
   function capitalizeText(value) {
     const trimmedStart = value.match(/^\s*/)[0];
     const rest = value.slice(trimmedStart.length);
@@ -53,6 +68,10 @@
         applyTransform(unhyphenText, "Hyphens replaced with spaces.");
       } else if (action === "unsnake") {
         applyTransform(unsnakeText, "Underscores replaced with spaces.");
+      } else if (action === "snake") {
+        applyTransform(snakeText, "Spaces and hyphens changed to underscores.");
+      } else if (action === "hyphen") {
+        applyTransform(hyphenText, "Spaces and underscores changed to hyphens.");
       } else if (action === "capitalize") {
         applyTransform(capitalizeText, "First letter capitalized.");
       } else if (action === "upper") {

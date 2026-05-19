@@ -4,28 +4,127 @@
 {% block title %}Generation History{% endblock %}
 {% block eyebrow %}Saved Outputs{% endblock %}
 {% block hero_title %}Generation History{% endblock %}
-{% block hero_text %}Review saved articles, pages, social posts, quality reports, prompt inputs, tags, and word counts.{% endblock %}
+{% block hero_text %}Review saved articles, pages, posts, validation dates, post links, quality reports, prompt inputs, tags, and word counts.{% endblock %}
 
 {% block content %}
   <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="get" class="mb-5 grid gap-4 rounded-[24px] bg-sand-100 px-4 py-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1fr_auto] lg:items-end">
+      <div>
+        <label for="historySearch" class="mb-2 block text-sm font-bold text-sand-900">Search</label>
+        <input id="historySearch" name="search" type="search" value="{{ filters.search }}" placeholder="Title, keyword, link, brand, medium" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+      </div>
+      <div>
+        <label for="historyType" class="mb-2 block text-sm font-bold text-sand-900">Type</label>
+        <select id="historyType" name="content_type" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="">All types</option>
+          {% for item in content_type_options %}
+            <option value="{{ item }}" {% if filters.content_type == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="historyStatus" class="mb-2 block text-sm font-bold text-sand-900">Status</label>
+        <select id="historyStatus" name="status" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="">Draft + saved</option>
+          <option value="draft" {% if filters.status == "draft" %}selected{% endif %}>Draft</option>
+          <option value="saved" {% if filters.status == "saved" %}selected{% endif %}>Saved</option>
+        </select>
+      </div>
+      <div>
+        <label for="historyDate" class="mb-2 block text-sm font-bold text-sand-900">Validation Date</label>
+        <input id="historyDate" name="date" type="date" value="{{ filters.date }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+      </div>
+      <div>
+        <label for="historyMedium" class="mb-2 block text-sm font-bold text-sand-900">Medium</label>
+        <select id="historyMedium" name="medium" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="">All mediums</option>
+          {% for item in medium_options %}
+            <option value="{{ item }}" {% if filters.medium == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Filter</button>
+        <button type="submit" name="export" value="xlsx" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Export XLS</button>
+        <a href="/generation-history" class="inline-flex min-h-12 items-center justify-center rounded-full bg-white px-4 py-3 text-sm font-bold text-sand-700 ring-1 ring-sand-200 transition hover:bg-sand-50">Clear</a>
+      </div>
+    </form>
+
     <div class="grid gap-3">
       {% for item in history_items %}
-        <a href="/generation-history/{{ item.id }}" class="grid gap-3 rounded-2xl border border-sand-200 bg-white px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50 md:grid-cols-[150px_1fr_120px] md:items-center">
+        <article class="grid gap-3 rounded-2xl border border-sand-200 bg-white px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50 md:grid-cols-[170px_1fr_210px] md:items-center" data-history-item>
           <div>
-            <span class="inline-flex rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-moss-700">{{ item.content_type }}</span>
-            <div class="mt-2 text-xs font-bold text-sand-500">{{ item.created_at }}</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="inline-flex rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-moss-700">{{ item.content_type }}</span>
+              {% if item.post_link %}
+                <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Saved</span>
+              {% else %}
+                <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-amber-700">Draft</span>
+              {% endif %}
+            </div>
+            <div class="mt-2 text-xs font-bold text-sand-500">
+              {% if item.post_link %}
+                Validated {{ item.saved_at or item.created_at }}
+              {% else %}
+                Created {{ item.created_at }}
+              {% endif %}
+            </div>
           </div>
           <div>
-            <h2 class="text-base font-bold text-sand-950">{{ item.title or "Untitled" }}</h2>
+            <a href="/generation-history/{{ item.id }}" class="text-base font-bold text-sand-950 underline decoration-sand-300 underline-offset-2 hover:text-sand-700">{{ item.title or "Untitled" }}</a>
             <p class="mt-1 text-sm text-sand-700">{{ item.brand_name or "No brand" }}{% if item.primary_keyword %} · {{ item.primary_keyword }}{% endif %}{% if item.medium_name %} · {{ item.medium_name }}{% endif %}</p>
+            {% if item.post_link %}
+              <span class="mt-2 block break-all text-xs font-bold text-moss-700 underline decoration-moss-500/40 underline-offset-2">{{ item.post_link }}</span>
+            {% endif %}
           </div>
-          <div class="text-sm font-bold text-sand-700 md:text-right">{{ item.word_count }} words</div>
-        </a>
+          <div class="flex flex-wrap items-center gap-2 md:justify-end">
+            <span class="text-sm font-bold text-sand-700">{{ item.word_count }} words</span>
+            {% if item.post_link %}
+              <form method="post" action="/generation-history/{{ item.id }}/mark-draft">
+                <input type="hidden" name="search" value="{{ filters.search }}" />
+                <input type="hidden" name="content_type" value="{{ filters.content_type }}" />
+                <input type="hidden" name="status" value="{{ filters.status }}" />
+                <input type="hidden" name="date" value="{{ filters.date }}" />
+                <input type="hidden" name="medium" value="{{ filters.medium }}" />
+                <button type="submit" class="inline-flex items-center rounded-full bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-200">Mark Draft</button>
+              </form>
+            {% endif %}
+            <form method="post" action="/generation-history/{{ item.id }}/delete" onsubmit="return confirm('Delete this history item?');">
+              <input type="hidden" name="search" value="{{ filters.search }}" />
+              <input type="hidden" name="content_type" value="{{ filters.content_type }}" />
+              <input type="hidden" name="status" value="{{ filters.status }}" />
+              <input type="hidden" name="date" value="{{ filters.date }}" />
+              <input type="hidden" name="medium" value="{{ filters.medium }}" />
+              <button type="submit" class="inline-flex items-center rounded-full bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100">Delete</button>
+            </form>
+          </div>
+        </article>
       {% else %}
         <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
-          No saved generation history yet.
+          No generation history matches those filters.
         </div>
       {% endfor %}
     </div>
+    {% if history_items %}
+      <div id="historyPagination" class="mt-5 flex flex-wrap items-center gap-2"></div>
+    {% endif %}
   </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const historyItems = Array.from(document.querySelectorAll("[data-history-item]"));
+    const historyPaginator = window.AppUi && window.AppUi.createPaginator
+      ? window.AppUi.createPaginator({
+          items: historyItems,
+          controls: document.getElementById("historyPagination"),
+          storageKey: "generationHistory.page",
+          pageSize: 9,
+        })
+      : null;
+
+    if (historyPaginator) {
+      historyPaginator.refresh();
+    }
+  </script>
 {% endblock %}

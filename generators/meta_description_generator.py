@@ -1,4 +1,5 @@
 import json
+import re
 from prompts import build_backlink_meta_description_prompt, build_meta_description_prompt
 from utils import extract_json_string
 from logger import logger
@@ -7,8 +8,15 @@ from word_bank import find_banned_terms_in_text
 MIN_META_DESCRIPTION_CHARACTERS = 120
 MAX_META_DESCRIPTION_CHARACTERS = 140
 
-def _generate_meta_descriptions_from_prompt(provider, prompt: str, target_count: int = 0, progress_callback=None):
+def _generate_meta_descriptions_from_prompt(
+    provider,
+    prompt: str,
+    target_count: int = 0,
+    progress_callback=None,
+    forbidden_phrases: list[str] | None = None,
+):
     last_failure_detail = ""
+    cleaned_forbidden_phrases = _clean_forbidden_phrases(forbidden_phrases or [])
 
     attempt = 0
     while True:
@@ -22,6 +30,12 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str, target_count:
                 "- Make every meta description between 120 and 140 characters.\n"
                 "- Count only the description text, not JSON syntax.\n"
             )
+            if cleaned_forbidden_phrases:
+                retry_instruction += (
+                    "- Do not include these exact phrases in any meta description: "
+                    + ", ".join(cleaned_forbidden_phrases)
+                    + ".\n"
+                )
             if target_count:
                 retry_instruction += f"- Return {target_count} usable meta descriptions if possible.\n"
 
@@ -36,6 +50,7 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str, target_count:
             valid_meta_descriptions = []
             rejected_lengths = []
             rejected_banned_terms = []
+            rejected_forbidden_phrases = []
 
             for item in meta_descriptions:
                 if not isinstance(item, dict):
@@ -46,6 +61,12 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str, target_count:
                 banned_terms = find_banned_terms_in_text(text)
                 if banned_terms:
                     rejected_banned_terms.extend(term for term in banned_terms if term not in rejected_banned_terms)
+                    continue
+                forbidden_matches = _matching_forbidden_phrases(text, cleaned_forbidden_phrases)
+                if forbidden_matches:
+                    rejected_forbidden_phrases.extend(
+                        phrase for phrase in forbidden_matches if phrase not in rejected_forbidden_phrases
+                    )
                     continue
                 text_length = len(text)
                 if not MIN_META_DESCRIPTION_CHARACTERS <= text_length <= MAX_META_DESCRIPTION_CHARACTERS:
@@ -81,8 +102,30 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str, target_count:
                         ", ".join(str(length) for length in rejected_lengths),
                         attempt,
                     )
+                if rejected_forbidden_phrases:
+                    _publish_progress(
+                        progress_callback,
+                        f"Meta attempt {attempt}: ignored descriptions with forbidden phrases ({', '.join(rejected_forbidden_phrases)}).",
+                    )
+                    logger.warning(
+                        "Ignored meta descriptions with forbidden phrases %s on attempt %d",
+                        ", ".join(rejected_forbidden_phrases),
+                        attempt,
+                    )
                 return valid_meta_descriptions[:target_count] if target_count else valid_meta_descriptions
 
+            if rejected_forbidden_phrases:
+                last_failure_detail = f"Last meta descriptions included forbidden phrases {', '.join(rejected_forbidden_phrases)}."
+                _publish_progress(
+                    progress_callback,
+                    f"Meta attempt {attempt}: forbidden phrases found ({', '.join(rejected_forbidden_phrases)}). Retrying...",
+                )
+                logger.warning(
+                    "Generated meta descriptions included forbidden phrases %s on attempt %d",
+                    ", ".join(rejected_forbidden_phrases),
+                    attempt,
+                )
+                continue
             if rejected_banned_terms:
                 last_failure_detail = f"Last meta descriptions used banned terms {', '.join(rejected_banned_terms)}."
                 _publish_progress(
@@ -126,6 +169,28 @@ def _generate_meta_descriptions_from_prompt(provider, prompt: str, target_count:
         "Generated meta descriptions could not satisfy banned words and length rules. "
         f"{last_failure_detail}"
     )
+
+
+def _clean_forbidden_phrases(phrases: list[str]) -> list[str]:
+    cleaned = []
+    for phrase in phrases:
+        value = " ".join(str(phrase or "").split()).strip()
+        if value and value.lower() not in [item.lower() for item in cleaned]:
+            cleaned.append(value)
+    return cleaned
+
+
+def _matching_forbidden_phrases(text: str, phrases: list[str]) -> list[str]:
+    normalized_text = " ".join((text or "").lower().split())
+    matches = []
+    for phrase in phrases:
+        normalized_phrase = " ".join(phrase.lower().split())
+        if not normalized_phrase:
+            continue
+        pattern = r"(?<![a-z0-9])" + re.escape(normalized_phrase) + r"(?![a-z0-9])"
+        if re.search(pattern, normalized_text):
+            matches.append(phrase)
+    return matches
 
 
 def _publish_progress(progress_callback, message: str, kind: str = "status") -> None:
@@ -196,6 +261,7 @@ def generate_backlink_meta_descriptions(
     backlink_blog_name: str = "",
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
+    brand_topic_mode: str = "example",
     progress_callback=None,
 ):
     prompt = build_backlink_meta_description_prompt(
@@ -215,5 +281,15 @@ def generate_backlink_meta_descriptions(
         backlink_blog_name=backlink_blog_name,
         backlink_writer_name=backlink_writer_name,
         backlink_content_guidelines=backlink_content_guidelines,
+        brand_topic_mode=brand_topic_mode,
     )
-    return _generate_meta_descriptions_from_prompt(provider, prompt, target_count=count, progress_callback=progress_callback)
+    forbidden_phrases = [keyword]
+    if (brand_topic_mode or "").strip().lower() != "main":
+        forbidden_phrases.append(brand)
+    return _generate_meta_descriptions_from_prompt(
+        provider,
+        prompt,
+        target_count=count,
+        progress_callback=progress_callback,
+        forbidden_phrases=forbidden_phrases,
+    )

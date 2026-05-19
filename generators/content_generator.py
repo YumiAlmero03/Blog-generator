@@ -105,6 +105,145 @@ def suggest_content_tags(
     return tags[: max(minimum, len(tags))]
 
 
+def generate_ai_content_tags(
+    provider,
+    title: str = "",
+    keyword: str = "",
+    supporting_keyword: str = "",
+    brand: str = "",
+    content: str = "",
+    minimum: int = 10,
+    progress_callback=None,
+) -> list[str]:
+    fallback = suggest_content_tags(
+        title=title,
+        keyword=keyword,
+        supporting_keyword=supporting_keyword,
+        brand=brand,
+        content=content,
+        minimum=minimum,
+    )
+    prompt = f"""
+Create clean publishing tags for this generated blog.
+
+Return valid JSON only.
+
+Selected title: {title}
+Primary keyword or anchor: {keyword}
+Supporting keyword: {supporting_keyword}
+Brand: {brand}
+
+Content:
+{(content or '')[:6000]}
+
+Rules:
+- Use the selected title as the main context.
+- Return {minimum} to 12 short tags.
+- Keep tags natural, useful for publishing, and lower case when possible.
+- Avoid duplicate tags, banned terms, promotional hype, and generic filler.
+- Do not include explanations before or after the JSON.
+
+Return JSON only in this format:
+{{
+  "tags": ["tag one", "tag two"]
+}}
+"""
+    _publish_progress(progress_callback, prompt, kind="prompt")
+    raw = provider.generate_json(prompt)
+    try:
+        data = json.loads(extract_json_string(raw))
+        tags = data.get("tags", [])
+        if isinstance(tags, str):
+            tags = [tag.strip() for tag in tags.split(",")]
+        cleaned = []
+        for tag in tags:
+            value = re.sub(r"\s+", " ", str(tag).strip().lower())
+            if value and value not in cleaned:
+                cleaned.append(value)
+        return cleaned[:12] or fallback
+    except Exception:
+        logger.exception("generate_ai_content_tags failed. Raw response: %s", raw)
+        return fallback
+
+
+def generate_blog_visual_ideas(
+    provider,
+    title: str,
+    keyword: str = "",
+    brand: str = "",
+    context: str = "",
+    count: int = 2,
+    progress_callback=None,
+) -> list[str]:
+    prompt = f"""
+You are creating practical image directions for a generated blog article.
+
+Return valid JSON only.
+
+Selected title: {title}
+Topic keyword: {keyword}
+Brand: {brand}
+Context:
+{context}
+
+Rules:
+- Generate exactly {count} distinct visual or image descriptions.
+- Use the selected title as the anchor for both visual ideas.
+- Make each idea useful for a designer, AI image tool, or publisher selecting a header image.
+- Keep them neutral and editorial, not promotional.
+- Do not include text overlays, logos, watermarks, brand marks, or UI screenshots unless the article specifically requires them.
+- Avoid gambling, betting, casino, jackpot, wagering, sportsbook, lottery, poker, roulette, or bonus-focused imagery.
+- Keep each visual idea to 1-2 sentences.
+- No explanations before or after the JSON.
+
+Return JSON only in this format:
+{{
+  "visuals": ["First visual idea.", "Second visual idea."]
+}}
+"""
+    _publish_progress(progress_callback, prompt, kind="prompt")
+    raw = provider.generate_json(prompt)
+    try:
+        data = json.loads(extract_json_string(raw))
+        visuals = data.get("visuals", [])
+        if isinstance(visuals, str):
+            visuals = [visuals]
+        cleaned = [str(item).strip() for item in visuals if str(item).strip()]
+        return cleaned[:count]
+    except Exception as exc:
+        logger.exception("generate_blog_visual_ideas failed. Raw response: %s", raw)
+        raise ValueError("Could not parse JSON from model output.") from exc
+
+
+def generate_backlink_visual_idea(
+    provider,
+    title: str,
+    keyword: str = "",
+    brand: str = "",
+    backlink_website_name: str = "",
+    backlink_website_type: str = "",
+    backlink_blog_name: str = "",
+    backlink_content_guidelines: str = "",
+    progress_callback=None,
+) -> str:
+    return "\n\n".join(
+        generate_blog_visual_ideas(
+            provider,
+            title=title,
+            keyword=keyword,
+            brand=brand,
+            context=(
+                f"Publishing medium: {backlink_website_name}\n"
+                f"Publication/account: {backlink_blog_name}\n"
+                f"Medium type: {backlink_website_type}\n"
+                f"Medium rules: {backlink_content_guidelines}"
+            ),
+            count=2,
+            progress_callback=progress_callback,
+        )
+    )
+
+
 def parse_generated_content(raw: str) -> tuple[str, int]:
     json_text = extract_json_string(raw)
     data = json.loads(json_text)
@@ -420,6 +559,12 @@ def medium_example_mention_error(content: str, brand: str = "", keyword: str = "
     return ""
 
 
+def medium_brand_usage_error(content: str, brand: str = "", keyword: str = "", brand_topic_mode: str = "example") -> str:
+    if (brand_topic_mode or "").strip().lower() == "main":
+        return ""
+    return medium_example_mention_error(content, brand=brand, keyword=keyword)
+
+
 def generate_backlink_content(
     provider,
     title: str,
@@ -442,6 +587,8 @@ def generate_backlink_content(
     backlink_content_guidelines: str = "",
     suggested_content: str = "",
     change_request: str = "",
+    required_anchor_text: str = "",
+    brand_topic_mode: str = "example",
     progress_callback=None,
 ):
     from app.services.content_format_service import markdown_to_output
@@ -476,12 +623,17 @@ def generate_backlink_content(
         backlink_content_guidelines=backlink_content_guidelines,
         suggested_content=suggested_content,
         change_request=change_request,
+        required_anchor_text=required_anchor_text,
+        brand_topic_mode=brand_topic_mode,
     )
     def validator(content: str) -> str:
         url_error = required_url_presence_error(content, money_site_url)
         if url_error:
             return url_error
-        return medium_example_mention_error(content, brand=brand, keyword=keyword)
+        anchor_error = required_anchor_text_presence_error(content, required_anchor_text)
+        if anchor_error:
+            return anchor_error
+        return medium_brand_usage_error(content, brand=brand, keyword=keyword, brand_topic_mode=brand_topic_mode)
 
     markdown_content = _generate_content_from_prompt(
         provider,

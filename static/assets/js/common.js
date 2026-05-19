@@ -245,6 +245,142 @@
     copyText(value, message, onSuccess);
   }
 
+  function storageGet(key, fallback) {
+    if (!key) {
+      return fallback;
+    }
+    try {
+      return window.localStorage.getItem(key) || fallback;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function storageSet(key, value) {
+    if (!key) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {}
+  }
+
+  function createPaginator(options) {
+    const items = Array.from((options && options.items) || []);
+    const pageSize = Number((options && options.pageSize) || 9);
+    const controls = options ? options.controls : null;
+    const empty = options ? options.empty : null;
+    const storageKey = options ? options.storageKey : "";
+    let currentPage = Number(storageGet(storageKey, "1")) || 1;
+
+    function matchedItems() {
+      return items.filter(function (item) {
+        return item.dataset.filterVisible !== "0";
+      });
+    }
+
+    function buttonClasses(isActive) {
+      return [
+        "inline-flex min-h-10 min-w-10 items-center justify-center rounded-full px-3 py-2 text-xs font-bold transition",
+        isActive
+          ? "bg-sand-600 text-sand-50"
+          : "bg-white text-sand-700 ring-1 ring-sand-200 hover:bg-sand-50 hover:text-sand-950",
+      ].join(" ");
+    }
+
+    function renderButton(label, page, disabled, active) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.className = buttonClasses(active);
+      button.disabled = disabled;
+      button.classList.toggle("cursor-not-allowed", disabled);
+      button.classList.toggle("opacity-50", disabled);
+      button.addEventListener("click", function () {
+        if (disabled) {
+          return;
+        }
+        currentPage = page;
+        apply();
+      });
+      return button;
+    }
+
+    function renderControls(totalItems, totalPages) {
+      if (!controls) {
+        return;
+      }
+      controls.innerHTML = "";
+      controls.classList.toggle("hidden", totalItems <= pageSize);
+      if (totalItems <= pageSize) {
+        return;
+      }
+
+      const summary = document.createElement("span");
+      summary.className = "mr-2 text-sm font-bold text-sand-700";
+      summary.textContent = "Page " + currentPage + " of " + totalPages;
+      controls.appendChild(summary);
+
+      controls.appendChild(renderButton("Prev", Math.max(1, currentPage - 1), currentPage <= 1, false));
+
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(totalPages, currentPage + 2);
+      if (startPage > 1) {
+        controls.appendChild(renderButton("1", 1, false, currentPage === 1));
+      }
+      if (startPage > 2) {
+        const spacer = document.createElement("span");
+        spacer.className = "px-1 text-sm font-bold text-sand-500";
+        spacer.textContent = "...";
+        controls.appendChild(spacer);
+      }
+      for (let page = startPage; page <= endPage; page += 1) {
+        controls.appendChild(renderButton(String(page), page, false, page === currentPage));
+      }
+      if (endPage < totalPages - 1) {
+        const spacer = document.createElement("span");
+        spacer.className = "px-1 text-sm font-bold text-sand-500";
+        spacer.textContent = "...";
+        controls.appendChild(spacer);
+      }
+      if (endPage < totalPages) {
+        controls.appendChild(renderButton(String(totalPages), totalPages, false, currentPage === totalPages));
+      }
+
+      controls.appendChild(renderButton("Next", Math.min(totalPages, currentPage + 1), currentPage >= totalPages, false));
+    }
+
+    function apply() {
+      const visibleItems = matchedItems();
+      const totalPages = Math.max(1, Math.ceil(visibleItems.length / pageSize));
+      currentPage = Math.min(Math.max(1, currentPage), totalPages);
+      storageSet(storageKey, String(currentPage));
+
+      const start = (currentPage - 1) * pageSize;
+      const pagedItems = new Set(visibleItems.slice(start, start + pageSize));
+      items.forEach(function (item) {
+        item.classList.toggle("hidden", !pagedItems.has(item));
+      });
+
+      if (empty) {
+        empty.classList.toggle("hidden", visibleItems.length !== 0);
+      }
+      renderControls(visibleItems.length, totalPages);
+      return visibleItems.length;
+    }
+
+    return {
+      refresh: apply,
+      setPage: function (page) {
+        currentPage = Number(page) || 1;
+        return apply();
+      },
+      getPage: function () {
+        return currentPage;
+      },
+    };
+  }
+
   document.addEventListener("submit", function (event) {
     const form = event.target.closest("form[data-loading-message]");
     if (!form) {
@@ -308,6 +444,7 @@
     startFormLoading: startFormLoading,
     copyField: copyField,
     copyText: copyText,
+    createPaginator: createPaginator,
   };
 
   window.addEventListener("load", hideLoading);

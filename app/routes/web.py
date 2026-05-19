@@ -1,6 +1,6 @@
 from flask import Blueprint, send_from_directory
 
-from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, dashboard_controller, image_controller, page_controller, settings_controller, social_media_controller, tier2_blog_controller, tool_controller
+from app.controllers import backlink_blog_controller, backlink_controller, blog_controller, brand_controller, brand_medium_controller, dashboard_controller, image_controller, page_controller, posting_planner_controller, settings_controller, social_media_controller, tier2_blog_controller, tool_controller
 from app.views import generation_events_view
 from app.services.image_service import UPLOAD_ROOT
 
@@ -9,8 +9,13 @@ web = Blueprint("web", __name__)
 
 
 web.add_url_rule("/dashboard", view_func=dashboard_controller.dashboard, methods=["GET"])
+web.add_url_rule("/posting-planner", view_func=posting_planner_controller.posting_planner, methods=["GET", "POST"])
+web.add_url_rule("/brand-medium-table", view_func=brand_medium_controller.brand_medium_table, methods=["GET", "POST"])
 web.add_url_rule("/generation-history", view_func=dashboard_controller.generation_history, methods=["GET"])
-web.add_url_rule("/generation-history/<int:history_id>", view_func=dashboard_controller.generation_history_detail, methods=["GET"])
+web.add_url_rule("/generation-history/<int:history_id>", view_func=dashboard_controller.generation_history_detail, methods=["GET", "POST"])
+web.add_url_rule("/generation-history/<int:history_id>/edit", view_func=dashboard_controller.edit_generation_history, methods=["GET"])
+web.add_url_rule("/generation-history/<int:history_id>/mark-draft", view_func=dashboard_controller.mark_generation_history_as_draft, methods=["POST"])
+web.add_url_rule("/generation-history/<int:history_id>/delete", view_func=dashboard_controller.delete_generation_history, methods=["POST"])
 web.add_url_rule("/", view_func=blog_controller.index, methods=["GET", "POST"])
 web.add_url_rule("/medium-blog-generator", view_func=backlink_blog_controller.backlink_blog_generator, methods=["GET", "POST"])
 web.add_url_rule("/backlink-blog-generator", view_func=backlink_blog_controller.backlink_blog_generator, methods=["GET", "POST"])
@@ -22,8 +27,7 @@ web.add_url_rule("/text-tools", view_func=tool_controller.text_tools, methods=["
 web.add_url_rule("/seo-checker", view_func=tool_controller.seo_checker, methods=["GET", "POST"])
 web.add_url_rule("/image-tools", view_func=image_controller.image_tools, methods=["GET", "POST"])
 web.add_url_rule("/brands", view_func=brand_controller.brands, methods=["GET", "POST"])
-web.add_url_rule("/social-media-activator", view_func=social_media_controller.social_media_activator, methods=["GET", "POST"])
-web.add_url_rule("/social-media-list", view_func=social_media_controller.social_media_list, methods=["GET", "POST"])
+web.add_url_rule("/neutral-blog-generator", view_func=social_media_controller.neutral_blog_generator, methods=["GET", "POST"])
 web.add_url_rule("/mediums", view_func=backlink_controller.backlinks, methods=["GET", "POST"])
 web.add_url_rule("/backlinks", view_func=backlink_controller.backlinks, methods=["GET", "POST"])
 web.add_url_rule("/settings", view_func=settings_controller.settings, methods=["GET", "POST"])

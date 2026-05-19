@@ -28,6 +28,7 @@
       <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for landing pages, service pages, about pages, local pages, or any custom WordPress page layout.</p>
 
       <form method="post" id="pageGeneratorForm" data-loading-message="Generating page content..." class="grid gap-1">
+        <input type="hidden" name="history_id" value="{{ history_id }}" />
         <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
         <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="e.g. Phoenix Home Services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
@@ -114,6 +115,7 @@
         </div>
         <form id="savePageForm" method="post" class="hidden-form" aria-hidden="true">
           <input type="hidden" name="action" value="save_generated_blog" />
+          <input type="hidden" name="history_id" value="{{ history_id }}" />
           <input type="hidden" name="brand" value="{{ brand }}" />
           <input type="hidden" name="keyword" value="{{ keyword }}" />
           <input type="hidden" name="supporting_keywords" value="{{ supporting_keywords }}" />

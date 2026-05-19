@@ -121,6 +121,7 @@ def generate_backlink_titles(
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
     keyword_is_anchor_text: bool = False,
+    brand_topic_mode: str = "example",
     progress_callback=None,
 ):
     prompt = build_backlink_title_prompt(
@@ -142,8 +143,9 @@ def generate_backlink_titles(
         backlink_writer_name=backlink_writer_name,
         backlink_content_guidelines=backlink_content_guidelines,
         keyword_is_anchor_text=keyword_is_anchor_text,
+        brand_topic_mode=brand_topic_mode,
     )
-    forbidden_phrases = [brand]
+    forbidden_phrases = [] if (brand_topic_mode or "").strip().lower() == "main" else [brand]
     if keyword_is_anchor_text:
         forbidden_phrases.append(keyword)
     return _generate_titles_from_prompt(provider, prompt, forbidden_phrases=forbidden_phrases, progress_callback=progress_callback)
