@@ -107,6 +107,9 @@
                             <span class="text-xs font-bold text-sand-600">{{ post.saved_at if post.post_link else post.created_at }}</span>
                           </div>
                           <a href="/generation-history/{{ post.id }}" class="block text-sm font-bold leading-5 text-sand-950 underline decoration-sand-300 underline-offset-2 hover:text-sand-700">{{ post.title or "Untitled post" }}</a>
+                          {% if post.content_type == "Medium Blog" and post.brand_name %}
+                            <div class="mt-1 text-xs font-bold text-sand-700">Brand: {{ post.brand_name }}</div>
+                          {% endif %}
                           {% if post.post_link %}
                             <a href="{{ post.post_link }}" target="_blank" rel="noopener noreferrer" class="mt-1 block break-all text-xs font-bold text-moss-700 underline decoration-moss-500/40 underline-offset-2 hover:text-moss-500">{{ post.post_link }}</a>
                           {% endif %}
