@@ -60,12 +60,12 @@
 
     {% if titles %}
       <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-        <form method="post" id="contentForm" data-loading-message="Generating article content..." class="grid gap-6">
+        <form method="post" id="contentForm" data-loading-message="{% if not meta_descriptions %}Generating meta descriptions...{% elif not visual %}Generating visual ideas...{% elif not content %}Generating article content...{% elif not tag_suggestions %}Generating tags...{% else %}Generating article content...{% endif %}" class="grid gap-6">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 2</span>
-              <h2 class="font-display text-3xl text-sand-950">Generate Article Content</h2>
-              <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose a title, then generate the article. Meta descriptions are generated automatically with the article and kept as 5 choices below.</p>
+              <h2 class="font-display text-3xl text-sand-950">Generate Article Pieces</h2>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose a title, then generate meta descriptions, visual ideas, article content, and tags one piece at a time.</p>
             </div>
           </div>
 
@@ -113,6 +113,13 @@
               </div>
             {% endif %}
           </div>
+
+          {% if visual and not content %}
+            <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+              <label for="visualDraft" class="mb-2 block text-sm font-bold text-sand-900">Visual / Image Descriptions</label>
+              <textarea id="visualDraft" name="visual" rows="5" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ visual }}</textarea>
+            </div>
+          {% endif %}
 
           <div class="rounded-[24px] border border-sand-200 bg-sand-50/80 p-5">
             <h3 class="font-display text-2xl text-sand-950">Links to Include in Content</h3>
@@ -184,7 +191,17 @@
           </div>
 
           <div class="flex justify-start pt-2">
-            <button type="button" id="generateContentButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Full Article</button>
+            {% if not meta_descriptions %}
+              <button type="button" id="generateContentButton" data-generate-action="generate_meta_descriptions" data-loading-message="Generating meta descriptions..." class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Meta Descriptions</button>
+            {% elif not visual %}
+              <button type="button" id="generateContentButton" data-generate-action="generate_visual" data-loading-message="Generating visual ideas..." class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Visuals</button>
+            {% elif not content %}
+              <button type="button" id="generateContentButton" data-generate-action="generate_content" data-loading-message="Generating article content..." class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Content</button>
+            {% elif not tag_suggestions %}
+              <button type="button" id="generateContentButton" data-generate-action="generate_tags" data-loading-message="Generating tags..." class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Tags</button>
+            {% else %}
+              <button type="button" id="generateContentButton" data-generate-action="generate_content" data-loading-message="Regenerating article content..." class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Regenerate Content</button>
+            {% endif %}
           </div>
 
           <input type="hidden" name="keyword" value="{{ keyword }}" />
@@ -196,7 +213,8 @@
           <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
           <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
           <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
-          <input type="hidden" id="contentActionInput" name="action" value="generate_content" />
+          <input type="hidden" name="tags_json" value='{{ tag_suggestions | tojson }}' />
+          <input type="hidden" id="contentActionInput" name="action" value="generate_meta_descriptions" />
         </form>
       </section>
 

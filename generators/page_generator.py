@@ -3,7 +3,7 @@ import random
 import re
 
 from logger import logger
-from prompts import build_page_prompt
+from prompts import build_page_content_prompt, build_page_meta_description_prompt, build_page_prompt, build_page_title_prompt
 from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
 
@@ -186,6 +186,260 @@ def generate_page(
 
     raise ValueError(
         "Generated page could not satisfy the rules. "
+        f"Last attempt was {last_word_count} words."
+    )
+
+
+def generate_page_title(
+    provider,
+    keyword: str,
+    supporting_keywords: str = "",
+    page_type: str = "",
+    expectations: str = "",
+    brand: str = "",
+    brand_context: str = "",
+    progress_callback=None,
+) -> str:
+    prompt = build_page_title_prompt(
+        keyword=keyword,
+        supporting_keywords=supporting_keywords,
+        page_type=page_type,
+        expectations=expectations,
+        brand=brand,
+        brand_context=brand_context,
+    )
+
+    attempt = 0
+    while True:
+        attempt += 1
+        retry_instruction = ""
+        if attempt > 1:
+            retry_instruction = (
+                "\n\nIMPORTANT RETRY REQUIREMENT:\n"
+                "- Your previous title was missing, used banned words, or did not follow the page title rules.\n"
+                "- Return one fresh title in valid JSON only.\n"
+            )
+
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
+
+        try:
+            json_text = extract_json_string(raw)
+            data = json.loads(json_text)
+            title = (data.get("title", "") or "").strip()
+            if not title:
+                _publish_progress(progress_callback, f"Page title attempt {attempt}: no title returned. Retrying...")
+                continue
+            banned_terms = find_banned_terms_in_text(title)
+            if banned_terms:
+                _publish_progress(
+                    progress_callback,
+                    f"Page title attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
+                logger.warning(
+                    "Page title used banned terms %s for keyword '%s' on attempt %d",
+                    ", ".join(banned_terms),
+                    keyword,
+                    attempt,
+                )
+                continue
+            return title
+        except Exception as exc:
+            logger.exception("generate_page_title failed on attempt %d. Raw response: %s", attempt, raw)
+            raise ValueError("Could not parse JSON from model output.") from exc
+
+
+def generate_page_meta_description(
+    provider,
+    keyword: str,
+    title: str,
+    supporting_keywords: str = "",
+    page_type: str = "",
+    expectations: str = "",
+    brand: str = "",
+    brand_context: str = "",
+    progress_callback=None,
+) -> str:
+    prompt = build_page_meta_description_prompt(
+        keyword=keyword,
+        title=title,
+        supporting_keywords=supporting_keywords,
+        page_type=page_type,
+        expectations=expectations,
+        brand=brand,
+        brand_context=brand_context,
+    )
+
+    attempt = 0
+    while True:
+        attempt += 1
+        retry_instruction = ""
+        if attempt > 1:
+            retry_instruction = (
+                "\n\nIMPORTANT RETRY REQUIREMENT:\n"
+                "- Your previous meta description was missing, used banned words, or missed the 120-140 character range.\n"
+                "- Return one fresh meta description in valid JSON only.\n"
+                "- Count only the description text, not JSON syntax.\n"
+            )
+
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
+
+        try:
+            json_text = extract_json_string(raw)
+            data = json.loads(json_text)
+            meta_description = (data.get("meta_description", "") or "").strip()
+            if not meta_description:
+                _publish_progress(progress_callback, f"Page meta attempt {attempt}: no meta description returned. Retrying...")
+                continue
+            banned_terms = find_banned_terms_in_text(meta_description)
+            if banned_terms:
+                _publish_progress(
+                    progress_callback,
+                    f"Page meta attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
+                logger.warning(
+                    "Page meta description used banned terms %s for keyword '%s' on attempt %d",
+                    ", ".join(banned_terms),
+                    keyword,
+                    attempt,
+                )
+                continue
+            meta_description_length = len(meta_description)
+            if not MIN_META_DESCRIPTION_CHARACTERS <= meta_description_length <= MAX_META_DESCRIPTION_CHARACTERS:
+                _publish_progress(
+                    progress_callback,
+                    f"Page meta attempt {attempt}: {meta_description_length} characters, target is 120-140. Retrying...",
+                )
+                logger.warning(
+                    "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d",
+                    meta_description_length,
+                    MIN_META_DESCRIPTION_CHARACTERS,
+                    MAX_META_DESCRIPTION_CHARACTERS,
+                    keyword,
+                    attempt,
+                )
+                continue
+            return meta_description
+        except Exception as exc:
+            logger.exception("generate_page_meta_description failed on attempt %d. Raw response: %s", attempt, raw)
+            raise ValueError("Could not parse JSON from model output.") from exc
+
+
+def generate_page_content(
+    provider,
+    keyword: str,
+    title: str,
+    meta_description: str,
+    supporting_keywords: str = "",
+    page_type: str = "",
+    expectations: str = "",
+    brand: str = "",
+    brand_context: str = "",
+    change_request: str = "",
+    min_words: int = MIN_PAGE_WORDS,
+    max_words: int = MAX_PAGE_WORDS,
+    progress_callback=None,
+):
+    from app.services.content_format_service import count_markdown_words, markdown_to_html
+
+    min_word_count, max_word_count = _normalize_word_limits(min_words, max_words)
+    prompt = build_page_content_prompt(
+        keyword=keyword,
+        title=title,
+        meta_description=meta_description,
+        supporting_keywords=supporting_keywords,
+        page_type=page_type,
+        expectations=expectations,
+        brand=brand,
+        brand_context=brand_context,
+        change_request=change_request,
+        min_words=min_word_count,
+        max_words=max_word_count,
+    )
+
+    last_word_count = 0
+    attempt = 0
+    while True:
+        attempt += 1
+        retry_instruction = ""
+        if attempt > 1:
+            retry_instruction = (
+                f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
+                f"- Your previous page content did not satisfy the word-count or banned-word rules.\n"
+                f"- Keep the selected title exactly: {title}\n"
+                f"- Return valid JSON only.\n"
+                f"- The page content must be more than {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
+                f"- Do not finish at exactly {min_word_count} words; expand until the page exceeds that minimum.\n"
+            )
+
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
+
+        try:
+            json_text = extract_json_string(raw)
+            data = json.loads(json_text)
+            markdown_content = (data.get("content", "") or "").strip()
+            word_count = count_markdown_words(markdown_content)
+            last_word_count = word_count
+            banned_terms = find_banned_terms_in_text(markdown_content)
+
+            if banned_terms:
+                _publish_progress(
+                    progress_callback,
+                    f"Page content attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
+                logger.warning(
+                    "Page content used banned terms %s for keyword '%s' on attempt %d",
+                    ", ".join(banned_terms),
+                    keyword,
+                    attempt,
+                )
+                continue
+
+            if word_count <= min_word_count:
+                _publish_progress(
+                    progress_callback,
+                    f"Page content attempt {attempt}: {word_count} words, content must be more than {min_word_count}. Retrying...",
+                )
+                logger.warning(
+                    "Page content word count is %d (must be more than: %d) for keyword '%s' on attempt %d",
+                    word_count,
+                    min_word_count,
+                    keyword,
+                    attempt,
+                )
+                continue
+
+            if not min_word_count and word_count > max_word_count:
+                _publish_progress(
+                    progress_callback,
+                    f"Page content attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",
+                )
+                continue
+
+            content = markdown_to_html(markdown_content)
+            content, injected_count = inject_image_placeholders(content)
+            logger.info(
+                "Page content generated successfully for keyword '%s' with %d words and %d image placeholders on attempt %d",
+                keyword,
+                word_count,
+                injected_count,
+                attempt,
+            )
+            return {
+                "content": content,
+                "image_count": injected_count,
+            }
+        except Exception as exc:
+            logger.exception("generate_page_content failed on attempt %d. Raw response: %s", attempt, raw)
+            raise ValueError("Could not parse JSON from model output.") from exc
+
+    raise ValueError(
+        "Generated page content could not satisfy the rules. "
         f"Last attempt was {last_word_count} words."
     )
 

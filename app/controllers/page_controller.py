@@ -4,8 +4,12 @@ from flask import render_template, request
 
 from database import get_brand_context, get_generation_history_item, list_brand_names, record_generation, record_page, upsert_brand
 from generators.content_generator import count_html_words, revise_existing_content
-from generators.page_generator import generate_page
-from generators.simple_page_generator import generate_simple_page
+from generators.page_generator import generate_page_content, generate_page_meta_description, generate_page_title
+from generators.simple_page_generator import (
+    generate_simple_page_content,
+    generate_simple_page_meta_descriptions,
+    generate_simple_page_title,
+)
 from logger import logger
 
 from app.controllers.helpers import base_template_context
@@ -40,7 +44,7 @@ def page_generator():
         _load_page_history_item(state, int(edit_history_id))
 
     if request.method == "POST":
-        action = request.form.get("action", "generate_page").strip()
+        action = request.form.get("action", "generate_page_title").strip()
         state["keyword"] = request.form.get("keyword", "").strip()
         state["brand"] = request.form.get("brand", "").strip()
         state["supporting_keywords"] = request.form.get("supporting_keywords", "").strip()
@@ -80,11 +84,45 @@ def page_generator():
                         brand=state["brand"],
                         progress_callback=progress,
                     )
-                else:
-                    progress("Generating page content...")
-                    result = generate_page(
+                    _record_completed_page(state, min_words, max_words)
+                elif action == "generate_page_meta" and not state["page_title"]:
+                    state["error"] = "Please generate the page title first."
+                elif action == "generate_page_content" and not state["page_title"]:
+                    state["error"] = "Please generate the page title first."
+                elif action == "generate_page_content" and not state["meta_description"]:
+                    state["error"] = "Please generate the meta description first."
+                elif action in {"generate_page_title", "generate_page"} or not state["page_title"]:
+                    progress("Generating page title...")
+                    state["page_title"] = generate_page_title(
                         provider,
                         keyword=state["keyword"],
+                        brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
+                        page_type=state["page_type"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        progress_callback=progress,
+                    )
+                elif action == "generate_page_meta" or not state["meta_description"]:
+                    progress("Generating page meta description...")
+                    state["meta_description"] = generate_page_meta_description(
+                        provider,
+                        keyword=state["keyword"],
+                        title=state["page_title"],
+                        brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
+                        page_type=state["page_type"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        progress_callback=progress,
+                    )
+                else:
+                    progress("Generating page content...")
+                    result = generate_page_content(
+                        provider,
+                        keyword=state["keyword"],
+                        title=state["page_title"],
+                        meta_description=state["meta_description"],
                         brand=state["brand"],
                         supporting_keywords=state["supporting_keywords"],
                         page_type=state["page_type"],
@@ -95,45 +133,9 @@ def page_generator():
                         max_words=max_words,
                         progress_callback=progress,
                     )
-                    state["page_title"] = result.get("title", "")
-                    state["meta_description"] = result.get("meta_description", "")
                     state["page_content"] = result.get("content", "")
                     state["image_count"] = result.get("image_count", 0)
-                state["quality_report"] = analyze_generated_content(
-                    state["page_content"],
-                    title=state["page_title"],
-                    keyword=state["keyword"],
-                    meta_description=state["meta_description"],
-                    min_words=min_words,
-                    max_words=max_words,
-                )
-                state["history_id"] = str(record_generation(
-                    content_type="Page",
-                    brand_name=state["brand"],
-                    title=state["page_title"],
-                    primary_keyword=state["keyword"],
-                    word_count=state["quality_report"]["word_count"],
-                    meta_description=state["meta_description"],
-                    prompt_inputs={
-                        "page_type": state["page_type"],
-                        "supporting_keywords": state["supporting_keywords"],
-                        "expectations": state["expectations"],
-                        "image_count": state["image_count"],
-                        "regenerate_scope": state["regenerate_scope"],
-                        "change_request": state["change_request"],
-                    },
-                    content=state["page_content"],
-                    quality_report=state["quality_report"],
-                    history_id=state["history_id"],
-                ))
-                record_page(
-                    brand=state["brand"],
-                    keyword=state["keyword"],
-                    page_title=state["page_title"],
-                    page_type=state["page_type"],
-                    supporting_keywords=state["supporting_keywords"],
-                    expectations=state["expectations"],
-                )
+                    _record_completed_page(state, min_words, max_words)
                 clear_generation_status(request.form.get("generation_status_token", ""))
             except Exception as exc:
                 logger.exception("page_generator action failed")
@@ -168,7 +170,7 @@ def simple_page_generator():
         _load_simple_page_history_item(state, int(edit_history_id))
 
     if request.method == "POST":
-        action = request.form.get("action", "generate_simple_page").strip()
+        action = request.form.get("action", "generate_simple_page_title").strip()
         state["brand"] = request.form.get("brand", "").strip()
         state["page_title"] = request.form.get("page_title", "").strip()
         state["page_type"] = request.form.get("page_type", "").strip()
@@ -208,11 +210,45 @@ def simple_page_generator():
                     )
                     if not state["generated_title"]:
                         state["generated_title"] = state["page_title"]
-                else:
-                    progress("Generating simple page...")
-                    result = generate_simple_page(
+                    selected_meta = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+                    _record_completed_simple_page(state, selected_meta, min_words, max_words)
+                elif action == "generate_simple_page_meta" and not state["generated_title"]:
+                    state["error"] = "Please generate the simple page title first."
+                elif action == "generate_simple_page_content" and not state["generated_title"]:
+                    state["error"] = "Please generate the simple page title first."
+                elif action == "generate_simple_page_content" and not state["meta_descriptions"]:
+                    state["error"] = "Please generate the meta descriptions first."
+                elif action in {"generate_simple_page_title", "generate_simple_page"} or not state["generated_title"]:
+                    progress("Generating simple page title...")
+                    state["generated_title"] = generate_simple_page_title(
                         provider,
                         page_title=state["page_title"],
+                        page_type=state["page_type"],
+                        brand=state["brand"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        progress_callback=progress,
+                    )
+                elif action == "generate_simple_page_meta" or not state["meta_descriptions"]:
+                    progress("Generating simple page meta descriptions...")
+                    state["meta_descriptions"] = generate_simple_page_meta_descriptions(
+                        provider,
+                        page_title=state["page_title"],
+                        generated_title=state["generated_title"],
+                        page_type=state["page_type"],
+                        brand=state["brand"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        progress_callback=progress,
+                    )
+                else:
+                    selected_meta = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+                    progress("Generating simple page content...")
+                    state["generated_content"] = generate_simple_page_content(
+                        provider,
+                        page_title=state["page_title"],
+                        generated_title=state["generated_title"],
+                        selected_meta_description=selected_meta,
                         page_type=state["page_type"],
                         brand=state["brand"],
                         expectations=state["expectations"],
@@ -222,43 +258,7 @@ def simple_page_generator():
                         max_words=max_words,
                         progress_callback=progress,
                     )
-                    state["generated_title"] = result.get("title", "")
-                    state["meta_descriptions"] = result.get("meta_descriptions", [])
-                    state["generated_content"] = result.get("content", "")
-                selected_meta = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
-                state["quality_report"] = analyze_generated_content(
-                    state["generated_content"],
-                    title=state["generated_title"] or state["page_title"],
-                    keyword=state["page_title"],
-                    meta_description=selected_meta,
-                    min_words=min_words,
-                    max_words=max_words,
-                )
-                state["history_id"] = str(record_generation(
-                    content_type="Simple Page",
-                    brand_name=state["brand"],
-                    title=state["generated_title"] or state["page_title"],
-                    primary_keyword=state["page_title"],
-                    word_count=state["quality_report"]["word_count"],
-                    meta_description=selected_meta,
-                    prompt_inputs={
-                        "page_type": state["page_type"],
-                        "expectations": state["expectations"],
-                        "regenerate_scope": state["regenerate_scope"],
-                        "change_request": state["change_request"],
-                    },
-                    content=state["generated_content"],
-                    quality_report=state["quality_report"],
-                    history_id=state["history_id"],
-                ))
-                record_page(
-                    brand=state["brand"],
-                    keyword=state["page_title"],
-                    page_title=state["generated_title"] or state["page_title"],
-                    page_type=state["page_type"] or "simple page",
-                    supporting_keywords="",
-                    expectations=state["expectations"],
-                )
+                    _record_completed_simple_page(state, selected_meta, min_words, max_words)
                 clear_generation_status(request.form.get("generation_status_token", ""))
             except Exception as exc:
                 logger.exception("simple_page_generator action failed")
@@ -268,6 +268,85 @@ def simple_page_generator():
                 )
 
     return render_template("simple_page_generator.html", **base_template_context(), **state)
+
+
+def _record_completed_page(state: dict, min_words: int, max_words: int):
+    if not state["page_content"]:
+        return
+    state["quality_report"] = analyze_generated_content(
+        state["page_content"],
+        title=state["page_title"],
+        keyword=state["keyword"],
+        meta_description=state["meta_description"],
+        min_words=min_words,
+        max_words=max_words,
+    )
+    state["history_id"] = str(record_generation(
+        content_type="Page",
+        brand_name=state["brand"],
+        title=state["page_title"],
+        primary_keyword=state["keyword"],
+        word_count=state["quality_report"]["word_count"],
+        meta_description=state["meta_description"],
+        prompt_inputs={
+            "page_type": state["page_type"],
+            "supporting_keywords": state["supporting_keywords"],
+            "expectations": state["expectations"],
+            "image_count": state["image_count"],
+            "regenerate_scope": state["regenerate_scope"],
+            "change_request": state["change_request"],
+        },
+        content=state["page_content"],
+        quality_report=state["quality_report"],
+        history_id=state["history_id"],
+    ))
+    record_page(
+        brand=state["brand"],
+        keyword=state["keyword"],
+        page_title=state["page_title"],
+        page_type=state["page_type"],
+        supporting_keywords=state["supporting_keywords"],
+        expectations=state["expectations"],
+    )
+
+
+def _record_completed_simple_page(state: dict, selected_meta: str, min_words: int, max_words: int):
+    if not state["generated_content"]:
+        return
+    title = state["generated_title"] or state["page_title"]
+    state["quality_report"] = analyze_generated_content(
+        state["generated_content"],
+        title=title,
+        keyword=state["page_title"],
+        meta_description=selected_meta,
+        min_words=min_words,
+        max_words=max_words,
+    )
+    state["history_id"] = str(record_generation(
+        content_type="Simple Page",
+        brand_name=state["brand"],
+        title=title,
+        primary_keyword=state["page_title"],
+        word_count=state["quality_report"]["word_count"],
+        meta_description=selected_meta,
+        prompt_inputs={
+            "page_type": state["page_type"],
+            "expectations": state["expectations"],
+            "regenerate_scope": state["regenerate_scope"],
+            "change_request": state["change_request"],
+        },
+        content=state["generated_content"],
+        quality_report=state["quality_report"],
+        history_id=state["history_id"],
+    ))
+    record_page(
+        brand=state["brand"],
+        keyword=state["page_title"],
+        page_title=title,
+        page_type=state["page_type"] or "simple page",
+        supporting_keywords="",
+        expectations=state["expectations"],
+    )
 
 
 def _save_page_generation(state: dict):

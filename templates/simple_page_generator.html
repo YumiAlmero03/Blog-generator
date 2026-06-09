@@ -27,8 +27,11 @@
 
       <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for straightforward pages that do not need the full SEO landing-page structure.</p>
 
-      <form method="post" data-loading-message="Generating simple page..." class="grid gap-1">
+      <form method="post" data-loading-message="{% if not generated_title %}Generating simple page title...{% elif not meta_descriptions %}Generating simple page meta descriptions...{% else %}Generating simple page content...{% endif %}" class="grid gap-1">
         <input type="hidden" name="history_id" value="{{ history_id }}" />
+        <input type="hidden" name="generated_title" value="{{ generated_title }}" />
+        <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
+        <textarea name="generated_content" class="hidden-form" aria-hidden="true">{{ generated_content }}</textarea>
         <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
         <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="e.g. Phoenix Home Services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
@@ -66,8 +69,15 @@
         {% endif %}
 
         <div class="flex flex-wrap gap-3">
-          <input type="hidden" name="action" value="generate_simple_page" />
-          <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Simple Page</button>
+          {% if not generated_title %}
+            <button type="submit" name="action" value="generate_simple_page_title" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Title</button>
+          {% elif not meta_descriptions %}
+            <button type="submit" name="action" value="generate_simple_page_meta" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Meta Descriptions</button>
+          {% elif not generated_content %}
+            <button type="submit" name="action" value="generate_simple_page_content" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Content</button>
+          {% else %}
+            <button type="submit" name="action" value="generate_simple_page_content" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Regenerate Content</button>
+          {% endif %}
           {% if generated_content %}
             <button type="button" id="copySimpleHtmlButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Copy HTML</button>
           {% endif %}
@@ -76,6 +86,37 @@
     </section>
 
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if generated_title or meta_descriptions %}
+        <div class="mb-5 grid gap-4">
+          {% if generated_title %}
+            <div class="rounded-[22px] border border-sand-200 bg-white p-5">
+              <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <label for="simpleTitleOutput" class="block text-sm font-bold text-sand-900">Selected title</label>
+                <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full bg-stone-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-black" data-copy-target="simpleTitleOutput" data-copy-message="Title copied.">Copy Title</button>
+              </div>
+              <p class="text-base font-bold leading-7 text-sand-950">{{ generated_title }}</p>
+              <textarea id="simpleTitleOutput" readonly class="sr-copy-field">{{ generated_title }}</textarea>
+            </div>
+          {% endif %}
+          {% if meta_descriptions and not generated_content %}
+            <div class="rounded-[22px] border border-sand-200 bg-sand-50/80 p-5">
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <h3 class="font-display text-2xl text-sand-950">Meta Descriptions</h3>
+                <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">3 Options</span>
+              </div>
+              <ul class="grid gap-3">
+                {% for meta_desc in meta_descriptions %}
+                  <li class="rounded-2xl border border-sand-200 bg-white px-4 py-4">
+                    <div class="text-sm font-semibold leading-6 text-sand-900">{{ meta_desc.text }}</div>
+                    <div class="mt-1 text-xs font-medium uppercase tracking-[0.06em] text-sand-600">Character count: {{ meta_desc.character_count }}</div>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
       {% if generated_content %}
         <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <h2 class="font-display text-3xl text-sand-950">{{ generated_title or page_title }}</h2>
@@ -132,7 +173,13 @@
         </form>
       {% else %}
         <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
-          Enter a page title and choose a simple page type to generate content.
+          {% if generated_title and meta_descriptions %}
+            Title and meta descriptions are ready. Generate the content next.
+          {% elif generated_title %}
+            Title is ready. Generate the meta descriptions next.
+          {% else %}
+            Enter a page title and choose a simple page type to generate the title first.
+          {% endif %}
         </div>
       {% endif %}
     </section>

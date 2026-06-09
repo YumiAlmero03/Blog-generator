@@ -8,7 +8,16 @@ from prompts.blog import (
     build_meta_description_prompt,
     build_title_prompt,
 )
-from prompts.pages import build_page_prompt, build_simple_page_prompt
+from prompts.pages import (
+    build_page_content_prompt,
+    build_page_meta_description_prompt,
+    build_page_prompt,
+    build_page_title_prompt,
+    build_simple_page_content_prompt,
+    build_simple_page_meta_prompt,
+    build_simple_page_prompt,
+    build_simple_page_title_prompt,
+)
 from prompts.revisions import build_scoped_content_revision_prompt
 from prompts.social_media import build_social_media_post_prompt
 from prompts.shared import (
@@ -28,9 +37,15 @@ __all__ = [
     "build_brand_context_section",
     "build_content_prompt",
     "build_meta_description_prompt",
+    "build_page_content_prompt",
+    "build_page_meta_description_prompt",
     "build_page_prompt",
+    "build_page_title_prompt",
     "build_scoped_content_revision_prompt",
+    "build_simple_page_content_prompt",
+    "build_simple_page_meta_prompt",
     "build_simple_page_prompt",
+    "build_simple_page_title_prompt",
     "build_social_media_post_prompt",
     "build_title_prompt",
 ]

@@ -239,8 +239,8 @@ def _handle_generate_content(state: dict):
         return
 
     try:
-        state["titles"] = _json_list(titles_raw)
-        state["meta_descriptions"] = _json_list(meta_descriptions_raw)
+        state["titles"] = _json_list(request.form.get("titles_json", "").strip())
+        state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
         provider = get_provider()
         progress = _progress_callback("Medium blog", request.form.get("generation_status_token", ""))
         if state["brand"]:

@@ -52,7 +52,7 @@ def index():
         action = request.form.get("action", "").strip()
         if action == "generate_titles":
             _handle_generate_titles(state)
-        elif action == "generate_content":
+        elif action in {"generate_meta_descriptions", "generate_visual", "generate_content", "generate_tags"}:
             _handle_generate_content(state)
         elif action == "save_generated_blog":
             _handle_save_generated_blog(state)
@@ -130,30 +130,17 @@ def _load_history_item(state: dict, history_id: int):
 
 
 def _handle_generate_content(state: dict):
-    state["selected_title"] = request.form.get("selected_title", "").strip()
-    state["keyword"] = request.form.get("keyword", "").strip()
-    state["brand"] = request.form.get("brand", "").strip()
-    state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
-    state["tone"] = request.form.get("tone", "natural").strip() or "natural"
-    state["change_request"] = request.form.get("change_request", "").strip()
-    state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
-    state["include_money_site"] = request.form.get("include_money_site") == "1"
-    state["history_id"] = request.form.get("history_id", "").strip()
-    titles_raw = request.form.get("titles_json", "").strip()
-    meta_descriptions_raw = request.form.get("meta_descriptions_json", "").strip()
-    selected_meta_description = request.form.get("meta_description_choice", "").strip()
-    existing_content = request.form.get("content_html", "").strip()
-    state["visual"] = request.form.get("visual", "").strip()
-
-    state["links"] = _extract_links_from_request()
+    action = request.form.get("action", "generate_meta_descriptions").strip()
+    selected_meta_description = _hydrate_blog_generation_state(state)
+    existing_content = state["content"]
 
     if not state["selected_title"]:
         state["error"] = "Please select a title first."
         return
 
     try:
-        state["titles"] = _json_list(titles_raw)
-        state["meta_descriptions"] = _json_list(meta_descriptions_raw)
+        state["titles"] = _json_list(request.form.get("titles_json", "").strip())
+        state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
         provider = get_provider()
         progress = _progress_callback("Blog", request.form.get("generation_status_token", ""))
         if state["brand"]:
@@ -162,7 +149,8 @@ def _handle_generate_content(state: dict):
         min_words, max_words = get_blog_word_limits()
         brand_context = get_brand_context(state["brand"])
         is_minor_revision = bool(existing_content and state["change_request"])
-        if not is_minor_revision:
+
+        if action == "generate_meta_descriptions":
             progress("Generating meta descriptions...")
             state["meta_descriptions"] = generate_meta_descriptions(
                 provider,
@@ -173,15 +161,16 @@ def _handle_generate_content(state: dict):
                 brand_context=brand_context,
                 progress_callback=progress,
             )
-        if state["meta_descriptions"]:
-            selected_match = next(
-                (item for item in state["meta_descriptions"] if item.get("text", "").strip() == selected_meta_description),
-                None,
-            )
-            state["meta_description"] = (selected_match or state["meta_descriptions"][0]).get("text", "")
-        else:
-            state["meta_description"] = selected_meta_description
-        if not is_minor_revision:
+            state["meta_description"] = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+            state["step"] = "meta"
+            clear_generation_status(request.form.get("generation_status_token", ""))
+            return
+
+        if not state["meta_description"]:
+            state["error"] = "Please generate and choose a meta description first."
+            return
+
+        if action == "generate_visual":
             progress("Generating 2 visual ideas...")
             state["visual"] = _visual_text(generate_blog_visual_ideas(
                 provider,
@@ -192,6 +181,30 @@ def _handle_generate_content(state: dict):
                 count=2,
                 progress_callback=progress,
             ))
+            state["step"] = "visual"
+            clear_generation_status(request.form.get("generation_status_token", ""))
+            return
+
+        if action == "generate_tags":
+            if not state["content"]:
+                state["error"] = "Please generate article content before generating tags."
+                return
+            progress("Generating tags...")
+            state["tag_suggestions"] = generate_ai_content_tags(
+                provider,
+                title=state["selected_title"],
+                keyword=state["keyword"],
+                supporting_keyword=state["supporting_keyword"],
+                brand=state["brand"],
+                content=state["content"],
+                minimum=10,
+                progress_callback=progress,
+            )
+            _record_completed_blog(state, min_words, max_words)
+            clear_generation_status(request.form.get("generation_status_token", ""))
+            state["step"] = "tags"
+            return
+
         if is_minor_revision:
             progress("Applying minor article changes...")
             state["content"] = revise_existing_content(
@@ -224,52 +237,6 @@ def _handle_generate_content(state: dict):
                 max_words=max_words,
                 progress_callback=progress,
             )
-        progress("Content passed validation. Generating tags...")
-        state["tag_suggestions"] = generate_ai_content_tags(
-            provider,
-            title=state["selected_title"],
-            keyword=state["keyword"],
-            supporting_keyword=state["supporting_keyword"],
-            brand=state["brand"],
-            content=state["content"],
-            minimum=10,
-            progress_callback=progress,
-        )
-        state["quality_report"] = analyze_generated_content(
-            state["content"],
-            title=state["selected_title"],
-            keyword=state["keyword"],
-            meta_description=state["meta_description"],
-            min_words=min_words,
-            max_words=max_words,
-        )
-        state["history_id"] = str(record_generation(
-            content_type="Blog",
-            brand_name=state["brand"],
-            title=state["selected_title"],
-            primary_keyword=state["keyword"],
-            word_count=state["quality_report"]["word_count"],
-            meta_description=state["meta_description"],
-            tags=state["tag_suggestions"],
-            prompt_inputs={
-                "supporting_keyword": state["supporting_keyword"],
-                "tone": state["tone"],
-                "include_money_site": state["include_money_site"],
-                "regenerate_scope": state["regenerate_scope"],
-                "change_request": state["change_request"],
-                "links": state["links"],
-                "visual": state["visual"],
-            },
-            content=state["content"],
-            quality_report=state["quality_report"],
-            history_id=state["history_id"],
-        ))
-        record_blog(
-            brand=state["brand"],
-            title=state["selected_title"],
-            keyword=state["keyword"],
-            supporting_keyword=state["supporting_keyword"],
-        )
         clear_generation_status(request.form.get("generation_status_token", ""))
         state["step"] = "content"
     except Exception as exc:
@@ -278,6 +245,75 @@ def _handle_generate_content(state: dict):
             "An error occurred while generating article content. Check logs/app.log for details.",
             exc,
         )
+
+
+def _hydrate_blog_generation_state(state: dict) -> str:
+    state["selected_title"] = request.form.get("selected_title", "").strip()
+    state["keyword"] = request.form.get("keyword", "").strip()
+    state["brand"] = request.form.get("brand", "").strip()
+    state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
+    state["tone"] = request.form.get("tone", "natural").strip() or "natural"
+    state["change_request"] = request.form.get("change_request", "").strip()
+    state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
+    state["include_money_site"] = request.form.get("include_money_site") == "1"
+    state["history_id"] = request.form.get("history_id", "").strip()
+    state["visual"] = request.form.get("visual", "").strip()
+    state["content"] = request.form.get("content_html", "").strip()
+    state["links"] = _extract_links_from_request()
+    state["titles"] = _json_list(request.form.get("titles_json", "").strip())
+    state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
+    state["tag_suggestions"] = _tags_from_raw(request.form.get("tags_json", "").strip())
+
+    selected_meta_description = request.form.get("meta_description_choice", "").strip()
+    if state["meta_descriptions"]:
+        selected_match = next(
+            (item for item in state["meta_descriptions"] if item.get("text", "").strip() == selected_meta_description),
+            None,
+        )
+        state["meta_description"] = (selected_match or state["meta_descriptions"][0]).get("text", "")
+    else:
+        state["meta_description"] = selected_meta_description
+    return selected_meta_description
+
+
+def _record_completed_blog(state: dict, min_words: int, max_words: int):
+    if not state["content"]:
+        return
+    state["quality_report"] = analyze_generated_content(
+        state["content"],
+        title=state["selected_title"],
+        keyword=state["keyword"],
+        meta_description=state["meta_description"],
+        min_words=min_words,
+        max_words=max_words,
+    )
+    state["history_id"] = str(record_generation(
+        content_type="Blog",
+        brand_name=state["brand"],
+        title=state["selected_title"],
+        primary_keyword=state["keyword"],
+        word_count=state["quality_report"]["word_count"],
+        meta_description=state["meta_description"],
+        tags=state["tag_suggestions"],
+        prompt_inputs={
+            "supporting_keyword": state["supporting_keyword"],
+            "tone": state["tone"],
+            "include_money_site": state["include_money_site"],
+            "regenerate_scope": state["regenerate_scope"],
+            "change_request": state["change_request"],
+            "links": state["links"],
+            "visual": state["visual"],
+        },
+        content=state["content"],
+        quality_report=state["quality_report"],
+        history_id=state["history_id"],
+    ))
+    record_blog(
+        brand=state["brand"],
+        title=state["selected_title"],
+        keyword=state["keyword"],
+        supporting_keyword=state["supporting_keyword"],
+    )
 
 
 def _handle_save_generated_blog(state: dict):
@@ -377,6 +413,16 @@ def _json_list(raw: str) -> list:
         return parsed if isinstance(parsed, list) else []
     except json.JSONDecodeError:
         return []
+
+
+def _tags_from_raw(raw: str) -> list[str]:
+    parsed = _json_list(raw)
+    tags = []
+    for item in parsed:
+        cleaned = str(item or "").strip()
+        if cleaned:
+            tags.append(cleaned)
+    return tags
 
 
 def _loads(raw: str) -> dict:

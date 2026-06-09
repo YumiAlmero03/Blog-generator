@@ -323,8 +323,9 @@
 
   if (generateContentButton && contentForm) {
     generateContentButton.addEventListener("click", function () {
+      const action = generateContentButton.dataset.generateAction || "generate_content";
       if (contentActionInput) {
-        contentActionInput.value = "generate_content";
+        contentActionInput.value = action;
       }
       syncCustomTitleRadio();
       const selectedTitle = getSelectedTitle();
@@ -332,9 +333,13 @@
         showValidationMessage("Please select a title first.");
         return;
       }
+      if (action !== "generate_meta_descriptions" && !getSelectedMetaDescription()) {
+        showValidationMessage("Please choose a meta description first.");
+        return;
+      }
       clearValidationMessage();
       prepareContentForm();
-      window.AppUi.startFormLoading(contentForm, "Generating article content...");
+      window.AppUi.startFormLoading(contentForm, generateContentButton.dataset.loadingMessage || "Generating article content...");
       contentForm.submit();
     });
   }
