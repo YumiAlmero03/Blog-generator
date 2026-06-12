@@ -75,6 +75,9 @@ def edit_generation_history(history_id: int):
     if not item:
         abort(404)
     content_type = (item.get("content_type") or "").strip().lower()
+    prompt_inputs = _loads(item.get("prompt_inputs", "{}"))
+    if content_type in {"blog", "news"} and prompt_inputs.get("news_generator"):
+        return redirect(url_for("web.news_generator", edit_history_id=history_id))
     routes = {
         "blog": "web.index",
         "medium blog": "web.backlink_blog_generator",

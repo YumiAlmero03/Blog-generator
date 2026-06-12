@@ -7,6 +7,7 @@ from word_bank import find_banned_terms_in_text
 
 MIN_META_DESCRIPTION_CHARACTERS = 120
 MAX_META_DESCRIPTION_CHARACTERS = 140
+MAX_ATTEMPTS = 5
 
 def _generate_meta_descriptions_from_prompt(
     provider,
@@ -19,7 +20,7 @@ def _generate_meta_descriptions_from_prompt(
     cleaned_forbidden_phrases = _clean_forbidden_phrases(forbidden_phrases or [])
 
     attempt = 0
-    while True:
+    while attempt < MAX_ATTEMPTS:
         attempt += 1
         retry_instruction = ""
         if attempt > 1:

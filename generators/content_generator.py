@@ -587,6 +587,7 @@ def generate_backlink_content(
     backlink_content_guidelines: str = "",
     suggested_content: str = "",
     change_request: str = "",
+    selected_meta_description: str = "",
     required_anchor_text: str = "",
     brand_topic_mode: str = "example",
     progress_callback=None,
@@ -623,6 +624,7 @@ def generate_backlink_content(
         backlink_content_guidelines=backlink_content_guidelines,
         suggested_content=suggested_content,
         change_request=change_request,
+        selected_meta_description=selected_meta_description,
         required_anchor_text=required_anchor_text,
         brand_topic_mode=brand_topic_mode,
     )

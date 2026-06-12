@@ -59,6 +59,8 @@ def backlink_blog_generator():
         action = request.form.get("action", "").strip()
         if action == "generate_titles":
             _handle_generate_titles(state)
+        elif action == "generate_meta_descriptions":
+            _handle_generate_meta_descriptions(state)
         elif action == "generate_content":
             _handle_generate_content(state)
         elif action == "save_generated_blog":
@@ -195,6 +197,83 @@ def _handle_generate_titles(state: dict):
         )
 
 
+def _handle_generate_meta_descriptions(state: dict):
+    state["custom_title"] = request.form.get("custom_title", "").strip()
+    state["selected_title"] = state["custom_title"] or request.form.get("selected_title", "").strip()
+    state["keyword"] = request.form.get("keyword", "").strip()
+    state["brand"] = request.form.get("brand", "").strip()
+    state["tone"] = request.form.get("tone", "natural").strip() or "natural"
+    state["brand_website_url"] = request.form.get("brand_website_url", "").strip()
+    state["history_id"] = request.form.get("history_id", "").strip()
+    state["selected_backlink_id"] = request.form.get("selected_backlink_id", "").strip()
+    state["titles"] = _json_list(request.form.get("titles_json", "").strip())
+    state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
+
+    if not state["selected_title"]:
+        state["error"] = "Please select a title first."
+        return
+
+    if not state["selected_backlink_id"].isdigit():
+        state["error"] = "Please choose a medium first."
+        return
+
+    state["selected_backlink"] = get_backlink(int(state["selected_backlink_id"]))
+    if not state["selected_backlink"]:
+        state["error"] = "The selected medium could not be found."
+        return
+
+    if not state["brand"]:
+        state["error"] = "Please select a brand for the medium content."
+        return
+
+    if not state["brand_website_url"]:
+        brand_record = get_brand_record(state["brand"])
+        state["brand_website_url"] = (brand_record or {}).get("website", "").strip()
+    if not state["brand_website_url"]:
+        state["error"] = "The selected brand needs a website saved in Brands before generating medium content."
+        return
+
+    try:
+        provider = get_provider()
+        progress = _progress_callback("Medium meta descriptions", request.form.get("generation_status_token", ""))
+        if state["brand"]:
+            upsert_brand(state["brand"])
+        brand_context = get_brand_context(state["brand"])
+        backlink_context = {
+            "backlink_website_name": state["selected_backlink"].get("website_name", ""),
+            "backlink_blog_url": "",
+            "backlink_website_type": state["selected_backlink"].get("website_type", "blog"),
+            "backlink_post_type": state["selected_backlink"].get("post_type", "html") or "html",
+            "backlink_title_max_characters": state["selected_backlink"].get("title_max_characters", 0) or 0,
+            "backlink_min_words": state["selected_backlink"].get("min_words", 0) or 0,
+            "backlink_max_characters": state["selected_backlink"].get("max_characters", 0) or 0,
+            "backlink_tier_level": "Tier 1",
+            "backlink_blog_name": state["selected_backlink"].get("blog_name", "") or state["selected_backlink"].get("account_name", ""),
+            "backlink_writer_name": state["selected_backlink"].get("writer_name", ""),
+            "backlink_content_guidelines": state["selected_backlink"].get("content_guidelines", ""),
+            "brand_topic_mode": state["selected_backlink"].get("brand_topic_mode", "example"),
+        }
+        state["meta_descriptions"] = generate_backlink_meta_descriptions(
+            provider,
+            title=state["selected_title"],
+            keyword=state["keyword"],
+            count=5,
+            brand=state["brand"],
+            brand_context=brand_context,
+            **backlink_context,
+            progress_callback=progress,
+        )
+        if state["meta_descriptions"]:
+            state["meta_description"] = state["meta_descriptions"][0].get("text", "")
+        state["step"] = "meta"
+    except Exception as exc:
+        logger.exception("backlink generate_meta_descriptions action failed")
+        state["error"] = generation_error_message(
+            "An error occurred while generating medium meta descriptions. Check logs/app.log for details.",
+            exc,
+        )
+
+
 def _handle_generate_content(state: dict):
     state["custom_title"] = request.form.get("custom_title", "").strip()
     state["selected_title"] = state["custom_title"] or request.form.get("selected_title", "").strip()
@@ -261,7 +340,7 @@ def _handle_generate_content(state: dict):
             "brand_topic_mode": state["selected_backlink"].get("brand_topic_mode", "example"),
         }
         is_minor_revision = bool(existing_content and state["change_request"])
-        if not is_minor_revision:
+        if not state["meta_descriptions"]:
             progress("Generating meta descriptions...")
             state["meta_descriptions"] = generate_backlink_meta_descriptions(
                 provider,
@@ -322,6 +401,7 @@ def _handle_generate_content(state: dict):
                 suggested_content=state["suggested_content"],
                 change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
                 required_anchor_text=state["keyword"],
+                selected_meta_description=state.get("meta_description", ""),
                 **backlink_context,
                 progress_callback=progress,
             )

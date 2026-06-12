@@ -15,9 +15,11 @@
   const editorContainer = document.getElementById("contentEditor");
   const editorWordCount = document.getElementById("editorWordCount");
   const existingLinksElement = document.getElementById("existingLinksData");
+  const linksJsonInput = document.getElementById("linksJsonInput");
   const linksContainer = document.getElementById("linksContainer");
   const addLinkButton = document.getElementById("addLinkButton");
   const generateContentButton = document.getElementById("generateContentButton");
+  const generateMetaDescriptionsButton = document.getElementById("generateMetaDescriptionsButton");
   const saveGeneratedButton = document.getElementById("saveGeneratedButton");
   const contentActionInput = document.getElementById("contentActionInput");
   const postLinkInput = document.getElementById("post_link");
@@ -54,6 +56,27 @@
     if (quill && contentHtmlInput) {
       contentHtmlInput.value = quill.root.innerHTML;
     }
+    syncLinksJsonInput();
+  }
+
+  function syncLinksJsonInput() {
+    if (!linksJsonInput || !linksContainer) {
+      return;
+    }
+    const links = [];
+    linksContainer.querySelectorAll("[id^='linkField_']").forEach(function (field) {
+      const textInput = field.querySelector('input[name="link_text[]"]');
+      const urlInput = field.querySelector('input[name="link_url[]"]');
+      const text = textInput ? textInput.value.trim() : "";
+      const url = urlInput ? normalizePostLink(urlInput.value) : "";
+      if (url) {
+        if (urlInput) {
+          urlInput.value = url;
+        }
+        links.push({ text: text, url: url, type: "reference" });
+      }
+    });
+    linksJsonInput.value = JSON.stringify(links);
   }
 
   function normalizePostLink(value) {
@@ -284,12 +307,19 @@
     const linkType = currentLink.type === "external" ? "external" : "internal";
     const linkText = currentLink.text || "";
     const linkUrl = currentLink.url || "";
+    const urlOnly = linksContainer.dataset.linkMode === "url-only";
 
     linkFieldCounter += 1;
     const linkField = document.createElement("div");
     linkField.className = "flex flex-wrap items-end gap-3 rounded-[22px] border border-sand-200 bg-white/80 p-4";
     linkField.id = "linkField_" + linkFieldCounter;
-    linkField.innerHTML = [
+    linkField.innerHTML = urlOnly ? [
+      '<div class="min-w-[260px] flex-1">',
+      '  <label for="link_url_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">News Link</label>',
+      '  <input type="url" id="link_url_' + linkFieldCounter + '" name="link_url[]" value="' + escapeHtml(linkUrl) + '" placeholder="https://news-site.com/article" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />',
+      "</div>",
+      '<button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700" data-remove-link="' + linkFieldCounter + '">Remove</button>',
+    ].join("") : [
       '<div class="w-full sm:w-[150px]">',
       '  <label for="link_type_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">Link Type</label>',
       '  <select id="link_type_' + linkFieldCounter + '" name="link_type[]" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">',
@@ -321,33 +351,43 @@
     }
   });
 
+  function handleGenerateAction(button) {
+    const action = button.dataset.generateAction || "generate_content";
+    if (contentActionInput) {
+      contentActionInput.value = action;
+    }
+    syncCustomTitleRadio();
+    const selectedTitle = getSelectedTitle();
+    if (!selectedTitle) {
+      showValidationMessage("Please select a title first.");
+      return;
+    }
+    if (action !== "generate_meta_descriptions" && action !== "generate_all" && !getSelectedMetaDescription()) {
+      showValidationMessage("Please choose a meta description first.");
+      return;
+    }
+    clearValidationMessage();
+    prepareContentForm();
+    window.AppUi.startFormLoading(contentForm, button.dataset.loadingMessage || "Generating article content...");
+    contentForm.submit();
+  }
+
   if (generateContentButton && contentForm) {
     generateContentButton.addEventListener("click", function () {
-      const action = generateContentButton.dataset.generateAction || "generate_content";
-      if (contentActionInput) {
-        contentActionInput.value = action;
-      }
-      syncCustomTitleRadio();
-      const selectedTitle = getSelectedTitle();
-      if (!selectedTitle) {
-        showValidationMessage("Please select a title first.");
-        return;
-      }
-      if (action !== "generate_meta_descriptions" && !getSelectedMetaDescription()) {
-        showValidationMessage("Please choose a meta description first.");
-        return;
-      }
-      clearValidationMessage();
-      prepareContentForm();
-      window.AppUi.startFormLoading(contentForm, generateContentButton.dataset.loadingMessage || "Generating article content...");
-      contentForm.submit();
+      handleGenerateAction(generateContentButton);
+    });
+  }
+
+  if (generateMetaDescriptionsButton && contentForm) {
+    generateMetaDescriptionsButton.addEventListener("click", function () {
+      handleGenerateAction(generateMetaDescriptionsButton);
     });
   }
 
   if (saveGeneratedButton && contentForm) {
     saveGeneratedButton.addEventListener("click", function () {
       if (contentActionInput) {
-        contentActionInput.value = "save_generated_blog";
+        contentActionInput.value = saveGeneratedButton.dataset.saveAction || "save_generated_blog";
       }
       syncCustomTitleRadio();
       const selectedTitle = getSelectedTitle();

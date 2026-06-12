@@ -228,8 +228,12 @@ def list_generation_history(
 
     cleaned_content_type = (content_type or "").strip()
     if cleaned_content_type:
-        where_clauses.append("gh.content_type = ?")
-        params.append(cleaned_content_type)
+        if cleaned_content_type.lower() == "blog":
+            where_clauses.append("gh.content_type IN (?, ?)")
+            params.extend(["Blog", "News"])
+        else:
+            where_clauses.append("gh.content_type = ?")
+            params.append(cleaned_content_type)
 
     cleaned_status = (status or "").strip().lower()
     if cleaned_status == "saved":
@@ -286,7 +290,7 @@ def list_generation_history(
             SELECT
                 gh.id,
                 gh.created_at,
-                gh.content_type,
+                CASE WHEN gh.content_type = 'News' THEN 'Blog' ELSE gh.content_type END AS content_type,
                 gh.brand_id,
                 gh.title,
                 gh.primary_keyword,
@@ -363,7 +367,7 @@ def get_generation_history_item(history_id: int) -> dict | None:
             SELECT
                 gh.id,
                 gh.created_at,
-                gh.content_type,
+                CASE WHEN gh.content_type = 'News' THEN 'Blog' ELSE gh.content_type END AS content_type,
                 gh.brand_id,
                 gh.title,
                 gh.primary_keyword,
@@ -399,15 +403,33 @@ def generation_dashboard_stats() -> dict:
         ).fetchone()
         by_type = connection.execute(
             """
-            SELECT content_type, COUNT(*) AS count, COALESCE(SUM(word_count), 0) AS words
+            SELECT
+              CASE WHEN content_type = 'News' THEN 'Blog' ELSE content_type END AS content_type,
+              COUNT(*) AS count,
+              COALESCE(SUM(word_count), 0) AS words
             FROM generation_history
-            GROUP BY content_type
+            GROUP BY CASE WHEN content_type = 'News' THEN 'Blog' ELSE content_type END
             ORDER BY count DESC, content_type
             """
         ).fetchall()
         recent = connection.execute(
             """
-            SELECT *
+            SELECT
+                id,
+                created_at,
+                CASE WHEN content_type = 'News' THEN 'Blog' ELSE content_type END AS content_type,
+                brand_id,
+                title,
+                primary_keyword,
+                medium_name,
+                word_count,
+                meta_description,
+                post_link,
+                saved_at,
+                tags,
+                prompt_inputs,
+                content,
+                quality_report
             FROM generation_history
             ORDER BY datetime(created_at) DESC, id DESC
             LIMIT 8

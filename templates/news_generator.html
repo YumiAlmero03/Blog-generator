@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% set active_page = "news" %}
+
+{% block title %}News Generator{% endblock %}
+
+{% block head_extras %}
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+{% endblock %}
+
+{% block overlay %}
+  <div class="loading-overlay" id="loadingOverlay" data-loading-overlay>
+    <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[22px] bg-white/95 px-7 py-7 text-center shadow-2xl">
+      <div class="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-4 border-sand-200 border-t-sand-600"></div>
+      <div class="text-base font-bold text-sand-700" id="loadingText" data-loading-text>Generating news...</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block eyebrow %}Current Events{% endblock %}
+{% block hero_title %}News Generator{% endblock %}
+{% block hero_text %}Enter a keyword for today's event, choose a title, then generate meta descriptions, visual directions, content, and tags with separate news-focused prompts.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
+      {% endif %}
+
+      <form method="post" id="titlesForm" data-loading-message="Generating current news titles..." class="grid gap-1">
+        <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 1</span>
+        <h2 class="mb-4 font-display text-3xl text-sand-950">Generate News Titles</h2>
+
+        <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand / Publication</label>
+        <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Optional publication or brand name" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="keyword" class="mb-2 block text-sm font-bold text-sand-900">Today’s Event Keyword <span class="text-red-600">*</span></label>
+        <textarea id="keyword" name="keyword" rows="2" placeholder="e.g. election results, earthquake update, AI regulation, stock market today" class="mb-4 min-h-[92px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ keyword }}</textarea>
+
+        <div class="mb-4 rounded-[24px] border border-sand-200 bg-sand-50/80 p-5">
+          <h3 class="font-display text-2xl text-sand-950">Reference News Links</h3>
+          <p class="mt-2 text-sm leading-6 text-sand-700">Add news article links here. When links are provided, the AI will use only the fetched contents of those links as source material.</p>
+          <div id="linksContainer" data-link-mode="url-only" class="mt-4 grid gap-3"></div>
+          <button type="button" id="addLinkButton" class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Add Reference Link</button>
+        </div>
+
+        <label for="target_audience" class="mb-2 block text-sm font-bold text-sand-900">Target Audience</label>
+        <input id="target_audience" name="target_audience" type="text" value="{{ target_audience }}" placeholder="e.g. business owners, parents, gamers, students, investors" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="target_country" class="mb-2 block text-sm font-bold text-sand-900">Target Country / Region</label>
+        <select id="target_country" name="target_country" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for country in target_countries %}
+            <option value="{{ country }}" {% if target_country == country %}selected{% endif %}>{{ country }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Tone</label>
+        <select id="tone" name="tone" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="news" {% if tone == 'news' %}selected{% endif %}>News</option>
+          <option value="neutral" {% if tone == 'neutral' %}selected{% endif %}>Neutral</option>
+          <option value="explainer" {% if tone == 'explainer' %}selected{% endif %}>Explainer</option>
+          <option value="professional" {% if tone == 'professional' %}selected{% endif %}>Professional</option>
+        </select>
+
+        <label for="count" class="mb-2 block text-sm font-bold text-sand-900">Number of Titles</label>
+        <select id="count" name="count" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          <option value="10" {% if count == 10 %}selected{% endif %}>10 titles</option>
+          <option value="20" {% if count == 20 %}selected{% endif %}>20 titles</option>
+        </select>
+
+        <input type="hidden" name="action" value="generate_titles" />
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Titles</button>
+      </form>
+    </section>
+
+    {% if titles %}
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        <form method="post" id="contentForm" data-loading-message="Generating news pieces..." class="grid gap-6">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 2</span>
+              <h2 class="font-display text-3xl text-sand-950">Generate All News Pieces</h2>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-sand-700">Choose one title, then generate meta descriptions, image descriptions, article content, and tags in one run.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span class="w-fit rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">Current date: {{ current_date }}</span>
+              <span class="w-fit rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-sand-700">{{ target_country }}</span>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="mb-4 font-display text-2xl text-sand-950">Select Title <span class="text-red-600">*</span></h3>
+            <ul class="grid gap-3">
+              {% for title in titles %}
+                <li>
+                  <label for="title_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
+                    <input id="title_{{ loop.index }}" name="selected_title" type="radio" value="{{ title }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if selected_title == title or (not selected_title and loop.first) %}checked{% endif %} />
+                    <span class="text-sm font-semibold leading-6 text-sand-900">{{ title }}</span>
+                  </label>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          {% if meta_descriptions %}
+            <div>
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <h3 class="font-display text-2xl text-sand-950">Meta Description Choices</h3>
+                <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">5 Options</span>
+              </div>
+              <ul class="grid gap-3">
+                {% for meta_desc in meta_descriptions %}
+                  <li>
+                    <label for="meta_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
+                      <input
+                        type="radio"
+                        id="meta_{{ loop.index }}"
+                        name="meta_description_choice"
+                        value="{{ meta_desc.text }}"
+                        class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500"
+                        {% if meta_description == meta_desc.text or (not meta_description and loop.first) %}checked{% endif %}
+                      />
+                      <span class="block">
+                        <span class="block text-sm font-semibold leading-6 text-sand-900">{{ meta_desc.text }}</span>
+                        <span class="mt-1 block text-xs font-medium uppercase tracking-[0.06em] text-sand-600">Character count: {{ meta_desc.character_count }}</span>
+                      </span>
+                    </label>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          {% if visual %}
+            <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+              <label for="visual" class="mb-2 block text-sm font-bold text-sand-900">Visual / Image Descriptions</label>
+              <textarea id="visual" name="visual" rows="6" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ visual }}</textarea>
+            </div>
+          {% endif %}
+
+          {% if content %}
+            <div class="grid gap-4">
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h3 class="font-display text-2xl text-sand-950">News Content</h3>
+                  <p class="mt-2 text-sm leading-6 text-sand-700">Edit the generated HTML directly in the editor before previewing, downloading, or saving.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <button type="button" id="previewDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Print Preview</button>
+                  <button type="button" id="downloadDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Download .doc</button>
+                  <button type="button" id="saveGeneratedButton" data-save-action="save_generated_news" class="inline-flex min-h-12 items-center justify-center rounded-full bg-moss-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-moss-500">Save Generated News</button>
+                </div>
+              </div>
+              <div id="editorContainer">
+                <div id="contentEditor" class="quill-editor rounded-b-2xl">{{ content }}</div>
+              </div>
+              {% include "_output_views.html" %}
+              <div id="editorWordCount" class="text-sm font-medium text-sand-700">Word count: 0</div>
+            </div>
+
+            {% if tag_suggestions %}
+              <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                  <h3 class="font-display text-2xl text-sand-950">Tags</h3>
+                  <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ tag_suggestions|length }} Tags</span>
+                </div>
+                <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm font-bold leading-6 text-sand-800">{{ tag_suggestions|join(', ') }}</div>
+              </div>
+            {% endif %}
+
+            {% include "_quality_report.html" %}
+          {% endif %}
+
+          <div class="flex justify-start pt-2">
+            <button type="button" id="generateContentButton" data-generate-action="generate_all" data-loading-message="Generating all news pieces..." class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">
+              {% if content %}Regenerate All{% else %}Generate All{% endif %}
+            </button>
+          </div>
+
+          <input type="hidden" name="keyword" value="{{ keyword }}" />
+          <input type="hidden" name="brand" value="{{ brand }}" />
+          <input type="hidden" name="target_audience" value="{{ target_audience }}" />
+          <input type="hidden" name="target_country" value="{{ target_country }}" />
+          <input type="hidden" id="linksJsonInput" name="links_json" value='{{ links | tojson }}' />
+          <input type="hidden" name="reference_fetches_json" value='{{ reference_fetches | tojson }}' />
+          <input type="hidden" name="tone" value="{{ tone }}" />
+          <input type="hidden" name="history_id" value="{{ history_id }}" />
+          {% if not visual %}<input type="hidden" name="visual" value="{{ visual }}" />{% endif %}
+          <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
+          <input type="hidden" name="titles_json" value='{{ titles | tojson }}' />
+          <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
+          <input type="hidden" name="tags_json" value='{{ tag_suggestions | tojson }}' />
+          <input type="hidden" id="contentActionInput" name="action" value="generate_all" />
+        </form>
+      </section>
+
+      <form id="previewForm" method="post" action="/preview" class="hidden-form" aria-hidden="true">
+        <input type="hidden" id="previewSelectedTitle" name="selected_title" value="{{ selected_title }}" />
+        <input type="hidden" name="keyword" value="{{ keyword }}" />
+        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="supporting_keyword" value="" />
+        <input type="hidden" id="previewMetaDescription" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="previewContentHtml" name="content_html" value="" />
+      </form>
+
+      <form id="downloadForm" method="post" action="/download_doc" class="hidden-form" aria-hidden="true">
+        <input type="hidden" id="downloadSelectedTitle" name="selected_title" value="{{ selected_title }}" />
+        <input type="hidden" name="keyword" value="{{ keyword }}" />
+        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="supporting_keyword" value="" />
+        <input type="hidden" id="downloadMetaDescription" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="downloadContentHtml" name="content_html" value="" />
+      </form>
+    {% endif %}
+  </div>
+
+  <datalist id="brandSuggestions">
+    {% for item in brand_names %}
+      <option value="{{ item }}"></option>
+    {% endfor %}
+  </datalist>
+
+  <script id="existingLinksData" type="application/json">{{ links | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script src="{{ url_for('static', filename='assets/js/index.js') }}"></script>
+{% endblock %}

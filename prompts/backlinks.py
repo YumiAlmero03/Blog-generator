@@ -226,6 +226,7 @@ def build_backlink_content_prompt(
     backlink_content_guidelines: str = "",
     suggested_content: str = "",
     change_request: str = "",
+    selected_meta_description: str = "",
     required_anchor_text: str = "",
     required_link_label: str = "brand",
     brand_topic_mode: str = "example",
@@ -263,6 +264,16 @@ Minor change request from the user:
 {cleaned_change_request}
 
 Apply this request while keeping the medium content natural, complete, and aligned with all rules below.
+"""
+
+    selected_meta_description_section = ""
+    cleaned_selected_meta_description = (selected_meta_description or "").strip()
+    if cleaned_selected_meta_description:
+        selected_meta_description_section = f"""
+Selected meta description for context only:
+{cleaned_selected_meta_description}
+
+Use this selected meta description as tone and topic guidance for the article. Do not rewrite it verbatim in the article.
 """
     try:
         min_words = max(0, int(backlink_min_words or 0))
@@ -436,6 +447,8 @@ Brand: {brand}
 {suggested_content_section}
 
 {change_request_section}
+
+{selected_meta_description_section}
 
 {platform_rules}
 
