@@ -27,7 +27,7 @@
 
       <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for landing pages, service pages, about pages, local pages, or any custom WordPress page layout.</p>
 
-      <form method="post" id="pageGeneratorForm" data-loading-message="{% if not page_title %}Generating page title...{% elif not meta_description %}Generating page meta description...{% else %}Generating page content...{% endif %}" class="grid gap-1">
+      <form method="post" id="pageGeneratorForm" data-loading-message="{% if not page_title %}Generating page title...{% elif not meta_description %}Generating page meta description...{% else %}Generating page content...{% endif %}" data-background-submit class="grid gap-1">
         <input type="hidden" name="history_id" value="{{ history_id }}" />
         <input type="hidden" name="page_title" value="{{ page_title }}" />
         <input type="hidden" name="meta_description" value="{{ meta_description }}" />
@@ -35,6 +35,13 @@
         <textarea name="page_content" class="hidden-form" aria-hidden="true">{{ page_content }}</textarea>
         <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
         <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="e.g. Phoenix Home Services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+        <select id="language" name="language" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for option in language_options %}
+            <option value="{{ option }}" {% if language == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
 
         <label for="keyword" class="mb-2 block text-sm font-bold text-sand-900">Keyword <span class="text-red-600">*</span></label>
         <input id="keyword" name="keyword" type="text" value="{{ keyword }}" placeholder="e.g. emergency plumber in phoenix" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
@@ -62,14 +69,12 @@
         {% endif %}
 
         <div class="flex flex-wrap gap-3">
-          {% if not page_title %}
-            <button type="submit" name="action" value="generate_page_title" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Title</button>
-          {% elif not meta_description %}
-            <button type="submit" name="action" value="generate_page_meta" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Meta Description</button>
-          {% elif not page_content %}
-            <button type="submit" name="action" value="generate_page_content" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Content</button>
-          {% else %}
-            <button type="submit" name="action" value="generate_page_content" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Regenerate Page Content</button>
+          <button type="submit" name="action" value="generate_page_title" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if page_title %}Regenerate Title{% else %}Generate Title{% endif %}</button>
+          {% if page_title %}
+            <button type="submit" name="action" value="generate_page_meta" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if meta_description %}Regenerate Meta{% else %}Generate Meta{% endif %}</button>
+          {% endif %}
+          {% if page_title and meta_description %}
+            <button type="submit" name="action" value="generate_page_content" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if page_content %}Regenerate Content{% else %}Generate Content{% endif %}</button>
           {% endif %}
           {% if page_content %}
             <button type="button" id="copyHtmlButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Copy HTML</button>
@@ -132,6 +137,7 @@
         <div class="mt-5">
           {% include "_quality_report.html" %}
         </div>
+        {% include "_content_checklist.html" %}
 
         <label for="htmlOutput" class="mt-5 mb-2 block text-sm font-bold text-sand-900">HTML output</label>
         <textarea id="htmlOutput" readonly class="mt-0 min-h-[260px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ page_content }}</textarea>
@@ -153,6 +159,7 @@
           <input type="hidden" name="action" value="save_generated_blog" />
           <input type="hidden" name="history_id" value="{{ history_id }}" />
           <input type="hidden" name="brand" value="{{ brand }}" />
+          <input type="hidden" name="language" value="{{ language }}" />
           <input type="hidden" name="keyword" value="{{ keyword }}" />
           <input type="hidden" name="supporting_keywords" value="{{ supporting_keywords }}" />
           <input type="hidden" name="page_type" value="{{ page_type }}" />

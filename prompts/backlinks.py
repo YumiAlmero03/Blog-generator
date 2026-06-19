@@ -1,6 +1,6 @@
 from word_bank import build_banned_words_prompt_section
 
-from prompts.shared import MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_backlink_context_section, build_brand_context_section
+from prompts.shared import MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_backlink_context_section, build_brand_context_section, build_language_instruction
 
 def build_backlink_title_prompt(
     keyword: str,
@@ -22,8 +22,10 @@ def build_backlink_title_prompt(
     backlink_content_guidelines: str = "",
     keyword_is_anchor_text: bool = False,
     brand_topic_mode: str = "example",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     backlink_section = build_backlink_context_section(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
@@ -65,6 +67,7 @@ Generate exactly {count} blog title variants for this keyword/topic:
 Brand: {brand}
 {context_section}
 {backlink_section}
+{language_section}
 {banned_words_section}
 {anchor_title_rule}
 
@@ -131,8 +134,10 @@ def build_backlink_meta_description_prompt(
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
     brand_topic_mode: str = "example",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     backlink_section = build_backlink_context_section(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
@@ -166,6 +171,7 @@ Keyword: {keyword}
 Brand: {brand}
 {context_section}
 {backlink_section}
+{language_section}
 {banned_words_section}
 
 Rules:
@@ -230,8 +236,10 @@ def build_backlink_content_prompt(
     required_anchor_text: str = "",
     required_link_label: str = "brand",
     brand_topic_mode: str = "example",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     backlink_section = build_backlink_context_section(
         backlink_website_name=backlink_website_name,
         backlink_blog_url=backlink_blog_url,
@@ -441,6 +449,7 @@ Supporting keyword: {supporting_keyword}
 Brand: {brand}
 {context_section}
 {backlink_section}
+{language_section}
 
 {banned_words_section}
 {money_site_section}

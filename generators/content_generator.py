@@ -4,6 +4,7 @@ from prompts import build_backlink_content_prompt, build_content_prompt, build_s
 from utils import extract_json_string
 from logger import logger
 from word_bank import find_banned_terms_in_text
+from content_repetition import repeated_content_issue
 
 MIN_BLOG_WORDS = 1300
 
@@ -113,6 +114,7 @@ def generate_ai_content_tags(
     brand: str = "",
     content: str = "",
     minimum: int = 10,
+    language: str = "English",
     progress_callback=None,
 ) -> list[str]:
     fallback = suggest_content_tags(
@@ -132,6 +134,7 @@ Selected title: {title}
 Primary keyword or anchor: {keyword}
 Supporting keyword: {supporting_keyword}
 Brand: {brand}
+Target language: {language}
 
 Content:
 {(content or '')[:6000]}
@@ -139,6 +142,7 @@ Content:
 Rules:
 - Use the selected title as the main context.
 - Return {minimum} to 12 short tags.
+- Write tags in {language}.
 - Keep tags natural, useful for publishing, and lower case when possible.
 - Avoid duplicate tags, banned terms, promotional hype, and generic filler.
 - Do not include explanations before or after the JSON.
@@ -173,6 +177,7 @@ def generate_blog_visual_ideas(
     brand: str = "",
     context: str = "",
     count: int = 2,
+    language: str = "English",
     progress_callback=None,
 ) -> list[str]:
     prompt = f"""
@@ -183,11 +188,13 @@ Return valid JSON only.
 Selected title: {title}
 Topic keyword: {keyword}
 Brand: {brand}
+Target language: {language}
 Context:
 {context}
 
 Rules:
 - Generate exactly {count} distinct visual or image descriptions.
+- Write visual descriptions in {language}.
 - Use the selected title as the anchor for both visual ideas.
 - Make each idea useful for a designer, AI image tool, or publisher selecting a header image.
 - Keep them neutral and editorial, not promotional.
@@ -224,6 +231,7 @@ def generate_backlink_visual_idea(
     backlink_website_type: str = "",
     backlink_blog_name: str = "",
     backlink_content_guidelines: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> str:
     return "\n\n".join(
@@ -239,6 +247,7 @@ def generate_backlink_visual_idea(
                 f"Medium rules: {backlink_content_guidelines}"
             ),
             count=2,
+            language=language,
             progress_callback=progress_callback,
         )
     )
@@ -252,14 +261,27 @@ def parse_generated_content(raw: str) -> tuple[str, int]:
     return content, word_count
 
 
-def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BLOG_WORDS, max_words: int = 0, validator=None, progress_callback=None, target_min_words: int | None = None):
+def _generate_content_from_prompt(
+    provider,
+    prompt: str,
+    min_words: int = MIN_BLOG_WORDS,
+    max_words: int = 0,
+    validator=None,
+    progress_callback=None,
+    target_min_words: int | None = None,
+    max_attempts: int = 0,
+    allow_best_effort: bool = False,
+    retry_parse_errors: bool = False,
+):
     last_word_count = 0
     last_validation_error = ""
     last_length_error = ""
     last_failure_detail = ""
+    best_effort_content = ""
+    best_effort_word_count = 0
 
     attempt = 0
-    while True:
+    while not max_attempts or attempt < max_attempts:
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
@@ -317,6 +339,28 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
                     attempt,
                 )
                 continue
+
+            repetition_issue = repeated_content_issue(content)
+            if repetition_issue:
+                last_validation_error = (
+                    f"{repetition_issue}. Rewrite the repeated section with fresh information, "
+                    "different sentence structure, and no duplicated paragraphs."
+                )
+                last_failure_detail = f"Content repeated text on attempt {attempt}: {repetition_issue}"
+                _publish_progress(
+                    progress_callback,
+                    f"Content attempt {attempt}: {repetition_issue} Retrying...",
+                )
+                logger.warning(
+                    "Content repeated text on attempt %d: %s",
+                    attempt,
+                    repetition_issue,
+                )
+                continue
+
+            if word_count > best_effort_word_count:
+                best_effort_content = content
+                best_effort_word_count = word_count
 
             if min_words and word_count < min_words:
                 last_failure_detail = (
@@ -380,8 +424,28 @@ def _generate_content_from_prompt(provider, prompt: str, min_words: int = MIN_BL
             )
             return content
         except Exception as exc:
+            last_failure_detail = f"Could not parse JSON from model output on attempt {attempt}."
             logger.exception("generate_content failed on attempt %d. Raw response: %s", attempt, raw)
+            if retry_parse_errors:
+                _publish_progress(
+                    progress_callback,
+                    f"Content attempt {attempt}: model returned no usable content. Retrying...",
+                )
+                continue
             raise ValueError("Could not parse JSON from model output.") from exc
+
+    if allow_best_effort and best_effort_content:
+        _publish_progress(
+            progress_callback,
+            f"Using best available content after {attempt} attempts ({best_effort_word_count} words).",
+        )
+        logger.warning(
+            "Using best-effort content with %d words after %d attempts. Last failure: %s",
+            best_effort_word_count,
+            attempt,
+            last_failure_detail,
+        )
+        return best_effort_content
 
     raise ValueError(
         "Generated article could not satisfy the rules. "
@@ -413,6 +477,7 @@ def generate_content(
     change_request: str = "",
     min_words: int = MIN_BLOG_WORDS,
     max_words: int = 1400,
+    language: str = "English",
     progress_callback=None,
 ):
     from app.services.content_format_service import markdown_to_output
@@ -430,6 +495,7 @@ def generate_content(
         change_request=change_request,
         min_words=prompt_min_words,
         max_words=max_words,
+        language=language,
     )
     markdown_content = _generate_content_from_prompt(
         provider,
@@ -453,6 +519,7 @@ def revise_existing_content(
     brand: str = "",
     required_url: str = "",
     required_anchor_text: str = "",
+    language: str = "English",
     progress_callback=None,
 ):
     prompt = build_scoped_content_revision_prompt(
@@ -465,6 +532,7 @@ def revise_existing_content(
         brand=brand,
         required_url=required_url,
         required_anchor_text=required_anchor_text,
+        language=language,
     )
 
     def validator(content: str) -> str:
@@ -590,6 +658,7 @@ def generate_backlink_content(
     selected_meta_description: str = "",
     required_anchor_text: str = "",
     brand_topic_mode: str = "example",
+    language: str = "English",
     progress_callback=None,
 ):
     from app.services.content_format_service import markdown_to_output
@@ -627,6 +696,7 @@ def generate_backlink_content(
         selected_meta_description=selected_meta_description,
         required_anchor_text=required_anchor_text,
         brand_topic_mode=brand_topic_mode,
+        language=language,
     )
     def validator(content: str) -> str:
         url_error = required_url_presence_error(content, money_site_url)
@@ -669,6 +739,7 @@ def generate_tier2_content(
     backlink_content_guidelines: str = "",
     suggested_content: str = "",
     change_request: str = "",
+    language: str = "English",
     progress_callback=None,
 ):
     from app.services.content_format_service import markdown_to_output
@@ -703,6 +774,7 @@ def generate_tier2_content(
         change_request=change_request,
         required_anchor_text=anchor_text,
         required_link_label="Tier 2",
+        language=language,
     )
 
     def validator(content: str) -> str:

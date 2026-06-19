@@ -71,7 +71,14 @@ def fetch_reference_context(links: list[dict], timeout: int = 12) -> tuple[str, 
         context_parts.append(
             f"Reference {index}: {source_label}\nURL: {url}\nExtracted content:\n{excerpt}"
         )
-        fetched.append({**link, "status": "fetched", "title": article["title"], "character_count": len(article["text"])})
+        fetched.append({
+            **link,
+            "status": "fetched",
+            "title": article["title"],
+            "source_label": source_label,
+            "character_count": len(article["text"]),
+            "excerpt": excerpt,
+        })
 
     return "\n\n---\n\n".join(context_parts).strip(), fetched
 

@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 UPLOAD_ROOT = BASE_DIR / "data" / "uploads"
 BRAND_LOGO_DIR = UPLOAD_ROOT / "brand_logos"
 IMAGE_TOOL_DIR = UPLOAD_ROOT / "image_tools"
-ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".avif"}
 
 for directory in (BRAND_LOGO_DIR, IMAGE_TOOL_DIR):
     directory.mkdir(parents=True, exist_ok=True)
@@ -22,7 +22,7 @@ def allowed_image_file(filename: str) -> bool:
 def save_uploaded_image(file_storage, destination_dir: Path, prefix: str) -> str:
     filename = secure_filename(file_storage.filename or "")
     if not filename or not allowed_image_file(filename):
-        raise ValueError("Please upload a PNG, JPG, JPEG, or WEBP image.")
+        raise ValueError("Please upload a PNG, JPG, JPEG, WEBP, or AVIF image.")
 
     suffix = Path(filename).suffix.lower() or ".png"
     saved_name = f"{prefix}_{uuid4().hex}{suffix}"

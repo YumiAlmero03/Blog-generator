@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% set active_page = "website-index-dashboard" %}
+
+{% block title %}Website Index Dashboard{% endblock %}
+{% block eyebrow %}Workspace{% endblock %}
+{% block hero_title %}Website Index Dashboard{% endblock %}
+{% block hero_text %}Track saved website URLs separately from blog history and see which ones are due for the weekly Google index check.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md">
+        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Saved URLs</p>
+        <div class="mt-3 font-display text-4xl font-bold text-sand-950">{{ stats.total_count }}</div>
+      </div>
+      <div class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md">
+        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Indexed</p>
+        <div class="mt-3 font-display text-4xl font-bold text-green-700">{{ stats.indexed_count }}</div>
+      </div>
+      <div class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md">
+        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Not Indexed</p>
+        <div class="mt-3 font-display text-4xl font-bold text-amber-700">{{ stats.not_indexed_count }}</div>
+      </div>
+      <div class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md">
+        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Unchecked</p>
+        <div class="mt-3 font-display text-4xl font-bold text-sand-700">{{ stats.unchecked_count }}</div>
+      </div>
+      <div class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md">
+        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Due This Week</p>
+        <div class="mt-3 font-display text-4xl font-bold text-blue-800">{{ due_count }}</div>
+      </div>
+    </section>
+
+    <section class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Percent Indexed</p>
+          <div class="mt-2 font-display text-4xl font-bold text-sand-950">
+            {% if stats.total_count %}
+              {{ ((stats.indexed_count / stats.total_count) * 100)|round(1) }}%
+            {% else %}
+              0%
+            {% endif %}
+          </div>
+          <p class="mt-1 text-sm text-sand-700">{{ stats.indexed_count }} indexed out of {{ stats.total_count }} saved URL{% if stats.total_count != 1 %}s{% endif %}</p>
+        </div>
+        <div class="h-3 min-w-[220px] flex-1 overflow-hidden rounded-full bg-sand-100">
+          <div class="h-full rounded-full bg-green-600" style="width: {% if stats.total_count %}{{ ((stats.indexed_count / stats.total_count) * 100)|round(1) }}{% else %}0{% endif %}%"></div>
+        </div>
+      </div>
+      {% if domain_stats %}
+        <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {% for item in domain_stats %}
+            <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-bold text-sand-950">{{ item.domain }}</p>
+                  <p class="mt-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-500">{{ item.indexed }} / {{ item.total }} indexed</p>
+                </div>
+                <div class="text-lg font-bold text-green-700">{{ item.percent }}%</div>
+              </div>
+              <div class="mt-3 h-2 overflow-hidden rounded-full bg-sand-100">
+                <div class="h-full rounded-full bg-green-600" style="width: {{ item.percent }}%"></div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="font-display text-3xl font-bold text-sand-950">Weekly Check Queue</h2>
+          <p class="mt-2 text-sm leading-6 text-sand-700">URLs are due when they have never been checked or their last check is older than 7 days.</p>
+          <p class="mt-2 text-sm leading-6 text-sand-700">Google uses the URL Inspection API. Bing and Yahoo are tracked as manual webmaster checks because they do not provide the same public URL inspection endpoint here.</p>
+        </div>
+        <a href="/website-index" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Open Website Index</a>
+      </div>
+
+      {% if urls %}
+        <div class="mt-6 grid gap-4 rounded-[24px] border border-sand-200 bg-sand-50/80 p-4 lg:grid-cols-[1.4fr_repeat(5,1fr)]">
+          <div>
+            <label for="websiteIndexSearch" class="mb-2 block text-sm font-bold text-sand-900">Search URL</label>
+            <input id="websiteIndexSearch" type="search" placeholder="Filter by URL or coverage" class="min-h-11 w-full rounded-2xl border border-sand-200 bg-white px-4 py-2.5 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+          <div>
+            <label for="websiteIndexDomainFilter" class="mb-2 block text-sm font-bold text-sand-900">Domain</label>
+            <select id="websiteIndexDomainFilter" class="min-h-11 w-full rounded-2xl border border-sand-200 bg-white px-4 py-2.5 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="">All</option>
+              {% for domain in domains %}
+                <option value="{{ domain }}">{{ domain }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="websiteIndexWeeklyFilter" class="mb-2 block text-sm font-bold text-sand-900">Weekly</label>
+            <select id="websiteIndexWeeklyFilter" class="min-h-11 w-full rounded-2xl border border-sand-200 bg-white px-4 py-2.5 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="">All</option>
+              <option value="due">Due</option>
+              <option value="fresh">Fresh</option>
+            </select>
+          </div>
+          <div>
+            <label for="websiteIndexGoogleFilter" class="mb-2 block text-sm font-bold text-sand-900">Google</label>
+            <select id="websiteIndexGoogleFilter" class="min-h-11 w-full rounded-2xl border border-sand-200 bg-white px-4 py-2.5 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="">All</option>
+              <option value="indexed">Indexed</option>
+              <option value="not-indexed">Not Indexed</option>
+              <option value="error">Error</option>
+              <option value="unchecked">Unchecked</option>
+            </select>
+          </div>
+          <div>
+            <label for="websiteIndexBingFilter" class="mb-2 block text-sm font-bold text-sand-900">Bing</label>
+            <select id="websiteIndexBingFilter" class="min-h-11 w-full rounded-2xl border border-sand-200 bg-white px-4 py-2.5 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="">All</option>
+              <option value="manual">Manual</option>
+              <option value="unchecked">Unchecked</option>
+            </select>
+          </div>
+          <div>
+            <label for="websiteIndexYahooFilter" class="mb-2 block text-sm font-bold text-sand-900">Yahoo</label>
+            <select id="websiteIndexYahooFilter" class="min-h-11 w-full rounded-2xl border border-sand-200 bg-white px-4 py-2.5 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="">All</option>
+              <option value="manual">Manual</option>
+              <option value="unchecked">Unchecked</option>
+            </select>
+          </div>
+          <div class="lg:col-span-6">
+            <span id="websiteIndexFilterCount" class="text-sm font-bold text-sand-700"></span>
+          </div>
+        </div>
+
+        <div class="mt-6 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+          <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+            <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+              <tr>
+                <th class="px-4 py-3">URL</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Weekly</th>
+                <th class="px-4 py-3">Google</th>
+                <th class="px-4 py-3">Bing</th>
+                <th class="px-4 py-3">Yahoo</th>
+                <th class="px-4 py-3">Coverage</th>
+                <th class="px-4 py-3">Last checked</th>
+                <th class="px-4 py-3">Last crawl</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-sand-100">
+              {% for item in urls %}
+                <tr
+                  data-website-index-row
+                  data-search="{{ (item.url ~ ' ' ~ (item.google_coverage_state or '') ~ ' ' ~ (item.last_error or ''))|lower }}"
+                  data-domain="{{ item.domain }}"
+                  data-weekly="{% if item.is_due %}due{% else %}fresh{% endif %}"
+                  data-google="{{ item.google_status or 'unchecked' }}"
+                  data-bing="{{ item.bing_status or 'unchecked' }}"
+                  data-yahoo="{{ item.yahoo_status or 'unchecked' }}"
+                >
+                  <td class="max-w-xl break-words px-4 py-3 font-semibold text-sand-900">
+                    <a href="{{ item.url }}" target="_blank" rel="noopener" class="hover:text-sand-600">{{ item.url }}</a>
+                  </td>
+                  <td class="px-4 py-3">
+                    {% if item.check_status == "checking" %}
+                      <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Checking</span>
+                    {% elif item.check_status == "done" %}
+                      <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Done</span>
+                    {% elif item.check_status == "error" %}
+                      <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-red-700">Error</span>
+                    {% elif item.check_status == "manual" %}
+                      <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Manual</span>
+                    {% else %}
+                      <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Queued</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3">
+                    {% if item.is_due %}
+                      <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Due</span>
+                    {% else %}
+                      <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Fresh</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3">
+                    {% if item.google_status == "indexed" %}
+                      <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Indexed</span>
+                    {% elif item.google_status == "not-indexed" %}
+                      <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-amber-700">Not Indexed</span>
+                    {% elif item.google_status == "error" %}
+                      <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-red-700">Error</span>
+                    {% else %}
+                      <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Unchecked</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3">
+                    {% if item.bing_status == "manual" %}
+                      <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Manual</span>
+                    {% else %}
+                      <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Unchecked</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3">
+                    {% if item.yahoo_status == "manual" %}
+                      <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Manual</span>
+                    {% else %}
+                      <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Unchecked</span>
+                    {% endif %}
+                  </td>
+                  <td class="min-w-[220px] px-4 py-3 text-sand-700">{{ item.google_coverage_state or item.last_error or "n/a" }}</td>
+                  <td class="min-w-[170px] px-4 py-3 text-sand-700">{{ item.last_checked_at or "n/a" }}</td>
+                  <td class="min-w-[170px] px-4 py-3 text-sand-700">{{ item.google_last_crawl_time or "n/a" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <button type="button" id="websiteIndexPrevPage" class="inline-flex min-h-10 items-center justify-center rounded-full border border-sand-200 bg-white px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Previous</button>
+          <span id="websiteIndexPageStatus" class="text-sm font-bold text-sand-700"></span>
+          <button type="button" id="websiteIndexNextPage" class="inline-flex min-h-10 items-center justify-center rounded-full border border-sand-200 bg-white px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Next</button>
+        </div>
+        <div id="websiteIndexEmptyFilter" class="mt-4 hidden rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm font-bold text-sand-700">No saved URLs match the current filters.</div>
+      {% else %}
+        <div class="mt-6 rounded-2xl border-2 border-dashed border-sand-200 bg-white/70 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          No URLs are saved yet. Open Website Index to paste or upload a URL list.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='assets/js/website_index_dashboard.js') }}"></script>
+{% endblock %}

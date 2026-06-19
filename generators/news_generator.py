@@ -1,7 +1,6 @@
 import json
 import re
 
-from app.services.content_format_service import markdown_to_output
 from generators.content_generator import _generate_content_from_prompt, count_html_words, suggest_content_tags
 from generators.meta_description_generator import _generate_meta_descriptions_from_prompt
 from generators.title_generator import _generate_titles_from_prompt
@@ -31,6 +30,7 @@ def generate_news_titles(
     brand: str = "",
     brand_context: str = "",
     current_date: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> list[str]:
     prompt = build_news_title_prompt(
@@ -43,11 +43,11 @@ def generate_news_titles(
         brand=brand,
         brand_context=brand_context,
         current_date=current_date or current_news_date(),
+        language=language,
     )
     return _generate_titles_from_prompt(
         provider,
         prompt,
-        forbidden_phrases=OLD_NEWS_YEARS,
         progress_callback=progress_callback,
     )
 
@@ -63,6 +63,7 @@ def generate_news_meta_descriptions(
     brand: str = "",
     brand_context: str = "",
     current_date: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> list[dict]:
     prompt = build_news_meta_description_prompt(
@@ -75,6 +76,7 @@ def generate_news_meta_descriptions(
         brand=brand,
         brand_context=brand_context,
         current_date=current_date or current_news_date(),
+        language=language,
     )
     return _generate_meta_descriptions_from_prompt(
         provider,
@@ -96,6 +98,7 @@ def generate_news_visual_ideas(
     brand: str = "",
     brand_context: str = "",
     current_date: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> list[str]:
     prompt = build_news_visual_prompt(
@@ -108,13 +111,15 @@ def generate_news_visual_ideas(
         brand=brand,
         brand_context=brand_context,
         current_date=current_date or current_news_date(),
+        language=language,
     )
     attempt = 0
-    while True:
+    max_attempts = 2
+    while attempt < max_attempts:
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
-            retry_instruction = "\n\nIMPORTANT RETRY REQUIREMENT:\n- Do not include any 2020, 2021, 2022, 2023, 2024, or 2025 references.\n"
+            retry_instruction = "\n\nIMPORTANT RETRY REQUIREMENT:\n- Keep image directions focused on the current event and avoid making an older reference the main visual.\n"
         _publish_progress(progress_callback, prompt + retry_instruction, kind="prompt")
         raw = provider.generate_json(prompt + retry_instruction)
         try:
@@ -127,13 +132,15 @@ def generate_news_visual_ideas(
             if _contains_old_news_year(combined):
                 _publish_progress(
                     progress_callback,
-                    f"Visual attempt {attempt}: old-news year reference found. Retrying...",
+                    f"Visual attempt {attempt}: older year reference found. Retrying once with a current-event focus...",
                 )
                 continue
             return cleaned[:count]
         except Exception as exc:
             logger.exception("generate_news_visual_ideas failed. Raw response: %s", raw)
             raise ValueError("Could not parse JSON from model output.") from exc
+
+    return []
 
 
 def generate_news_content(
@@ -149,6 +156,7 @@ def generate_news_content(
     min_words: int = 800,
     max_words: int = 1400,
     current_date: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> str:
     prompt = build_news_content_prompt(
@@ -163,21 +171,21 @@ def generate_news_content(
         min_words=min_words,
         max_words=max_words,
         current_date=current_date or current_news_date(),
+        language=language,
     )
-    def validator(content: str) -> str:
-        for year in OLD_NEWS_YEARS:
-            if re.search(rf"(?<!\d){year}(?!\d)", content or ""):
-                return f"Do not include old-news year references like {year}; keep the article focused on current 2026 events."
-        return ""
-
     markdown_content = _generate_content_from_prompt(
         provider,
         prompt,
         min_words=min_words,
         max_words=max_words,
-        validator=validator,
+        max_attempts=0,
+        allow_best_effort=False,
+        retry_parse_errors=True,
         progress_callback=progress_callback,
     )
+    markdown_content = _remove_selected_title_heading(markdown_content, title)
+    from app.services.content_format_service import markdown_to_output
+
     return markdown_to_output(markdown_content, "html")
 
 
@@ -192,6 +200,7 @@ def generate_news_tags(
     content: str = "",
     minimum: int = 10,
     current_date: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> list[str]:
     fallback = suggest_content_tags(
@@ -211,6 +220,7 @@ def generate_news_tags(
         content=content,
         minimum=minimum,
         current_date=current_date or current_news_date(),
+        language=language,
     )
     _publish_progress(progress_callback, prompt, kind="prompt")
     raw = provider.generate_json(prompt)
@@ -244,3 +254,26 @@ def _publish_progress(progress_callback, message: str, kind: str = "status") -> 
 
 def _contains_old_news_year(text: str) -> bool:
     return any(re.search(rf"(?<!\d){year}(?!\d)", text or "") for year in OLD_NEWS_YEARS)
+
+
+def _remove_selected_title_heading(content: str, title: str) -> str:
+    cleaned_title = _normalize_heading_text(title)
+    if not cleaned_title:
+        return content
+
+    lines = (content or "").splitlines()
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    if not lines:
+        return content
+
+    first_line = lines[0].strip()
+    first_heading = re.sub(r"^#{1,6}\s+", "", first_line).strip()
+    first_heading = first_heading.strip("*_` ")
+    if _normalize_heading_text(first_heading) == cleaned_title:
+        return "\n".join(lines[1:]).lstrip()
+    return content
+
+
+def _normalize_heading_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value or "", flags=re.IGNORECASE).strip().lower()

@@ -2,7 +2,7 @@ import json
 
 from flask import render_template, request
 
-from database import get_brand_context, get_generation_history_item, list_brand_names, record_generation, record_page, upsert_brand
+from database import get_brand_context, get_generation_history_item, list_brand_names, list_checklist_items, record_generation, record_page, upsert_brand
 from generators.content_generator import count_html_words, revise_existing_content
 from generators.page_generator import generate_page_content, generate_page_meta_description, generate_page_title
 from generators.simple_page_generator import (
@@ -15,6 +15,7 @@ from logger import logger
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
+from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_page_word_limits
 
@@ -23,6 +24,7 @@ def page_generator():
     state = {
         "keyword": "",
         "brand": "",
+        "language": get_default_language(),
         "supporting_keywords": "",
         "page_type": "",
         "expectations": "",
@@ -37,6 +39,8 @@ def page_generator():
         "error": None,
         "success": None,
         "brand_names": list_brand_names(),
+        "content_checklist_items": list_checklist_items("page", active_only=True),
+        "language_options": language_options(get_default_language()),
     }
 
     edit_history_id = request.args.get("edit_history_id", "").strip()
@@ -47,6 +51,7 @@ def page_generator():
         action = request.form.get("action", "generate_page_title").strip()
         state["keyword"] = request.form.get("keyword", "").strip()
         state["brand"] = request.form.get("brand", "").strip()
+        state["language"] = _language_from_request()
         state["supporting_keywords"] = request.form.get("supporting_keywords", "").strip()
         state["page_type"] = request.form.get("page_type", "").strip()
         state["expectations"] = request.form.get("expectations", "").strip()
@@ -82,6 +87,7 @@ def page_generator():
                         output_format="html",
                         keyword=state["keyword"],
                         brand=state["brand"],
+                        language=state["language"],
                         progress_callback=progress,
                     )
                     _record_completed_page(state, min_words, max_words)
@@ -101,6 +107,7 @@ def page_generator():
                         page_type=state["page_type"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
+                        language=state["language"],
                         progress_callback=progress,
                     )
                 elif action == "generate_page_meta" or not state["meta_description"]:
@@ -114,6 +121,7 @@ def page_generator():
                         page_type=state["page_type"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
+                        language=state["language"],
                         progress_callback=progress,
                     )
                 else:
@@ -131,6 +139,7 @@ def page_generator():
                         change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
                         min_words=min_words,
                         max_words=max_words,
+                        language=state["language"],
                         progress_callback=progress,
                     )
                     state["page_content"] = result.get("content", "")
@@ -144,12 +153,14 @@ def page_generator():
                     exc,
                 )
 
+    state["language_options"] = language_options(state["language"])
     return render_template("page_generator.html", **base_template_context(), **state)
 
 
 def simple_page_generator():
     state = {
         "brand": "",
+        "language": get_default_language(),
         "page_title": "",
         "page_type": "",
         "expectations": "",
@@ -163,6 +174,8 @@ def simple_page_generator():
         "error": None,
         "success": None,
         "brand_names": list_brand_names(),
+        "content_checklist_items": list_checklist_items("page", active_only=True),
+        "language_options": language_options(get_default_language()),
     }
 
     edit_history_id = request.args.get("edit_history_id", "").strip()
@@ -172,6 +185,7 @@ def simple_page_generator():
     if request.method == "POST":
         action = request.form.get("action", "generate_simple_page_title").strip()
         state["brand"] = request.form.get("brand", "").strip()
+        state["language"] = _language_from_request()
         state["page_title"] = request.form.get("page_title", "").strip()
         state["page_type"] = request.form.get("page_type", "").strip()
         state["expectations"] = request.form.get("expectations", "").strip()
@@ -206,6 +220,7 @@ def simple_page_generator():
                         output_format="html",
                         keyword=state["page_title"],
                         brand=state["brand"],
+                        language=state["language"],
                         progress_callback=progress,
                     )
                     if not state["generated_title"]:
@@ -227,6 +242,7 @@ def simple_page_generator():
                         brand=state["brand"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
+                        language=state["language"],
                         progress_callback=progress,
                     )
                 elif action == "generate_simple_page_meta" or not state["meta_descriptions"]:
@@ -239,6 +255,7 @@ def simple_page_generator():
                         brand=state["brand"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
+                        language=state["language"],
                         progress_callback=progress,
                     )
                 else:
@@ -256,6 +273,7 @@ def simple_page_generator():
                         change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
                         min_words=min_words,
                         max_words=max_words,
+                        language=state["language"],
                         progress_callback=progress,
                     )
                     _record_completed_simple_page(state, selected_meta, min_words, max_words)
@@ -267,6 +285,7 @@ def simple_page_generator():
                     exc,
                 )
 
+    state["language_options"] = language_options(state["language"])
     return render_template("simple_page_generator.html", **base_template_context(), **state)
 
 
@@ -290,6 +309,7 @@ def _record_completed_page(state: dict, min_words: int, max_words: int):
         meta_description=state["meta_description"],
         prompt_inputs={
             "page_type": state["page_type"],
+            "language": state["language"],
             "supporting_keywords": state["supporting_keywords"],
             "expectations": state["expectations"],
             "image_count": state["image_count"],
@@ -331,6 +351,7 @@ def _record_completed_simple_page(state: dict, selected_meta: str, min_words: in
         meta_description=selected_meta,
         prompt_inputs={
             "page_type": state["page_type"],
+            "language": state["language"],
             "expectations": state["expectations"],
             "regenerate_scope": state["regenerate_scope"],
             "change_request": state["change_request"],
@@ -375,6 +396,7 @@ def _save_page_generation(state: dict):
         meta_description=state["meta_description"],
         prompt_inputs={
             "page_type": state["page_type"],
+            "language": state["language"],
             "supporting_keywords": state["supporting_keywords"],
             "expectations": state["expectations"],
             "image_count": state["image_count"],
@@ -423,6 +445,7 @@ def _save_simple_page_generation(state: dict):
         meta_description=selected_meta,
         prompt_inputs={
             "page_type": state["page_type"],
+            "language": state["language"],
             "expectations": state["expectations"],
             "manual_save": True,
         },
@@ -449,6 +472,7 @@ def _load_page_history_item(state: dict, history_id: int):
     state["history_id"] = str(item.get("id", ""))
     state["brand"] = item.get("brand_name", "") or ""
     state["keyword"] = item.get("primary_keyword", "") or ""
+    state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["supporting_keywords"] = prompt_inputs.get("supporting_keywords", "")
     state["page_type"] = prompt_inputs.get("page_type", "")
     state["expectations"] = prompt_inputs.get("expectations", "")
@@ -469,6 +493,7 @@ def _load_simple_page_history_item(state: dict, history_id: int):
     meta_description = item.get("meta_description", "") or ""
     state["history_id"] = str(item.get("id", ""))
     state["brand"] = item.get("brand_name", "") or ""
+    state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["page_title"] = item.get("primary_keyword", "") or item.get("title", "") or ""
     state["page_type"] = prompt_inputs.get("page_type", "")
     state["expectations"] = prompt_inputs.get("expectations", "")
@@ -503,6 +528,10 @@ def _loads(raw: str) -> dict:
         return data if isinstance(data, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _language_from_request() -> str:
+    return normalize_language(request.form.get("language", get_default_language()))
 
 
 def _scoped_change_request(change_request: str, scope: str) -> str:

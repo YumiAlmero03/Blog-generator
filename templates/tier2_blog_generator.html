@@ -30,7 +30,7 @@
         <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
       {% endif %}
 
-      <form method="post" id="titlesForm" data-loading-message="Generating Tier 2 titles..." class="grid gap-1">
+      <form method="post" id="titlesForm" data-loading-message="Generating Tier 2 titles..." data-background-submit class="grid gap-1">
         <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 1</span>
         <h2 class="mb-4 font-display text-3xl text-sand-950">Generate Tier 2 Titles</h2>
 
@@ -57,17 +57,24 @@
           <option value="friendly" {% if tone == 'friendly' %}selected{% endif %}>Friendly</option>
         </select>
 
+        <label for="language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+        <select id="language" name="language" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for option in language_options %}
+            <option value="{{ option }}" {% if language == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+
         <label for="count" class="mb-2 block text-sm font-bold text-sand-900">Number of Titles</label>
         <input id="count" name="count" type="number" min="1" max="20" value="{{ count }}" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
         <input type="hidden" name="action" value="generate_titles" />
-        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Titles</button>
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if titles %}Regenerate Titles{% else %}Generate Titles{% endif %}</button>
       </form>
     </section>
 
     {% if titles %}
       <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-        <form method="post" id="contentForm" data-loading-message="Generating Tier 2 content..." class="grid gap-6">
+        <form method="post" id="contentForm" data-loading-message="Generating Tier 2 content..." data-background-submit class="grid gap-6">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 2</span>
@@ -200,6 +207,7 @@
             {% endif %}
 
             {% include "_quality_report.html" %}
+            {% include "_content_checklist.html" %}
           {% endif %}
 
           <div class="flex justify-start pt-2">
@@ -220,12 +228,13 @@
           </div>
 
           <div class="flex justify-start pt-2">
-            <button type="button" id="generateContentButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Full Article</button>
+            <button type="button" data-generate-action="generate_content" data-loading-message="{% if content %}Regenerating Tier 2 content...{% else %}Generating Tier 2 content...{% endif %}" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if content %}Regenerate Full Article{% else %}Generate Full Article{% endif %}</button>
           </div>
 
           <input type="hidden" name="selected_backlink_id" value="{{ selected_backlink_id }}" />
           <input type="hidden" name="anchor_text" value="{{ anchor_text }}" />
           <input type="hidden" name="link" value="{{ link }}" />
+          <input type="hidden" name="language" value="{{ language }}" />
           <input type="hidden" name="tone" value="{{ tone }}" />
           <input type="hidden" name="visual" value="{{ visual }}" />
           <input type="hidden" name="history_id" value="{{ history_id }}" />

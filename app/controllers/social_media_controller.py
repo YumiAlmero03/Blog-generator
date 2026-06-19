@@ -7,6 +7,7 @@ from database import (
     get_backlink,
     get_generation_history_item,
     list_backlinks,
+    list_checklist_items,
     record_generation,
 )
 from generators.content_generator import count_html_words
@@ -16,6 +17,7 @@ from logger import logger
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
+from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 
 
@@ -23,6 +25,7 @@ def neutral_blog_generator():
     state = {
         "topic": "",
         "suggested_content": "",
+        "language": get_default_language(),
         "selected_medium_id": "",
         "selected_medium": None,
         "selected_title": "",
@@ -37,6 +40,8 @@ def neutral_blog_generator():
         "error": None,
         "success": None,
         "mediums": list_backlinks(),
+        "content_checklist_items": list_checklist_items("blog", active_only=True),
+        "language_options": language_options(get_default_language()),
     }
     selected_medium = request.args.get("medium_id", "").strip()
     if request.method == "GET" and selected_medium.isdigit():
@@ -52,6 +57,7 @@ def neutral_blog_generator():
         else:
             _handle_generate_neutral_article(state)
 
+    state["language_options"] = language_options(state["language"])
     return render_template("social_media_activator.html", **base_template_context(), **state)
 
 
@@ -64,6 +70,7 @@ def _load_history_item(state: dict, history_id: int):
     state["history_id"] = str(item.get("id", ""))
     state["topic"] = item.get("primary_keyword", "") if item.get("primary_keyword") != "random topic" else prompt_inputs.get("topic", "")
     state["suggested_content"] = prompt_inputs.get("suggested_content", "") or ""
+    state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["selected_medium"] = selected_medium
     state["selected_medium_id"] = str(selected_medium.get("id", "")) if selected_medium else str(prompt_inputs.get("medium_id", ""))
     state["selected_title"] = item.get("title", "") or ""
@@ -102,6 +109,7 @@ def _find_medium_by_name(medium_name: str) -> dict | None:
 def _handle_generate_neutral_article(state: dict):
     state["topic"] = request.form.get("topic", "").strip()
     state["suggested_content"] = request.form.get("suggested_content", "").strip()
+    state["language"] = _language_from_request()
     state["selected_medium_id"] = request.form.get("selected_medium_id", "").strip()
     state["history_id"] = request.form.get("history_id", "").strip()
 
@@ -123,6 +131,7 @@ def _handle_generate_neutral_article(state: dict):
             topic=state["topic"],
             suggested_content=state["suggested_content"],
             medium=state["selected_medium"],
+            language=state["language"],
             progress_callback=progress,
         )
         state["selected_title"] = result.get("title", "")
@@ -143,6 +152,7 @@ def _handle_generate_neutral_article(state: dict):
             prompt_inputs={
                 "topic": state["topic"],
                 "suggested_content": state["suggested_content"],
+                "language": state["language"],
                 "medium_id": state["selected_medium_id"],
                 "medium": _medium_context(state["selected_medium"]),
                 "visual": state["visual"],
@@ -164,6 +174,7 @@ def _handle_generate_neutral_article(state: dict):
 def _handle_save_neutral_post(state: dict):
     state["topic"] = request.form.get("topic", "").strip()
     state["suggested_content"] = request.form.get("suggested_content", "").strip()
+    state["language"] = _language_from_request()
     state["selected_medium_id"] = request.form.get("selected_medium_id", "").strip()
     state["selected_title"] = request.form.get("selected_title", "").strip()
     state["meta_description"] = request.form.get("meta_description", "").strip()
@@ -213,6 +224,7 @@ def _handle_save_neutral_post(state: dict):
         prompt_inputs={
             "topic": state["topic"],
             "suggested_content": state["suggested_content"],
+            "language": state["language"],
             "medium_id": state["selected_medium_id"],
             "medium": _medium_context(state["selected_medium"]),
             "visual": state["visual"],
@@ -370,6 +382,10 @@ def _loads(raw: str) -> dict:
         return data if isinstance(data, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _language_from_request() -> str:
+    return normalize_language(request.form.get("language", get_default_language()))
 
 
 def _valid_post_link(value: str) -> bool:

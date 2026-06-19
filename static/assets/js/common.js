@@ -42,6 +42,8 @@
 
   let loadingEventSource = null;
   let loadingStatusPoll = null;
+  let loadingStatusPollToken = "";
+  const generationStatusPollDelay = 1500;
   let latestLoadingPrompt = "";
 
   function setLoadingStatus(message) {
@@ -110,9 +112,10 @@
       loadingEventSource = null;
     }
     if (loadingStatusPoll) {
-      window.clearInterval(loadingStatusPoll);
+      window.clearTimeout(loadingStatusPoll);
       loadingStatusPoll = null;
     }
+    loadingStatusPollToken = "";
     setLoadingStatus("");
     setLoadingPrompt("");
   }
@@ -161,10 +164,15 @@
 
   function startStatusPolling(token) {
     if (loadingStatusPoll) {
-      window.clearInterval(loadingStatusPoll);
+      window.clearTimeout(loadingStatusPoll);
     }
+    loadingStatusPoll = null;
+    loadingStatusPollToken = token;
 
     const poll = function () {
+      if (loadingStatusPollToken !== token) {
+        return;
+      }
       fetch("/generation-status/" + encodeURIComponent(token), {
         headers: { Accept: "application/json" },
       })
@@ -185,11 +193,15 @@
             setLoadingPrompt(payload.prompt);
           }
         })
-        .catch(function () {});
+        .catch(function () {})
+        .then(function () {
+          if (loadingStatusPollToken === token) {
+            loadingStatusPoll = window.setTimeout(poll, generationStatusPollDelay);
+          }
+        });
     };
 
     poll();
-    loadingStatusPoll = window.setInterval(poll, 1500);
   }
 
   function startFormLoading(form, message) {
@@ -201,6 +213,94 @@
     showLoading(message || form.dataset.loadingMessage);
     startStatusEvents(token);
     return token;
+  }
+
+  function submitFormInBackground(form, submitter) {
+    if (!form) {
+      return;
+    }
+    const token = startFormLoading(form, form.dataset.loadingMessage);
+    setLoadingStatus("Queued in background...");
+    let formData;
+    try {
+      formData = submitter && typeof FormData === "function"
+        ? new FormData(form, submitter)
+        : new FormData(form);
+    } catch (error) {
+      formData = new FormData(form);
+    }
+    if (submitter && submitter.name && !formData.has(submitter.name)) {
+      formData.append(submitter.name, submitter.value || "");
+    }
+    formData.set("generation_status_token", token);
+    formData.set("_background_path", form.getAttribute("action") || window.location.pathname + window.location.search);
+
+    fetch("/background-jobs", {
+      method: "POST",
+      body: formData,
+      headers: { Accept: "application/json" },
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("Could not start background job.");
+        }
+        return response.json();
+      })
+      .then(function (payload) {
+        pollBackgroundJob(payload.id);
+      })
+      .catch(function (error) {
+        setLoadingStatus(error.message || "Could not start background job.");
+        window.setTimeout(hideLoading, 1800);
+      });
+  }
+
+  function pollBackgroundJob(jobId) {
+    if (!jobId) {
+      setLoadingStatus("Background job did not return an id.");
+      window.setTimeout(hideLoading, 1800);
+      return;
+    }
+
+    const poll = function () {
+      fetch("/background-jobs/" + encodeURIComponent(jobId), {
+        headers: { Accept: "application/json" },
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error("Could not read background job status.");
+          }
+          return response.json();
+        })
+        .then(function (payload) {
+          if (payload.message) {
+            setLoadingStatus(payload.message);
+          }
+          if (payload.status === "complete") {
+            setLoadingStatus("Loading generated result...");
+            if (payload.html) {
+              document.open();
+              document.write(payload.html);
+              document.close();
+              return;
+            }
+            window.location.reload();
+            return;
+          }
+          if (payload.status === "failed") {
+            setLoadingStatus(payload.error || "Background generation failed.");
+            window.setTimeout(hideLoading, 2200);
+            return;
+          }
+          window.setTimeout(poll, 1200);
+        })
+        .catch(function (error) {
+          setLoadingStatus(error.message || "Background job status failed.");
+          window.setTimeout(hideLoading, 2200);
+        });
+    };
+
+    window.setTimeout(poll, 800);
   }
 
   function copyText(value, message, onSuccess) {
@@ -386,6 +486,11 @@
     if (!form) {
       return;
     }
+    if (form.hasAttribute("data-background-submit")) {
+      event.preventDefault();
+      submitFormInBackground(form, event.submitter || null);
+      return;
+    }
     startFormLoading(form, form.dataset.loadingMessage);
   });
 
@@ -442,6 +547,7 @@
     setLoadingStatus: setLoadingStatus,
     setLoadingPrompt: setLoadingPrompt,
     startFormLoading: startFormLoading,
+    submitFormInBackground: submitFormInBackground,
     copyField: copyField,
     copyText: copyText,
     createPaginator: createPaginator,

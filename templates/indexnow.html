@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+{% set active_page = "indexnow" %}
+
+{% block title %}Website Index{% endblock %}
+{% block eyebrow %}Search Indexing{% endblock %}
+{% block hero_title %}Website Index{% endblock %}
+{% block hero_text %}Save website URLs separately from blog history, submit discovery signals, and run weekly Google index checks through the official Search Console URL Inspection API.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="post" enctype="multipart/form-data" class="grid gap-6">
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">
+        No search engine gives a public “force index everything” button. This page sends the strongest allowed crawl and discovery requests, but indexing still depends on ownership, crawlability, quality, canonicals, robots rules, and each engine's decision.
+      </div>
+      <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">
+        IndexNow itself confirms that URLs were submitted or accepted, not that they are already indexed. Use the saved tracker below for Google URL Inspection, and check Bing Webmaster Tools or IndexNow Insights for Bing-side reporting.
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div>
+          <label for="host" class="mb-2 block text-sm font-bold text-sand-900">Host</label>
+          <input
+            id="host"
+            name="host"
+            type="text"
+            value="{{ host }}"
+            placeholder="www.example.com"
+            class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+          <p class="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Leave blank to use the first URL host</p>
+        </div>
+        <div>
+          <label for="key" class="mb-2 block text-sm font-bold text-sand-900">IndexNow Key <span class="text-red-600">*</span></label>
+          <input
+            id="key"
+            name="key"
+            type="text"
+            value="{{ key }}"
+            placeholder="your-indexnow-key"
+            class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div>
+          <label for="key_location" class="mb-2 block text-sm font-bold text-sand-900">Key Location</label>
+          <input
+            id="key_location"
+            name="key_location"
+            type="url"
+            value="{{ key_location }}"
+            placeholder="https://www.example.com/your-key.txt"
+            class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+          <p class="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Optional when the key file is at the site root</p>
+        </div>
+        <div>
+          <label for="endpoint" class="mb-2 block text-sm font-bold text-sand-900">Endpoint</label>
+          <input
+            id="endpoint"
+            name="endpoint"
+            type="url"
+            value="{{ endpoint }}"
+            class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+      </div>
+
+      <div class="rounded-[24px] border border-sand-200 bg-sand-50/70 p-4">
+        <h2 class="font-display text-2xl font-bold text-sand-950">Google Indexing API</h2>
+        <p class="mt-2 text-sm leading-6 text-sand-700">Use this only for pages Google allows through the Indexing API: JobPosting pages or livestream pages with BroadcastEvent inside VideoObject. The service account must be a verified owner in Search Console. For normal blog pages, use the sitemap export and Search Console.</p>
+        <div class="mt-4">
+          <label for="google_site_url" class="mb-2 block text-sm font-bold text-sand-900">Search Console Property</label>
+          <input
+            id="google_site_url"
+            name="google_site_url"
+            type="text"
+            value="{{ google_site_url }}"
+            placeholder="https://www.example.com/ or sc-domain:example.com"
+            class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+          <p class="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Required for Check Google Index</p>
+        </div>
+        <div class="mt-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+          <div>
+            <label for="google_access_token" class="mb-2 block text-sm font-bold text-sand-900">Google OAuth Access Token</label>
+            <input
+              id="google_access_token"
+              name="google_access_token"
+              type="password"
+              value="{{ google_access_token }}"
+              placeholder="ya29..."
+              class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+            />
+            <p class="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Optional if you provide service account JSON below</p>
+          </div>
+          <div>
+            <label for="google_notification_type" class="mb-2 block text-sm font-bold text-sand-900">Notification</label>
+            <select
+              id="google_notification_type"
+              name="google_notification_type"
+              class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+            >
+              <option value="URL_UPDATED" {% if google_notification_type == "URL_UPDATED" %}selected{% endif %}>URL Updated</option>
+              <option value="URL_DELETED" {% if google_notification_type == "URL_DELETED" %}selected{% endif %}>URL Deleted</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+          <div>
+            <label for="google_service_account_file" class="mb-2 block text-sm font-bold text-sand-900">Service Account JSON File</label>
+            <input
+              id="google_service_account_file"
+              name="google_service_account_file"
+              type="file"
+              accept=".json,application/json"
+              class="block min-h-12 w-full cursor-pointer rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sm text-sand-800 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-sand-100 file:px-4 file:py-2 file:text-sm file:font-bold file:text-sand-800 hover:file:bg-sand-200 focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+            />
+          </div>
+          <div>
+            <label for="google_service_account_json" class="mb-2 block text-sm font-bold text-sand-900">Or Paste Service Account JSON</label>
+            <textarea
+              id="google_service_account_json"
+              name="google_service_account_json"
+              rows="4"
+              placeholder='{"type":"service_account","client_email":"...","private_key":"..."}'
+              class="w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+            >{{ google_service_account_json }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label for="url_file" class="mb-2 block text-sm font-bold text-sand-900">Upload URL File</label>
+        <input
+          id="url_file"
+          name="url_file"
+          type="file"
+          accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
+          class="block min-h-12 w-full cursor-pointer rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sm text-sand-800 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-sand-100 file:px-4 file:py-2 file:text-sm file:font-bold file:text-sand-800 hover:file:bg-sand-200 focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+      </div>
+
+      <div>
+        <label for="url_list" class="mb-2 block text-sm font-bold text-sand-900">URL List</label>
+        <textarea
+          id="url_list"
+          name="url_list"
+          placeholder="https://www.example.com/page-1&#10;https://www.example.com/page-2"
+          class="min-h-[260px] w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-4 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        >{{ url_list }}</textarea>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" name="action" value="save_urls" formnovalidate class="inline-flex min-h-12 items-center justify-center rounded-full border border-sand-300 bg-white px-6 py-3 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Save URL List</button>
+        <button type="submit" name="action" value="indexnow" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Submit to IndexNow</button>
+        <button type="submit" name="action" value="google" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-black">Submit to Google API</button>
+        <button type="submit" name="action" value="google_inspect" class="inline-flex min-h-12 items-center justify-center rounded-full bg-blue-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-950">Check Google Index</button>
+        <button type="submit" name="action" value="weekly_check" formnovalidate class="inline-flex min-h-12 items-center justify-center rounded-full bg-blue-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-800">Weekly Due Check{% if due_count %} ({{ due_count }}){% endif %}</button>
+        <button type="submit" name="action" value="sitemap" formnovalidate class="inline-flex min-h-12 items-center justify-center rounded-full bg-moss-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-moss-700/90">Download Sitemap</button>
+        {% if parsed_count %}
+          <span class="rounded-full bg-sand-100 px-4 py-2 text-sm font-bold text-sand-700">{{ parsed_count }} URL{% if parsed_count != 1 %}s{% endif %} found</span>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if error %}
+      <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+      <div class="mt-5 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{{ success }}</div>
+    {% endif %}
+  </section>
+
+  {% if indexnow_result %}
+    <section class="mt-6 grid gap-5 lg:grid-cols-[280px_1fr]">
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">IndexNow</p>
+        <div class="mt-4 font-display text-6xl font-bold leading-none {% if indexnow_result.ok %}text-moss-700{% else %}text-amber-700{% endif %}">
+          {{ indexnow_result.submitted_count }}
+        </div>
+        <p class="mt-3 break-words text-sm leading-6 text-sand-700">URLs submitted for {{ indexnow_result.host }}</p>
+        {% if indexnow_result.duplicate_count %}
+          <p class="mt-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold text-sand-700">{{ indexnow_result.duplicate_count }} duplicate URL{% if indexnow_result.duplicate_count != 1 %}s{% endif %} removed</p>
+        {% endif %}
+      </div>
+
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <h2 class="font-display text-3xl font-bold text-sand-950">Batch Results</h2>
+        <div class="mt-5 grid gap-3">
+          {% for batch in indexnow_result.batches %}
+            <article class="rounded-2xl border border-sand-200 bg-white px-4 py-4">
+              <div class="flex flex-wrap items-center gap-2">
+                {% if batch.status in ["ok", "accepted"] %}
+                  <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">{{ batch.status }}</span>
+                {% else %}
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ batch.status }}</span>
+                {% endif %}
+                <span class="text-xs font-bold uppercase tracking-[0.1em] text-sand-600">Batch {{ batch.batch_number }}</span>
+                <span class="text-xs font-bold text-sand-600">HTTP {{ batch.status_code or "n/a" }}</span>
+                <span class="text-xs font-bold text-sand-600">{{ batch.submitted_count }} URL{% if batch.submitted_count != 1 %}s{% endif %}</span>
+              </div>
+              <p class="mt-2 text-sm leading-6 text-sand-700">{{ batch.detail }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    {% if indexnow_result.skipped %}
+      <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        <h2 class="font-display text-3xl font-bold text-sand-950">Skipped URLs</h2>
+        <div class="mt-5 max-h-[360px] overflow-y-auto rounded-2xl border border-sand-200 bg-white">
+          <ul class="divide-y divide-sand-100 text-sm leading-6 text-sand-700">
+            {% for item in indexnow_result.skipped %}
+              <li class="break-words px-4 py-3">{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+    {% endif %}
+  {% endif %}
+
+  {% if website_index_urls %}
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Saved Website Index</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ website_index_urls|length }} saved URL{% if website_index_urls|length != 1 %}s{% endif %}</h2>
+        </div>
+        <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ due_count }} due for weekly check</span>
+      </div>
+      <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+        <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+          <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+            <tr>
+              <th class="px-4 py-3">URL</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Google</th>
+              <th class="px-4 py-3">Bing</th>
+              <th class="px-4 py-3">Yahoo</th>
+              <th class="px-4 py-3">Coverage</th>
+              <th class="px-4 py-3">Last checked</th>
+              <th class="px-4 py-3">Last crawl</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-sand-100">
+            {% for item in website_index_urls %}
+              <tr>
+                <td class="max-w-xl break-words px-4 py-3 font-semibold text-sand-900">{{ item.url }}</td>
+                <td class="px-4 py-3">
+                  {% if item.check_status == "checking" %}
+                    <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Checking</span>
+                  {% elif item.check_status == "done" %}
+                    <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Done</span>
+                  {% elif item.check_status == "error" %}
+                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-red-700">Error</span>
+                  {% elif item.check_status == "manual" %}
+                    <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Manual</span>
+                  {% else %}
+                    <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Queued</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                  {% if item.google_status == "indexed" %}
+                    <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Indexed</span>
+                  {% elif item.google_status == "not-indexed" %}
+                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-amber-700">Not Indexed</span>
+                  {% elif item.google_status == "error" %}
+                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-red-700">Error</span>
+                  {% else %}
+                    <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Unchecked</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                  {% if item.bing_status == "manual" %}
+                    <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Manual</span>
+                  {% else %}
+                    <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Unchecked</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                  {% if item.yahoo_status == "manual" %}
+                    <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-blue-800">Manual</span>
+                  {% else %}
+                    <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Unchecked</span>
+                  {% endif %}
+                </td>
+                <td class="min-w-[220px] px-4 py-3 text-sand-700">{{ item.google_coverage_state or item.last_error or "n/a" }}</td>
+                <td class="min-w-[170px] px-4 py-3 text-sand-700">{{ item.last_checked_at or "n/a" }}</td>
+                <td class="min-w-[170px] px-4 py-3 text-sand-700">{{ item.google_last_crawl_time or "n/a" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if google_result %}
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Google Indexing API</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ google_result.submitted_count }} URL{% if google_result.submitted_count != 1 %}s{% endif %} sent</h2>
+        </div>
+        <span class="rounded-full {% if google_result.ok %}bg-green-100 text-green-700{% else %}bg-amber-100 text-amber-700{% endif %} px-4 py-2 text-xs font-bold uppercase tracking-[0.12em]">{% if google_result.ok %}Received{% else %}Check Results{% endif %}</span>
+      </div>
+      <div class="mt-5 grid gap-3">
+        {% for item in google_result.items %}
+          <article class="rounded-2xl border border-sand-200 bg-white px-4 py-4">
+            <div class="flex flex-wrap items-center gap-2">
+              {% if item.status == "ok" %}
+                <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">OK</span>
+              {% else %}
+                <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ item.status }}</span>
+              {% endif %}
+              <span class="text-xs font-bold text-sand-600">HTTP {{ item.status_code or "n/a" }}</span>
+            </div>
+            <p class="mt-2 break-words text-sm leading-6 text-sand-700">{{ item.url }}</p>
+            <p class="mt-1 text-sm font-bold leading-6 text-sand-800">{{ item.detail }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if google_inspection_result %}
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Google URL Inspection</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ google_inspection_result.inspected_count }} URL{% if google_inspection_result.inspected_count != 1 %}s{% endif %} checked</h2>
+        </div>
+        <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">Google only</span>
+      </div>
+      <p class="mt-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Bing, Yandex, Naver, and other IndexNow engines do not expose the same public URL inspection API here. Check their webmaster dashboards or IndexNow insights for engine-specific status.</p>
+      <div class="mt-5 grid gap-3">
+        {% for item in google_inspection_result.items %}
+          <article class="rounded-2xl border border-sand-200 bg-white px-4 py-4">
+            <div class="flex flex-wrap items-center gap-2">
+              {% if item.status == "indexed" %}
+                <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Indexed</span>
+              {% elif item.status == "not-indexed" %}
+                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">Not Indexed</span>
+              {% else %}
+                <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ item.status }}</span>
+              {% endif %}
+              <span class="text-xs font-bold text-sand-600">HTTP {{ item.status_code or "n/a" }}</span>
+              {% if item.verdict %}<span class="text-xs font-bold text-sand-600">Verdict {{ item.verdict }}</span>{% endif %}
+            </div>
+            <p class="mt-2 break-words text-sm leading-6 text-sand-700">{{ item.url }}</p>
+            <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <div class="rounded-2xl bg-sand-50 px-4 py-3"><dt class="font-bold text-sand-900">Coverage</dt><dd class="mt-1 break-words text-sand-700">{{ item.coverage_state or item.detail }}</dd></div>
+              <div class="rounded-2xl bg-sand-50 px-4 py-3"><dt class="font-bold text-sand-900">Last crawl</dt><dd class="mt-1 break-words text-sand-700">{{ item.last_crawl_time or "n/a" }}</dd></div>
+              <div class="rounded-2xl bg-sand-50 px-4 py-3"><dt class="font-bold text-sand-900">Robots</dt><dd class="mt-1 break-words text-sand-700">{{ item.robots_txt_state or "n/a" }}</dd></div>
+              <div class="rounded-2xl bg-sand-50 px-4 py-3"><dt class="font-bold text-sand-900">Indexing state</dt><dd class="mt-1 break-words text-sand-700">{{ item.indexing_state or "n/a" }}</dd></div>
+            </dl>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

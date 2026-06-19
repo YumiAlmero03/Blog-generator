@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% set active_page = "checklists" %}
+
+{% block title %}Checklists{% endblock %}
+{% block eyebrow %}Checklist Builder{% endblock %}
+{% block hero_title %}Checklists{% endblock %}
+{% block hero_text %}Create reusable checklist items for whole websites, generated blogs, and generated pages.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
+      {% endif %}
+
+      <form method="post" class="grid gap-1">
+        <input type="hidden" name="action" value="save_item" />
+
+        <label for="checklist_type" class="mb-2 block text-sm font-bold text-sand-900">Checklist type</label>
+        <select id="checklist_type" name="checklist_type" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for key, label in type_labels.items() %}
+            <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="label" class="mb-2 block text-sm font-bold text-sand-900">Checklist item <span class="text-red-600">*</span></label>
+        <input id="label" name="label" type="text" required placeholder="e.g. Meta description copied" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="sort_order" class="mb-2 block text-sm font-bold text-sand-900">Sort order</label>
+        <input id="sort_order" name="sort_order" type="number" value="0" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label class="mb-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-sand-200 bg-sand-50/80 px-4 py-3 text-sm leading-6 text-sand-800">
+          <input name="is_active" type="checkbox" value="1" checked class="mt-1 h-4 w-4 rounded border-sand-400 text-sand-600 focus:ring-sand-500" />
+          <span>
+            <strong class="block text-sand-950">Active</strong>
+            <span class="block text-sand-700">Show this item in dashboards and generated content checklists.</span>
+          </span>
+        </label>
+
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Add Checklist Item</button>
+      </form>
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="grid gap-5">
+        {% for checklist_type, items in checklist_groups.items() %}
+          <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+            <h2 class="font-display text-2xl text-sand-950">{{ type_labels.get(checklist_type, checklist_type|title) }}</h2>
+            {% if items %}
+              <form method="post" class="mt-4 flex flex-wrap items-center gap-3" data-checklist-reorder-form="{{ checklist_type }}">
+                <input type="hidden" name="action" value="reorder_items" />
+                <input type="hidden" name="checklist_type" value="{{ checklist_type }}" />
+                {% for item in items %}
+                  <input type="hidden" name="item_ids" value="{{ item.id }}" />
+                {% endfor %}
+                <button type="submit" class="inline-flex min-h-10 items-center rounded-full border border-sand-200 bg-white px-3 py-2 text-xs font-bold text-sand-700 transition hover:border-sand-500 hover:text-sand-950">Save Order</button>
+                <span class="text-xs font-bold text-sand-500" data-checklist-reorder-status="{{ checklist_type }}">Drag rows up or down.</span>
+              </form>
+              <div class="mt-4 grid gap-3" data-checklist-sort-list="{{ checklist_type }}">
+                {% for item in items %}
+                  <div class="rounded-2xl bg-sand-50 px-4 py-4 transition" draggable="true" data-checklist-sort-item data-item-id="{{ item.id }}">
+                    <form method="post" class="grid gap-3 lg:grid-cols-[64px_150px_minmax(0,1fr)_110px_auto] lg:items-center">
+                      <input type="hidden" name="action" value="save_item" />
+                      <input type="hidden" name="item_id" value="{{ item.id }}" />
+                      <input type="hidden" name="sort_order" value="{{ item.sort_order }}" data-sort-order-input />
+                      <div class="flex min-h-11 items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-sand-700" title="Drag up or down">
+                        <span class="cursor-grab text-sand-500" aria-hidden="true">::</span>
+                        <span data-sort-order-label>{{ loop.index }}</span>
+                      </div>
+                      <select name="checklist_type" class="min-h-11 rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm text-sand-900 outline-none">
+                        {% for key, label in type_labels.items() %}
+                          <option value="{{ key }}" {% if item.checklist_type == key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <input name="label" type="text" value="{{ item.label }}" class="min-h-11 rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm text-sand-900 outline-none" />
+                      <label class="flex min-h-11 items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-sand-800">
+                        <input name="is_active" type="checkbox" value="1" class="h-4 w-4 rounded border-sand-400 text-sand-600 focus:ring-sand-500" {% if item.is_active %}checked{% endif %} />
+                        Active
+                      </label>
+                      <div class="flex gap-2">
+                        <button type="submit" class="inline-flex min-h-10 items-center rounded-full bg-sand-600 px-3 py-2 text-xs font-bold text-sand-50 transition hover:bg-sand-700">Save</button>
+                      </div>
+                    </form>
+                    <form method="post" onsubmit="return confirm('Delete this checklist item?');" class="mt-3 pl-1">
+                      <input type="hidden" name="action" value="delete_item" />
+                      <input type="hidden" name="item_id" value="{{ item.id }}" />
+                      <button type="submit" class="text-xs font-bold text-red-700 underline decoration-red-200 underline-offset-2">Delete {{ item.label }}</button>
+                    </form>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="mt-4 rounded-2xl border-2 border-dashed border-sand-200 px-5 py-8 text-center text-sm text-sand-700">No checklist items yet.</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      const lists = Array.from(document.querySelectorAll("[data-checklist-sort-list]"));
+      let draggedItem = null;
+      let draggedList = null;
+
+      const updateListOrder = function (list) {
+        const checklistType = list.getAttribute("data-checklist-sort-list") || "";
+        const form = document.querySelector('[data-checklist-reorder-form="' + checklistType + '"]');
+        if (!form) {
+          return;
+        }
+        Array.from(form.querySelectorAll('input[name="item_ids"]')).forEach(function (input) {
+          input.remove();
+        });
+        Array.from(list.querySelectorAll("[data-checklist-sort-item]")).forEach(function (item, index) {
+          const itemId = item.getAttribute("data-item-id") || "";
+          const hidden = document.createElement("input");
+          const sortInput = item.querySelector("[data-sort-order-input]");
+          const sortLabel = item.querySelector("[data-sort-order-label]");
+          hidden.type = "hidden";
+          hidden.name = "item_ids";
+          hidden.value = itemId;
+          form.appendChild(hidden);
+          if (sortInput) {
+            sortInput.value = String(index + 1);
+          }
+          if (sortLabel) {
+            sortLabel.textContent = String(index + 1);
+          }
+        });
+      };
+
+      const saveListOrder = function (list) {
+        const checklistType = list.getAttribute("data-checklist-sort-list") || "";
+        const form = document.querySelector('[data-checklist-reorder-form="' + checklistType + '"]');
+        const status = document.querySelector('[data-checklist-reorder-status="' + checklistType + '"]');
+        if (!form || typeof fetch !== "function") {
+          return;
+        }
+        updateListOrder(list);
+        if (status) {
+          status.textContent = "Saving order...";
+        }
+        fetch(form.getAttribute("action") || window.location.pathname, {
+          method: "POST",
+          body: new FormData(form),
+          headers: { Accept: "text/html" },
+        })
+          .then(function (response) {
+            if (!response.ok) {
+              throw new Error("Could not save order.");
+            }
+            if (status) {
+              status.textContent = "Order saved.";
+            }
+          })
+          .catch(function () {
+            if (status) {
+              status.textContent = "Order was not saved. Use Save Order.";
+            }
+          });
+      };
+
+      const itemAfterPointer = function (list, y) {
+        const items = Array.from(list.querySelectorAll("[data-checklist-sort-item]:not(.checklist-dragging)"));
+        return items.reduce(function (closest, item) {
+          const box = item.getBoundingClientRect();
+          const offset = y - box.top - box.height / 2;
+          if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: item };
+          }
+          return closest;
+        }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+      };
+
+      lists.forEach(function (list) {
+        updateListOrder(list);
+        list.addEventListener("dragstart", function (event) {
+          draggedItem = event.target.closest("[data-checklist-sort-item]");
+          draggedList = list;
+          if (!draggedItem) {
+            return;
+          }
+          draggedItem.classList.add("checklist-dragging", "opacity-60");
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", draggedItem.getAttribute("data-item-id") || "");
+          }
+        });
+        list.addEventListener("dragend", function () {
+          if (draggedItem) {
+            draggedItem.classList.remove("checklist-dragging", "opacity-60");
+          }
+          draggedItem = null;
+          draggedList = null;
+        });
+        list.addEventListener("dragover", function (event) {
+          if (!draggedItem || draggedList !== list) {
+            return;
+          }
+          event.preventDefault();
+          const nextItem = itemAfterPointer(list, event.clientY);
+          if (nextItem) {
+            list.insertBefore(draggedItem, nextItem);
+          } else {
+            list.appendChild(draggedItem);
+          }
+        });
+        list.addEventListener("drop", function (event) {
+          if (!draggedItem || draggedList !== list) {
+            return;
+          }
+          event.preventDefault();
+          saveListOrder(list);
+        });
+      });
+    })();
+  </script>
+{% endblock %}

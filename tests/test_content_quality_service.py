@@ -1,4 +1,4 @@
-from app.services.content_quality_service import analyze_generated_content
+from app.services.content_quality_service import analyze_generated_content, repeated_content_issue
 
 
 def test_analyze_generated_content_counts_basic_html():
@@ -31,3 +31,14 @@ def test_analyze_generated_content_checks_required_url_once():
 
     link_check = next(check for check in report["checks"] if check["name"] == "Links")
     assert "required URL appears 1 time" in link_check["detail"]
+
+
+def test_repeated_content_issue_detects_duplicate_sentence_and_report_check():
+    repeated = "This paragraph explains a detailed idea with enough words to count as a meaningful repeated sentence."
+    content = f"<p>{repeated}</p><p>{repeated}</p>"
+
+    assert "Repeated paragraph" in repeated_content_issue(content)
+
+    report = analyze_generated_content(content)
+    repeat_check = next(check for check in report["checks"] if check["name"] == "Repeated content")
+    assert repeat_check["status"] == "fail"

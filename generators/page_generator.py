@@ -6,6 +6,7 @@ from logger import logger
 from prompts import build_page_content_prompt, build_page_meta_description_prompt, build_page_prompt, build_page_title_prompt
 from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
+from content_repetition import repeated_content_issue
 
 MIN_PAGE_WORDS = 1000
 MAX_PAGE_WORDS = 19000
@@ -60,6 +61,7 @@ def generate_page(
     change_request: str = "",
     min_words: int = MIN_PAGE_WORDS,
     max_words: int = MAX_PAGE_WORDS,
+    language: str = "English",
     progress_callback=None,
 ):
     from app.services.content_format_service import count_markdown_words, markdown_to_html
@@ -75,6 +77,7 @@ def generate_page(
         change_request=change_request,
         min_words=min_word_count,
         max_words=max_word_count,
+        language=language,
     )
 
     last_word_count = 0
@@ -134,6 +137,20 @@ def generate_page(
                     MAX_META_DESCRIPTION_CHARACTERS,
                     keyword,
                     attempt,
+                )
+                continue
+
+            repetition_issue = repeated_content_issue(markdown_content)
+            if repetition_issue:
+                _publish_progress(
+                    progress_callback,
+                    f"Page content attempt {attempt}: {repetition_issue} Retrying...",
+                )
+                logger.warning(
+                    "Page content repeated text for keyword '%s' on attempt %d: %s",
+                    keyword,
+                    attempt,
+                    repetition_issue,
                 )
                 continue
 
@@ -198,6 +215,7 @@ def generate_page_title(
     expectations: str = "",
     brand: str = "",
     brand_context: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> str:
     prompt = build_page_title_prompt(
@@ -207,6 +225,7 @@ def generate_page_title(
         expectations=expectations,
         brand=brand,
         brand_context=brand_context,
+        language=language,
     )
 
     attempt = 0
@@ -259,6 +278,7 @@ def generate_page_meta_description(
     expectations: str = "",
     brand: str = "",
     brand_context: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> str:
     prompt = build_page_meta_description_prompt(
@@ -269,6 +289,7 @@ def generate_page_meta_description(
         expectations=expectations,
         brand=brand,
         brand_context=brand_context,
+        language=language,
     )
 
     attempt = 0
@@ -341,6 +362,7 @@ def generate_page_content(
     change_request: str = "",
     min_words: int = MIN_PAGE_WORDS,
     max_words: int = MAX_PAGE_WORDS,
+    language: str = "English",
     progress_callback=None,
 ):
     from app.services.content_format_service import count_markdown_words, markdown_to_html
@@ -358,6 +380,7 @@ def generate_page_content(
         change_request=change_request,
         min_words=min_word_count,
         max_words=max_word_count,
+        language=language,
     )
 
     last_word_count = 0
@@ -368,11 +391,12 @@ def generate_page_content(
         if attempt > 1:
             retry_instruction = (
                 f"\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                f"- Your previous page content did not satisfy the word-count or banned-word rules.\n"
+                f"- Your previous page content did not satisfy the word-count, banned-word, or no-repetition rules.\n"
                 f"- Keep the selected title exactly: {title}\n"
                 f"- Return valid JSON only.\n"
                 f"- The page content must be more than {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
                 f"- Do not finish at exactly {min_word_count} words; expand until the page exceeds that minimum.\n"
+                f"- Do not repeat the same sentence or paragraph. Rewrite repeated ideas with fresh details.\n"
             )
 
         full_prompt = prompt + retry_instruction
@@ -397,6 +421,20 @@ def generate_page_content(
                     ", ".join(banned_terms),
                     keyword,
                     attempt,
+                )
+                continue
+
+            repetition_issue = repeated_content_issue(markdown_content)
+            if repetition_issue:
+                _publish_progress(
+                    progress_callback,
+                    f"Page content attempt {attempt}: {repetition_issue} Retrying...",
+                )
+                logger.warning(
+                    "Page content repeated text for keyword '%s' on attempt %d: %s",
+                    keyword,
+                    attempt,
+                    repetition_issue,
                 )
                 continue
 

@@ -2,7 +2,7 @@ import json
 
 from flask import render_template, request
 
-from database import get_backlink, get_brand_context, get_brand_record, get_generation_history_item, list_backlinks, list_brand_names, record_blog, record_generation, upsert_brand
+from database import get_backlink, get_brand_context, get_brand_record, get_generation_history_item, list_backlinks, list_brand_names, list_checklist_items, record_blog, record_generation, upsert_brand
 from generators.content_generator import count_html_words, generate_ai_content_tags, generate_backlink_content, generate_backlink_visual_idea, revise_existing_content, suggest_content_tags
 from generators.meta_description_generator import generate_backlink_meta_descriptions
 from generators.title_generator import generate_backlink_titles
@@ -11,6 +11,7 @@ from logger import logger
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
+from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 
 
@@ -18,6 +19,7 @@ def backlink_blog_generator():
     state = {
         "keyword": "",
         "brand": "",
+        "language": get_default_language(),
         "tone": "natural",
         "count": 10,
         "titles": [],
@@ -42,6 +44,8 @@ def backlink_blog_generator():
         "selected_backlink": None,
         "brand_names": list_brand_names(),
         "backlinks": list_backlinks(),
+        "content_checklist_items": list_checklist_items("blog", active_only=True),
+        "language_options": language_options(get_default_language()),
     }
     selected_medium = request.args.get("medium_id", "").strip()
     if request.method == "GET" and selected_medium.isdigit():
@@ -66,6 +70,7 @@ def backlink_blog_generator():
         elif action == "save_generated_blog":
             _handle_save_generated_blog(state)
 
+    state["language_options"] = language_options(state["language"])
     return render_template("backlink_blog_generator.html", **base_template_context(), **state)
 
 
@@ -81,6 +86,7 @@ def _load_history_item(state: dict, history_id: int):
     state["selected_backlink_id"] = str(selected_backlink.get("id", "")) if selected_backlink else ""
     state["brand"] = item.get("brand_name", "") or ""
     state["keyword"] = item.get("primary_keyword", "") or ""
+    state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["tone"] = prompt_inputs.get("tone", state["tone"])
     state["suggested_content"] = prompt_inputs.get("suggested_content", "")
     state["visual"] = prompt_inputs.get("visual", "")
@@ -124,6 +130,7 @@ def _find_backlink_by_name(medium_name: str) -> dict | None:
 def _handle_generate_titles(state: dict):
     state["brand"] = request.form.get("brand", "").strip()
     state["keyword"] = request.form.get("keyword", "").strip()
+    state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["selected_backlink_id"] = request.form.get("selected_backlink_id", "").strip()
     count_raw = request.form.get("count", "10").strip()
@@ -185,6 +192,7 @@ def _handle_generate_titles(state: dict):
             backlink_writer_name=state["selected_backlink"].get("writer_name", ""),
             backlink_content_guidelines=state["selected_backlink"].get("content_guidelines", ""),
             brand_topic_mode=state["selected_backlink"].get("brand_topic_mode", "example"),
+            language=state["language"],
             progress_callback=progress,
         )
         progress("Titles passed validation.")
@@ -202,6 +210,7 @@ def _handle_generate_meta_descriptions(state: dict):
     state["selected_title"] = state["custom_title"] or request.form.get("selected_title", "").strip()
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
+    state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["brand_website_url"] = request.form.get("brand_website_url", "").strip()
     state["history_id"] = request.form.get("history_id", "").strip()
@@ -261,6 +270,7 @@ def _handle_generate_meta_descriptions(state: dict):
             brand=state["brand"],
             brand_context=brand_context,
             **backlink_context,
+            language=state["language"],
             progress_callback=progress,
         )
         if state["meta_descriptions"]:
@@ -279,6 +289,7 @@ def _handle_generate_content(state: dict):
     state["selected_title"] = state["custom_title"] or request.form.get("selected_title", "").strip()
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
+    state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["suggested_content"] = request.form.get("suggested_content", "").strip()
     state["change_request"] = request.form.get("change_request", "").strip()
@@ -350,6 +361,7 @@ def _handle_generate_content(state: dict):
                 brand=state["brand"],
                 brand_context=brand_context,
                 **backlink_context,
+                language=state["language"],
                 progress_callback=progress,
             )
         if state["meta_descriptions"]:
@@ -371,6 +383,7 @@ def _handle_generate_content(state: dict):
                 backlink_website_type=backlink_context.get("backlink_website_type", ""),
                 backlink_blog_name=backlink_context.get("backlink_blog_name", ""),
                 backlink_content_guidelines=backlink_context.get("backlink_content_guidelines", ""),
+                language=state["language"],
                 progress_callback=progress,
             )
         if is_minor_revision:
@@ -386,6 +399,7 @@ def _handle_generate_content(state: dict):
                 brand=state["brand"],
                 required_url=state["brand_website_url"],
                 required_anchor_text=state["keyword"],
+                language=state["language"],
                 progress_callback=progress,
             )
         else:
@@ -403,6 +417,7 @@ def _handle_generate_content(state: dict):
                 required_anchor_text=state["keyword"],
                 selected_meta_description=state.get("meta_description", ""),
                 **backlink_context,
+                language=state["language"],
                 progress_callback=progress,
             )
         progress("Content passed validation. Generating tags...")
@@ -413,6 +428,7 @@ def _handle_generate_content(state: dict):
             brand=state["brand"],
             content=state["content"],
             minimum=10,
+            language=state["language"],
             progress_callback=progress,
         )
         max_words = _int_or_zero(backlink_context.get("backlink_max_characters", 0))
@@ -437,6 +453,7 @@ def _handle_generate_content(state: dict):
             tags=state["tag_suggestions"],
             prompt_inputs={
                 "tone": state["tone"],
+                "language": state["language"],
                 "suggested_content": state["suggested_content"],
                 "regenerate_scope": state["regenerate_scope"],
                 "change_request": state["change_request"],
@@ -470,6 +487,7 @@ def _handle_save_generated_blog(state: dict):
     state["selected_title"] = state["custom_title"] or request.form.get("selected_title", "").strip()
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
+    state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["suggested_content"] = request.form.get("suggested_content", "").strip()
     state["change_request"] = request.form.get("change_request", "").strip()
@@ -533,6 +551,7 @@ def _handle_save_generated_blog(state: dict):
         tags=state["tag_suggestions"],
         prompt_inputs={
             "tone": state["tone"],
+            "language": state["language"],
             "suggested_content": state["suggested_content"],
             "manual_save": True,
             "medium_id": state["selected_backlink_id"],
@@ -590,6 +609,10 @@ def _loads(raw: str) -> dict:
         return data if isinstance(data, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _language_from_request() -> str:
+    return normalize_language(request.form.get("language", get_default_language()))
 
 
 def _int_or_zero(value) -> int:

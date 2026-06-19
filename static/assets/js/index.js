@@ -19,6 +19,7 @@
   const linksContainer = document.getElementById("linksContainer");
   const addLinkButton = document.getElementById("addLinkButton");
   const generateContentButton = document.getElementById("generateContentButton");
+  const generateActionButtons = Array.from(document.querySelectorAll("[data-generate-action]"));
   const generateMetaDescriptionsButton = document.getElementById("generateMetaDescriptionsButton");
   const saveGeneratedButton = document.getElementById("saveGeneratedButton");
   const contentActionInput = document.getElementById("contentActionInput");
@@ -27,6 +28,10 @@
   const downloadButton = document.getElementById("downloadDocButton");
   const outputViewButtons = Array.from(document.querySelectorAll("[data-output-view-button]"));
   const outputViewPanels = Array.from(document.querySelectorAll("[data-output-view-panel]"));
+  const focusKeywordInput = document.getElementById("focus_keyword");
+  const supportingKeywordsInput = document.getElementById("supporting_keywords");
+  const copySelectedTitle = document.getElementById("copySelectedTitle");
+  const copySelectedMeta = document.getElementById("copySelectedMeta");
   let quill = null;
   let linkFieldCounter = 0;
 
@@ -50,6 +55,17 @@
 
   function getSelectedMetaDescription() {
     return document.querySelector('input[name="meta_description_choice"]:checked');
+  }
+
+  function syncSelectedCopyFields() {
+    const selectedTitle = getSelectedTitle();
+    const selectedMetaDescription = getSelectedMetaDescription();
+    if (copySelectedTitle) {
+      copySelectedTitle.value = selectedTitle ? selectedTitle.value : "";
+    }
+    if (copySelectedMeta) {
+      copySelectedMeta.value = selectedMetaDescription ? selectedMetaDescription.value : "";
+    }
   }
 
   function prepareContentForm() {
@@ -341,6 +357,31 @@
   }
 
   document.addEventListener("click", function (event) {
+    const suggestionButton = event.target.closest("[data-keyword-suggestion]");
+    if (suggestionButton) {
+      const suggestion = (suggestionButton.dataset.keywordSuggestion || "").trim();
+      if (!suggestion) {
+        return;
+      }
+      if (focusKeywordInput && !focusKeywordInput.value.trim()) {
+        focusKeywordInput.value = suggestion;
+        return;
+      }
+      if (supportingKeywordsInput) {
+        const existing = supportingKeywordsInput.value.split(",").map(function (item) {
+          return item.trim();
+        }).filter(Boolean);
+        const exists = existing.some(function (item) {
+          return item.toLowerCase() === suggestion.toLowerCase();
+        });
+        if (!exists) {
+          existing.push(suggestion);
+          supportingKeywordsInput.value = existing.join(", ");
+        }
+      }
+      return;
+    }
+
     const removeButton = event.target.closest("[data-remove-link]");
     if (!removeButton) {
       return;
@@ -348,6 +389,12 @@
     const target = document.getElementById("linkField_" + removeButton.dataset.removeLink);
     if (target) {
       target.remove();
+    }
+  });
+
+  document.addEventListener("change", function (event) {
+    if (event.target.matches('input[name="selected_title"], input[name="meta_description_choice"]')) {
+      syncSelectedCopyFields();
     }
   });
 
@@ -368,17 +415,21 @@
     }
     clearValidationMessage();
     prepareContentForm();
-    window.AppUi.startFormLoading(contentForm, button.dataset.loadingMessage || "Generating article content...");
-    contentForm.submit();
+    contentForm.dataset.loadingMessage = button.dataset.loadingMessage || contentForm.dataset.loadingMessage || "Generating article content...";
+    contentForm.requestSubmit ? contentForm.requestSubmit() : contentForm.submit();
   }
 
-  if (generateContentButton && contentForm) {
+  if (generateActionButtons.length && contentForm) {
+    generateActionButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        handleGenerateAction(button);
+      });
+    });
+  } else if (generateContentButton && contentForm) {
     generateContentButton.addEventListener("click", function () {
       handleGenerateAction(generateContentButton);
     });
-  }
-
-  if (generateMetaDescriptionsButton && contentForm) {
+  } else if (generateMetaDescriptionsButton && contentForm) {
     generateMetaDescriptionsButton.addEventListener("click", function () {
       handleGenerateAction(generateMetaDescriptionsButton);
     });
@@ -404,7 +455,7 @@
       }
       clearValidationMessage();
       prepareContentForm();
-      contentForm.submit();
+      contentForm.requestSubmit ? contentForm.requestSubmit() : contentForm.submit();
     });
   }
 
@@ -511,4 +562,6 @@
       console.error("Could not parse existing links JSON.", error);
     }
   }
+
+  syncSelectedCopyFields();
 })();

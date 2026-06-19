@@ -40,6 +40,7 @@ def backlinks():
         "blog_url": "",
         "posts_per_day": 0,
         "include_in_tier1": True,
+        "include_in_website_checklist": False,
         "brand_topic_mode": "example",
         "content_guidelines": "",
         "notes": "",
@@ -86,6 +87,7 @@ def _populate_for_edit(state: dict, backlink_id: int):
     state["blog_url"] = backlink.get("blog_url", "")
     state["posts_per_day"] = backlink.get("posts_per_day", 0) or 0
     state["include_in_tier1"] = bool(backlink.get("include_in_tier1", 1))
+    state["include_in_website_checklist"] = bool(backlink.get("include_in_website_checklist", 0))
     state["brand_topic_mode"] = backlink.get("brand_topic_mode", "example") or "example"
     state["content_guidelines"] = backlink.get("content_guidelines", "")
     state["notes"] = backlink.get("notes", "")
@@ -104,6 +106,7 @@ def _handle_save_backlink(state: dict):
     state["blog_url"] = request.form.get("blog_url", "").strip()
     state["posts_per_day"] = request.form.get("posts_per_day", "0").strip()
     state["include_in_tier1"] = request.form.get("include_in_tier1") == "1"
+    state["include_in_website_checklist"] = request.form.get("include_in_website_checklist") == "1"
     state["brand_topic_mode"] = request.form.get("brand_topic_mode", "example").strip() or "example"
     state["content_guidelines"] = request.form.get("content_guidelines", "").strip()
     state["notes"] = request.form.get("notes", "").strip()
@@ -153,6 +156,7 @@ def _handle_save_backlink(state: dict):
         content_guidelines=state["content_guidelines"],
         notes=state["notes"],
         include_in_tier1=state["include_in_tier1"],
+        include_in_website_checklist=state["include_in_website_checklist"],
         brand_topic_mode=state["brand_topic_mode"],
         backlink_id=backlink_id,
     )
@@ -171,6 +175,7 @@ def _handle_save_backlink(state: dict):
             "blog_url": "",
             "posts_per_day": 0,
             "include_in_tier1": True,
+            "include_in_website_checklist": False,
             "brand_topic_mode": "example",
             "content_guidelines": "",
             "notes": "",

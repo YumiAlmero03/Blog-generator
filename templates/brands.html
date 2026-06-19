@@ -95,6 +95,14 @@
             </span>
           </label>
 
+          <label for="include_in_website_checklist" class="mb-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-sand-200 bg-sand-50/80 px-4 py-3 text-sm leading-6 text-sand-800">
+            <input id="include_in_website_checklist" name="include_in_website_checklist" type="checkbox" value="1" class="mt-1 h-4 w-4 rounded border-sand-400 text-sand-600 focus:ring-sand-500" {% if include_in_website_checklist %}checked{% endif %} />
+            <span>
+              <strong class="block text-sand-950">Website Checklist</strong>
+              <span class="block text-sand-700">Show this brand on the Website Checklist dashboard.</span>
+            </span>
+          </label>
+
           <label for="logo_file" class="mb-2 block text-sm font-bold text-sand-900">Logo upload</label>
           <input id="logo_file" name="logo_file" type="file" accept=".png,.jpg,.jpeg,.webp" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none" />
           {% if logo_url %}
@@ -205,6 +213,9 @@
               {% endif %}
               {% if brand.include_in_backlink_follow_up %}
                 <div class="mt-3 inline-flex rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-sand-700">Backlink Follow Up</div>
+              {% endif %}
+              {% if brand.include_in_website_checklist %}
+                <div class="mt-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-amber-700">Website Checklist</div>
               {% endif %}
               <form method="post" class="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-sand-100 px-3 py-3">
                 <input type="hidden" name="action" value="save_brand_color" />

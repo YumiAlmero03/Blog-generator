@@ -25,6 +25,7 @@ def brands():
         "brand_color": "#b07042",
         "include_in_posting_planner": False,
         "include_in_backlink_follow_up": False,
+        "include_in_website_checklist": False,
         "brand_preset": "",
         "check_brand": "",
         "check_keyword": "",
@@ -87,6 +88,7 @@ def _populate_brand_for_edit(state: dict, brand_name: str):
     state["brand_color"] = brand_record.get("brand_color", "") or _fallback_brand_color(state["brand_name"])
     state["include_in_posting_planner"] = bool(brand_record.get("include_in_posting_planner", 0))
     state["include_in_backlink_follow_up"] = bool(brand_record.get("include_in_backlink_follow_up", 0))
+    state["include_in_website_checklist"] = bool(brand_record.get("include_in_website_checklist", 0))
 
 
 def _handle_save_brand(state: dict):
@@ -100,6 +102,7 @@ def _handle_save_brand(state: dict):
     state["brand_color"] = _normalize_color_input(request.form.get("brand_color", ""))
     state["include_in_posting_planner"] = request.form.get("include_in_posting_planner") == "1"
     state["include_in_backlink_follow_up"] = request.form.get("include_in_backlink_follow_up") == "1"
+    state["include_in_website_checklist"] = request.form.get("include_in_website_checklist") == "1"
     state["brand_preset"] = request.form.get("brand_preset", "").strip()
     logo_upload = request.files.get("logo_file")
 
@@ -124,6 +127,7 @@ def _handle_save_brand(state: dict):
             brand_color=state["brand_color"],
             include_in_posting_planner=state["include_in_posting_planner"],
             include_in_backlink_follow_up=state["include_in_backlink_follow_up"],
+            include_in_website_checklist=state["include_in_website_checklist"],
         )
         saved_name = state["brand_name"]
         state.update(
@@ -139,6 +143,7 @@ def _handle_save_brand(state: dict):
                 "brand_color": "#b07042",
                 "include_in_posting_planner": False,
                 "include_in_backlink_follow_up": False,
+                "include_in_website_checklist": False,
                 "success": f"Saved brand: {saved_name}",
             }
         )

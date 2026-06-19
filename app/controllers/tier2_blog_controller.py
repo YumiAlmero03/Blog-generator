@@ -2,7 +2,7 @@ import json
 
 from flask import render_template, request
 
-from database import get_backlink, get_generation_history_item, list_backlinks, record_generation
+from database import get_backlink, get_generation_history_item, list_backlinks, list_checklist_items, record_generation
 from generators.content_generator import count_html_words, generate_ai_content_tags, generate_backlink_visual_idea, generate_tier2_content, revise_existing_content, suggest_content_tags
 from generators.meta_description_generator import generate_backlink_meta_descriptions
 from generators.title_generator import generate_backlink_titles
@@ -11,6 +11,7 @@ from logger import logger
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
+from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 
 
@@ -32,6 +33,7 @@ def tier2_blog_generator():
         elif action == "save_generated_blog":
             _handle_save_generated_blog(state)
 
+    state["language_options"] = language_options(state["language"])
     return render_template("tier2_blog_generator.html", **base_template_context(), **state)
 
 
@@ -46,6 +48,7 @@ def _load_history_item(state: dict, history_id: int):
     state["selected_backlink_id"] = str(selected_backlink.get("id", "")) if selected_backlink else str(prompt_inputs.get("publishing_medium_id", ""))
     state["anchor_text"] = prompt_inputs.get("anchor_text") or item.get("primary_keyword", "") or ""
     state["link"] = prompt_inputs.get("link", "")
+    state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["tone"] = prompt_inputs.get("tone", state["tone"])
     state["suggested_content"] = prompt_inputs.get("suggested_content", "")
     state["visual"] = prompt_inputs.get("visual", "")
@@ -89,6 +92,7 @@ def _initial_state() -> dict:
         "selected_backlink": None,
         "anchor_text": "",
         "link": "",
+        "language": get_default_language(),
         "tone": "natural",
         "count": 10,
         "titles": [],
@@ -109,6 +113,8 @@ def _initial_state() -> dict:
         "success": None,
         "step": "title",
         "backlinks": list_backlinks(),
+        "content_checklist_items": list_checklist_items("blog", active_only=True),
+        "language_options": language_options(get_default_language()),
     }
 
 
@@ -116,6 +122,7 @@ def _read_common_state(state: dict):
     state["selected_backlink_id"] = request.form.get("selected_backlink_id", "").strip()
     state["anchor_text"] = request.form.get("anchor_text", "").strip()
     state["link"] = request.form.get("link", "").strip()
+    state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["suggested_content"] = request.form.get("suggested_content", "").strip()
     state["change_request"] = request.form.get("change_request", "").strip()
@@ -181,6 +188,7 @@ def _handle_generate_titles(state: dict):
             brand_context="",
             **_backlink_context(state),
             keyword_is_anchor_text=True,
+            language=state["language"],
             progress_callback=progress,
         )
         progress("Tier 2 titles passed validation.")
@@ -226,6 +234,7 @@ def _handle_generate_content(state: dict):
                 brand="",
                 brand_context="",
                 **backlink_context,
+                language=state["language"],
                 progress_callback=progress,
             )
         if state["meta_descriptions"]:
@@ -248,6 +257,7 @@ def _handle_generate_content(state: dict):
                 backlink_website_type=backlink_context.get("backlink_website_type", ""),
                 backlink_blog_name=backlink_context.get("backlink_blog_name", ""),
                 backlink_content_guidelines=backlink_context.get("backlink_content_guidelines", ""),
+                language=state["language"],
                 progress_callback=progress,
             )
         if is_minor_revision:
@@ -262,6 +272,7 @@ def _handle_generate_content(state: dict):
                 keyword=state["anchor_text"],
                 required_url=state["link"],
                 required_anchor_text=state["anchor_text"],
+                language=state["language"],
                 progress_callback=progress,
             )
         else:
@@ -275,6 +286,7 @@ def _handle_generate_content(state: dict):
                 suggested_content=state["suggested_content"],
                 change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
                 **backlink_context,
+                language=state["language"],
                 progress_callback=progress,
             )
         _prepare_quality_and_tags(state, provider=provider, progress=progress)
@@ -334,6 +346,7 @@ def _prepare_quality_and_tags(state: dict, provider=None, progress=None):
             keyword=state["anchor_text"],
             content=state["content"],
             minimum=10,
+            language=state["language"],
             progress_callback=progress,
         )
     else:
@@ -368,6 +381,7 @@ def _record_tier2_generation(state: dict, manual_save: bool):
             "publishing_medium_id": state["selected_backlink_id"],
             "anchor_text": state["anchor_text"],
             "link": state["link"],
+            "language": state["language"],
             "tone": state["tone"],
             "suggested_content": state["suggested_content"],
             "regenerate_scope": state["regenerate_scope"],
@@ -440,6 +454,10 @@ def _loads(raw: str) -> dict:
         return data if isinstance(data, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _language_from_request() -> str:
+    return normalize_language(request.form.get("language", get_default_language()))
 
 
 def _progress_callback(label: str, token: str):

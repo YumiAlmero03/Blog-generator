@@ -1,3 +1,6 @@
+from prompts.shared import build_language_instruction
+
+
 def build_scoped_content_revision_prompt(
     title: str,
     existing_content: str,
@@ -8,7 +11,9 @@ def build_scoped_content_revision_prompt(
     brand: str = "",
     required_url: str = "",
     required_anchor_text: str = "",
+    language: str = "English",
 ) -> str:
+    language_section = build_language_instruction(language)
     cleaned_scope = (scope or "full").strip().lower()
     scope_instructions = {
         "intro": (
@@ -67,6 +72,8 @@ Primary keyword/context:
 
 Brand/context:
 {brand}
+
+{language_section}
 
 Selected output format:
 {output_format}

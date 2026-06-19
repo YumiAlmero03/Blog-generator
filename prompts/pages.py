@@ -1,6 +1,6 @@
 from word_bank import build_banned_words_prompt_section
 
-from prompts.shared import build_brand_context_section
+from prompts.shared import build_brand_context_section, build_language_instruction
 
 def build_page_prompt(
     keyword: str,
@@ -12,8 +12,10 @@ def build_page_prompt(
     change_request: str = "",
     min_words: int | str = 1000,
     max_words: int | str = 19000,
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     min_word_count = _positive_int(min_words, 1000)
     max_word_count = _positive_int(max_words, 19000)
@@ -40,6 +42,7 @@ Supporting keywords:
 Brand:
 {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 Page type:
@@ -108,8 +111,10 @@ def build_page_title_prompt(
     expectations: str = "",
     brand: str = "",
     brand_context: str = "",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an expert SEO landing page title writer.
@@ -123,6 +128,7 @@ Supporting keywords:
 Brand:
 {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 Page type:
@@ -155,8 +161,10 @@ def build_page_meta_description_prompt(
     expectations: str = "",
     brand: str = "",
     brand_context: str = "",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an expert SEO meta description writer.
@@ -173,6 +181,7 @@ Supporting keywords:
 Brand:
 {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 Page type:
@@ -208,8 +217,10 @@ def build_page_content_prompt(
     change_request: str = "",
     min_words: int | str = 1000,
     max_words: int | str = 19000,
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     min_word_count = _positive_int(min_words, 1000)
     max_word_count = _positive_int(max_words, 19000)
@@ -242,6 +253,7 @@ Supporting keywords:
 Brand:
 {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 Page type:
@@ -296,8 +308,10 @@ def build_simple_page_prompt(
     change_request: str = "",
     min_words: int | str = 900,
     max_words: int | str = 1200,
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     min_word_count = _positive_int(min_words, 900)
     max_word_count = _positive_int(max_words, 1200)
@@ -335,6 +349,7 @@ Page type:
 Brand:
 {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 What to include:
@@ -379,8 +394,10 @@ def build_simple_page_title_prompt(
     brand: str = "",
     expectations: str = "",
     brand_context: str = "",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an expert WordPress page title writer.
@@ -394,6 +411,7 @@ Page type:
 Brand:
 {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 What to include:
@@ -420,8 +438,10 @@ def build_simple_page_meta_prompt(
     brand: str = "",
     expectations: str = "",
     brand_context: str = "",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an expert SEO meta description writer.
@@ -440,6 +460,7 @@ Page type:
 Brand:
 {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 What to include:
@@ -473,8 +494,10 @@ def build_simple_page_content_prompt(
     change_request: str = "",
     min_words: int | str = 900,
     max_words: int | str = 1200,
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     min_word_count = _positive_int(min_words, 900)
     max_word_count = _positive_int(max_words, 1200)
@@ -518,6 +541,7 @@ Page type:
 Brand:
 {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 What to include:

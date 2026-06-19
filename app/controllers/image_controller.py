@@ -146,14 +146,14 @@ def _handle_image_tools_post(state: dict):
                         state["watermark_rotation"],
                     )
 
-            if normalized_format in {"jpg", "webp"}:
+            if normalized_format in {"jpg", "webp", "avif"}:
                 working_image = working_image.convert("RGB")
 
             output_name = f"{clean_base_name}.{normalized_format}"
             output_path = IMAGE_TOOL_DIR / output_name
             save_format = "JPEG" if normalized_format == "jpg" else normalized_format.upper()
             save_kwargs = {"format": save_format}
-            if save_format in {"JPEG", "WEBP"}:
+            if save_format in {"JPEG", "WEBP", "AVIF"}:
                 save_kwargs["quality"] = 92
             working_image.save(output_path, **save_kwargs)
 
@@ -172,8 +172,8 @@ def _handle_image_tools_post(state: dict):
 def _validate_image_request(uploaded_image, source_filename: str, brand_record, state: dict) -> str | None:
     if (not uploaded_image or not uploaded_image.filename) and not source_filename:
         return "Please upload the image you want to process."
-    if state["output_format"] not in {"png", "jpg", "jpeg", "webp"}:
-        return "Please choose PNG, JPG, JPEG, or WEBP as the export format."
+    if state["output_format"] not in {"png", "jpg", "jpeg", "webp", "avif"}:
+        return "Please choose PNG, JPG, JPEG, WEBP, or AVIF as the export format."
     if state["use_watermark"] and not state["brand"]:
         return "Please select or enter a brand to use a watermark."
     if state["use_watermark"] and not brand_record:

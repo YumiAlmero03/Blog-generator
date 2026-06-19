@@ -22,6 +22,7 @@ def upsert_brand(
     brand_color: str = "",
     include_in_posting_planner: int | bool | str | None = None,
     include_in_backlink_follow_up: int | bool | str | None = None,
+    include_in_website_checklist: int | bool | str | None = None,
 ) -> Optional[dict]:
     brand_name = (brand or "").strip()
     if not brand_name:
@@ -41,6 +42,7 @@ def upsert_brand(
         "brand_color": normalize_brand_color(brand_color),
         "include_in_posting_planner": _normalize_planner_flag(include_in_posting_planner),
         "include_in_backlink_follow_up": _normalize_planner_flag(include_in_backlink_follow_up),
+        "include_in_website_checklist": _normalize_planner_flag(include_in_website_checklist),
     }
 
     with get_connection() as connection:
@@ -76,11 +78,16 @@ def upsert_brand(
                     if include_in_backlink_follow_up is not None
                     else int(existing_dict.get("include_in_backlink_follow_up", 0) or 0)
                 ),
+                "include_in_website_checklist": (
+                    payload["include_in_website_checklist"]
+                    if include_in_website_checklist is not None
+                    else int(existing_dict.get("include_in_website_checklist", 0) or 0)
+                ),
             }
             connection.execute(
                 """
                 UPDATE brands
-                SET name = ?, normalized_name = ?, website = ?, tone = ?, notes = ?, planner_notes = ?, niche = ?, main_keywords = ?, logo_path = ?, brand_color = ?, include_in_posting_planner = ?, include_in_backlink_follow_up = ?
+                SET name = ?, normalized_name = ?, website = ?, tone = ?, notes = ?, planner_notes = ?, niche = ?, main_keywords = ?, logo_path = ?, brand_color = ?, include_in_posting_planner = ?, include_in_backlink_follow_up = ?, include_in_website_checklist = ?
                 WHERE id = ?
                 """,
                 (
@@ -96,6 +103,7 @@ def upsert_brand(
                     merged["brand_color"],
                     merged["include_in_posting_planner"],
                     merged["include_in_backlink_follow_up"],
+                    merged["include_in_website_checklist"],
                     existing_dict["id"],
                 ),
             )
@@ -105,8 +113,8 @@ def upsert_brand(
 
         cursor = connection.execute(
             """
-            INSERT INTO brands (name, normalized_name, website, tone, notes, planner_notes, niche, main_keywords, logo_path, brand_color, include_in_posting_planner, include_in_backlink_follow_up)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO brands (name, normalized_name, website, tone, notes, planner_notes, niche, main_keywords, logo_path, brand_color, include_in_posting_planner, include_in_backlink_follow_up, include_in_website_checklist)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload["name"],
@@ -121,6 +129,7 @@ def upsert_brand(
                 payload["brand_color"],
                 payload["include_in_posting_planner"],
                 payload["include_in_backlink_follow_up"],
+                payload["include_in_website_checklist"],
             ),
         )
         return row_to_dict(

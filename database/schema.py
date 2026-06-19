@@ -19,7 +19,8 @@ def init_db():
                 logo_path TEXT NOT NULL DEFAULT '',
                 brand_color TEXT NOT NULL DEFAULT '',
                 include_in_posting_planner INTEGER NOT NULL DEFAULT 0,
-                include_in_backlink_follow_up INTEGER NOT NULL DEFAULT 0
+                include_in_backlink_follow_up INTEGER NOT NULL DEFAULT 0,
+                include_in_website_checklist INTEGER NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS keywords (
@@ -106,8 +107,29 @@ def init_db():
                 include_in_tier1 INTEGER NOT NULL DEFAULT 1,
                 brand_topic_mode TEXT NOT NULL DEFAULT 'example',
                 posts_per_day INTEGER NOT NULL DEFAULT 0,
+                include_in_website_checklist INTEGER NOT NULL DEFAULT 0,
                 content_guidelines TEXT NOT NULL DEFAULT '',
                 notes TEXT NOT NULL DEFAULT ''
+            );
+
+            CREATE TABLE IF NOT EXISTS checklist_items (
+                id INTEGER PRIMARY KEY,
+                checklist_type TEXT NOT NULL DEFAULT 'website',
+                label TEXT NOT NULL DEFAULT '',
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1
+            );
+
+            CREATE TABLE IF NOT EXISTS checklist_item_states (
+                id INTEGER PRIMARY KEY,
+                checklist_type TEXT NOT NULL DEFAULT 'website',
+                subject_type TEXT NOT NULL DEFAULT '',
+                subject_id TEXT NOT NULL DEFAULT '',
+                checklist_item_id INTEGER NOT NULL,
+                is_checked INTEGER NOT NULL DEFAULT 1,
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(checklist_type, subject_type, subject_id, checklist_item_id),
+                FOREIGN KEY(checklist_item_id) REFERENCES checklist_items(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS social_profiles (
@@ -135,6 +157,27 @@ def init_db():
                 quality_report TEXT NOT NULL DEFAULT '',
                 FOREIGN KEY(brand_id) REFERENCES brands(id) ON DELETE SET NULL
             );
+
+            CREATE TABLE IF NOT EXISTS website_index_urls (
+                id INTEGER PRIMARY KEY,
+                url TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                check_status TEXT NOT NULL DEFAULT '',
+                last_checked_at TEXT NOT NULL DEFAULT '',
+                google_status TEXT NOT NULL DEFAULT '',
+                google_verdict TEXT NOT NULL DEFAULT '',
+                google_coverage_state TEXT NOT NULL DEFAULT '',
+                google_robots_txt_state TEXT NOT NULL DEFAULT '',
+                google_indexing_state TEXT NOT NULL DEFAULT '',
+                google_last_crawl_time TEXT NOT NULL DEFAULT '',
+                bing_status TEXT NOT NULL DEFAULT '',
+                bing_last_checked_at TEXT NOT NULL DEFAULT '',
+                bing_detail TEXT NOT NULL DEFAULT '',
+                yahoo_status TEXT NOT NULL DEFAULT '',
+                yahoo_last_checked_at TEXT NOT NULL DEFAULT '',
+                yahoo_detail TEXT NOT NULL DEFAULT '',
+                last_error TEXT NOT NULL DEFAULT ''
+            );
             """
         )
         _ensure_column(connection, "backlinks", "account_name", "TEXT NOT NULL DEFAULT ''")
@@ -148,6 +191,7 @@ def init_db():
         _ensure_column(connection, "backlinks", "include_in_tier1", "INTEGER NOT NULL DEFAULT 1")
         _ensure_column(connection, "backlinks", "brand_topic_mode", "TEXT NOT NULL DEFAULT 'example'")
         _ensure_column(connection, "backlinks", "posts_per_day", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "backlinks", "include_in_website_checklist", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "backlinks", "content_guidelines", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "social_profiles", "brand_name", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "social_profiles", "social_type", "TEXT NOT NULL DEFAULT ''")
@@ -155,6 +199,7 @@ def init_db():
         _ensure_column(connection, "brands", "brand_color", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "brands", "include_in_posting_planner", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "brands", "include_in_backlink_follow_up", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "brands", "include_in_website_checklist", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "brands", "planner_notes", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "pages", "brand_id", "INTEGER")
         _ensure_column(connection, "blogs", "brand_id", "INTEGER")
@@ -168,6 +213,21 @@ def init_db():
         _ensure_column(connection, "generation_history", "post_link", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "generation_history", "saved_at", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "generation_history", "quality_report", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "last_checked_at", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "check_status", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "google_status", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "google_verdict", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "google_coverage_state", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "google_robots_txt_state", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "google_indexing_state", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "google_last_crawl_time", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "bing_status", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "bing_last_checked_at", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "bing_detail", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "yahoo_status", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "yahoo_last_checked_at", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "yahoo_detail", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "last_error", "TEXT NOT NULL DEFAULT ''")
         connection.execute(
             """
             UPDATE generation_history

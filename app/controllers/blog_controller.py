@@ -2,7 +2,7 @@ import json
 
 from flask import render_template, request
 
-from database import get_brand_context, get_generation_history_item, get_setting, list_brand_names, record_blog, record_generation, upsert_brand
+from database import get_brand_context, get_generation_history_item, get_setting, list_brand_names, list_checklist_items, record_blog, record_generation, upsert_brand
 from generators.content_generator import count_html_words, generate_ai_content_tags, generate_blog_visual_ideas, generate_content, revise_existing_content, suggest_content_tags
 from generators.meta_description_generator import generate_meta_descriptions
 from generators.title_generator import generate_titles
@@ -11,6 +11,7 @@ from logger import logger
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
+from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_blog_word_limits
 
@@ -20,6 +21,7 @@ def index():
         "keyword": "",
         "brand": "",
         "supporting_keyword": "",
+        "language": get_default_language(),
         "tone": "natural",
         "count": 10,
         "titles": [],
@@ -40,6 +42,8 @@ def index():
         "links": [],
         "history_id": "",
         "brand_names": list_brand_names(),
+        "content_checklist_items": list_checklist_items("blog", active_only=True),
+        "language_options": language_options(get_default_language()),
     }
     selected_brand = request.args.get("brand", "").strip()
     if request.method == "GET" and selected_brand:
@@ -60,6 +64,7 @@ def index():
     if not state["money_site_url"]:
         state["money_site_url"] = get_setting("money_site", "")
 
+    state["language_options"] = language_options(state["language"])
     return render_template("index.html", **base_template_context(), **state)
 
 
@@ -67,6 +72,7 @@ def _handle_generate_titles(state: dict):
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
+    state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     count_raw = request.form.get("count", "10").strip()
 
@@ -94,6 +100,7 @@ def _handle_generate_titles(state: dict):
             count=state["count"],
             brand=state["brand"],
             brand_context=brand_context,
+            language=state["language"],
             progress_callback=progress,
         )
         progress("Titles passed validation.")
@@ -115,6 +122,7 @@ def _load_history_item(state: dict, history_id: int):
     state["brand"] = item.get("brand_name", "") or ""
     state["keyword"] = item.get("primary_keyword", "") or ""
     state["supporting_keyword"] = prompt_inputs.get("supporting_keyword", "")
+    state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["tone"] = prompt_inputs.get("tone", state["tone"])
     state["include_money_site"] = bool(prompt_inputs.get("include_money_site", False))
     state["links"] = prompt_inputs.get("links", [])
@@ -159,6 +167,7 @@ def _handle_generate_content(state: dict):
                 count=5,
                 brand=state["brand"],
                 brand_context=brand_context,
+                language=state["language"],
                 progress_callback=progress,
             )
             state["meta_description"] = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
@@ -179,6 +188,7 @@ def _handle_generate_content(state: dict):
                 brand=state["brand"],
                 context=brand_context,
                 count=2,
+                language=state["language"],
                 progress_callback=progress,
             ))
             state["step"] = "visual"
@@ -198,6 +208,7 @@ def _handle_generate_content(state: dict):
                 brand=state["brand"],
                 content=state["content"],
                 minimum=10,
+                language=state["language"],
                 progress_callback=progress,
             )
             _record_completed_blog(state, min_words, max_words)
@@ -217,6 +228,7 @@ def _handle_generate_content(state: dict):
                 keyword=state["keyword"],
                 brand=state["brand"],
                 required_url=state["money_site_url"] if state["include_money_site"] else "",
+                language=state["language"],
                 progress_callback=progress,
             )
         else:
@@ -235,6 +247,7 @@ def _handle_generate_content(state: dict):
                 change_request=scoped_change_request,
                 min_words=min_words,
                 max_words=max_words,
+                language=state["language"],
                 progress_callback=progress,
             )
         clear_generation_status(request.form.get("generation_status_token", ""))
@@ -252,6 +265,7 @@ def _hydrate_blog_generation_state(state: dict) -> str:
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
+    state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["change_request"] = request.form.get("change_request", "").strip()
     state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
@@ -297,6 +311,7 @@ def _record_completed_blog(state: dict, min_words: int, max_words: int):
         tags=state["tag_suggestions"],
         prompt_inputs={
             "supporting_keyword": state["supporting_keyword"],
+            "language": state["language"],
             "tone": state["tone"],
             "include_money_site": state["include_money_site"],
             "regenerate_scope": state["regenerate_scope"],
@@ -321,6 +336,7 @@ def _handle_save_generated_blog(state: dict):
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
+    state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["change_request"] = request.form.get("change_request", "").strip()
     state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
@@ -372,6 +388,7 @@ def _handle_save_generated_blog(state: dict):
         tags=state["tag_suggestions"],
         prompt_inputs={
             "supporting_keyword": state["supporting_keyword"],
+            "language": state["language"],
             "tone": state["tone"],
             "include_money_site": state["include_money_site"],
             "manual_save": True,
@@ -431,6 +448,10 @@ def _loads(raw: str) -> dict:
         return data if isinstance(data, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _language_from_request() -> str:
+    return normalize_language(request.form.get("language", get_default_language()))
 
 
 def _visual_text(visuals: list[str]) -> str:

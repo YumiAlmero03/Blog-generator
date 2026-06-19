@@ -212,6 +212,7 @@ def generate_meta_descriptions(
     count: int = 3,
     brand: str = "",
     brand_context: str = "",
+    language: str = "English",
     progress_callback=None,
 ):
     prompt = build_meta_description_prompt(
@@ -220,6 +221,7 @@ def generate_meta_descriptions(
         count=count,
         brand=brand,
         brand_context=brand_context,
+        language=language,
     )
     return _generate_meta_descriptions_from_prompt(provider, prompt, target_count=count, progress_callback=progress_callback)
 
@@ -229,6 +231,7 @@ def generate_meta_description(
     keyword: str = "",
     brand: str = "",
     brand_context: str = "",
+    language: str = "English",
     progress_callback=None,
 ):
     """Legacy function for single meta description"""
@@ -239,6 +242,7 @@ def generate_meta_description(
         count=1,
         brand=brand,
         brand_context=brand_context,
+        language=language,
         progress_callback=progress_callback,
     )
     return descriptions[0]["text"] if descriptions else ""
@@ -263,6 +267,7 @@ def generate_backlink_meta_descriptions(
     backlink_writer_name: str = "",
     backlink_content_guidelines: str = "",
     brand_topic_mode: str = "example",
+    language: str = "English",
     progress_callback=None,
 ):
     prompt = build_backlink_meta_description_prompt(
@@ -283,6 +288,7 @@ def generate_backlink_meta_descriptions(
         backlink_writer_name=backlink_writer_name,
         backlink_content_guidelines=backlink_content_guidelines,
         brand_topic_mode=brand_topic_mode,
+        language=language,
     )
     forbidden_phrases = [keyword]
     if (brand_topic_mode or "").strip().lower() != "main":

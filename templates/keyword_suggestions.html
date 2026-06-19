@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% set active_page = "keyword-suggestions" %}
+
+{% block title %}Keyword Suggestions{% endblock %}
+{% block eyebrow %}SEO Research{% endblock %}
+{% block hero_title %}Keyword Suggestions{% endblock %}
+{% block hero_text %}Enter a seed topic, gather autocomplete-style query ideas when available, and generate keyword suggestions with estimated intent, difficulty, and search ranges.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="post" data-loading-message="Generating keyword suggestions..." data-background-submit class="grid gap-4 lg:grid-cols-[1fr_240px_160px_auto] lg:items-end">
+      <div>
+        <label for="topic" class="mb-2 block text-sm font-bold text-sand-900">Topic <span class="text-red-600">*</span></label>
+        <input id="topic" name="topic" type="text" value="{{ topic }}" required placeholder="slots, football, sports, travel" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+      </div>
+      <div>
+        <label for="target_country" class="mb-2 block text-sm font-bold text-sand-900">Country / Region</label>
+        <select id="target_country" name="target_country" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for country in target_countries %}
+            <option value="{{ country }}" {% if target_country == country %}selected{% endif %}>{{ country }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="count" class="mb-2 block text-sm font-bold text-sand-900">Count</label>
+        <input id="count" name="count" type="number" min="10" max="60" value="{{ count }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+      </div>
+      <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate</button>
+    </form>
+
+    <p class="mt-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Search volume and difficulty are estimates unless you connect a dedicated SEO data provider. Use them for prioritization, then validate important keywords in Search Console, Google Ads Keyword Planner, Ahrefs, Semrush, or another SEO tool.</p>
+
+    {% if error %}
+      <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+    {% endif %}
+  </section>
+
+  {% if result %}
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">{{ result.source }}</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ result.keywords|length }} keyword ideas for {{ result.topic }}</h2>
+        </div>
+        <button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black" data-copy-target="keywordCsvOutput" data-copy-message="Keyword CSV copied.">Copy CSV</button>
+      </div>
+
+      {% if result.autocomplete_keywords %}
+        <div class="mt-5 rounded-2xl bg-sand-100 px-4 py-3">
+          <div class="mb-2 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Autocomplete ideas used</div>
+          <div class="flex flex-wrap gap-2">
+            {% for keyword in result.autocomplete_keywords[:20] %}
+              <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-sand-700">{{ keyword }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="mt-6 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+        <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+          <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+            <tr>
+              <th class="px-4 py-3">Keyword</th>
+              <th class="px-4 py-3">Intent</th>
+              <th class="px-4 py-3">Difficulty</th>
+              <th class="px-4 py-3">Est. Searches</th>
+              <th class="px-4 py-3">Content Angle</th>
+              <th class="px-4 py-3">Notes</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-sand-100">
+            {% for item in result.keywords %}
+              <tr>
+                <td class="min-w-[220px] px-4 py-3 font-bold text-sand-950">{{ item.keyword }}</td>
+                <td class="px-4 py-3 text-sand-700">{{ item.intent }}</td>
+                <td class="px-4 py-3">
+                  <span class="rounded-full {% if item.difficulty == 'easy' %}bg-green-100 text-green-700{% elif item.difficulty == 'hard' %}bg-red-100 text-red-700{% else %}bg-amber-100 text-amber-700{% endif %} px-3 py-1 text-xs font-bold uppercase tracking-[0.1em]">{{ item.difficulty }} {{ item.difficulty_score }}</span>
+                </td>
+                <td class="px-4 py-3 font-semibold text-sand-800">{{ item.estimated_monthly_searches }}</td>
+                <td class="min-w-[260px] px-4 py-3 text-sand-700">{{ item.content_angle }}</td>
+                <td class="min-w-[260px] px-4 py-3 text-sand-700">{{ item.notes }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <textarea id="keywordCsvOutput" readonly class="sr-copy-field">keyword,intent,difficulty,difficulty_score,estimated_monthly_searches,content_angle,notes
+{% for item in result.keywords -%}
+"{{ item.keyword|replace('"', '""') }}","{{ item.intent }}","{{ item.difficulty }}","{{ item.difficulty_score }}","{{ item.estimated_monthly_searches|replace('"', '""') }}","{{ item.content_angle|replace('"', '""') }}","{{ item.notes|replace('"', '""') }}"
+{% endfor %}</textarea>
+    </section>
+  {% endif %}
+{% endblock %}

@@ -77,15 +77,19 @@ def test_blog_generator_retries_filters_and_returns_complete_blog():
 
 
 def _html_article(target_words):
-    words = (
-        "Modern game platforms use careful account design to help players understand choices and manage sessions with less confusion. "
-        "Clear menus, plain alerts, privacy controls, and practical reminders support safer habits during everyday play. "
-        "Teams can explain settings, payment checks, device access, and recovery steps without turning the article into promotion. "
-        "Helpful guidance also gives readers examples they can compare with their own digital routines and preferences."
-    ).split()
+    sentence_templates = [
+        "Modern game platforms use careful account design to help players understand choices and manage sessions with less confusion.",
+        "Clear menus, plain alerts, privacy controls, and practical reminders support safer habits during everyday play.",
+        "Teams can explain settings, payment checks, device access, and recovery steps without turning the article into promotion.",
+        "Helpful guidance gives readers examples they can compare with their own digital routines and preferences.",
+    ]
     repeated_words = []
+    cycle = 1
     while len(repeated_words) < target_words:
-        repeated_words.extend(words)
+        for sentence in sentence_templates:
+            varied_sentence = sentence.replace(".", f" for scenario {cycle}.")
+            repeated_words.extend(varied_sentence.split())
+            cycle += 1
     article_words = repeated_words[: max(1, target_words - 2)]
     midpoint = max(1, len(article_words) // 2)
     intro_text = " ".join(article_words[:midpoint])

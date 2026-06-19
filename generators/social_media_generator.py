@@ -3,6 +3,7 @@ import re
 
 from logger import logger
 from prompts import build_social_media_post_prompt
+from prompts.shared import build_language_instruction
 from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
 
@@ -167,6 +168,7 @@ def generate_neutral_blog_article(
     topic: str,
     medium: dict,
     suggested_content: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> dict:
     from app.services.content_format_service import markdown_to_html
@@ -177,6 +179,7 @@ def generate_neutral_blog_article(
         topic=topic,
         suggested_content=suggested_content,
         medium=medium,
+        language=language,
         progress_callback=progress_callback,
     )
     _publish_progress(progress_callback, "Title passed validation. Generating meta description...")
@@ -186,6 +189,7 @@ def generate_neutral_blog_article(
         topic=topic,
         suggested_content=suggested_content,
         medium=medium,
+        language=language,
         progress_callback=progress_callback,
     )
     _publish_progress(progress_callback, "Meta description passed validation. Generating 2 visual ideas...")
@@ -196,6 +200,7 @@ def generate_neutral_blog_article(
             topic=topic,
             suggested_content=suggested_content,
             medium=medium,
+            language=language,
             progress_callback=progress_callback,
         )
     )
@@ -208,6 +213,7 @@ def generate_neutral_blog_article(
         medium=medium,
         meta_description=meta_description,
         visual=visual,
+        language=language,
         progress_callback=progress_callback,
     )
     _publish_progress(progress_callback, "Content passed validation. Generating tags...")
@@ -218,6 +224,7 @@ def generate_neutral_blog_article(
         suggested_content=suggested_content,
         medium=medium,
         content=content_result["markdown_content"],
+        language=language,
         progress_callback=progress_callback,
     )
     _publish_progress(progress_callback, "Tags passed validation.")
@@ -234,8 +241,8 @@ def generate_neutral_blog_article(
     }
 
 
-def generate_neutral_blog_title(provider, topic: str, medium: dict, suggested_content: str = "", progress_callback=None) -> str:
-    prompt = _build_neutral_blog_title_prompt(topic=topic, suggested_content=suggested_content, medium=medium)
+def generate_neutral_blog_title(provider, topic: str, medium: dict, suggested_content: str = "", language: str = "English", progress_callback=None) -> str:
+    prompt = _build_neutral_blog_title_prompt(topic=topic, suggested_content=suggested_content, medium=medium, language=language)
     attempt = 0
     while True:
         attempt += 1
@@ -280,8 +287,8 @@ def generate_neutral_blog_title(provider, topic: str, medium: dict, suggested_co
         return title
 
 
-def generate_neutral_blog_meta_description(provider, title: str, topic: str, medium: dict, suggested_content: str = "", progress_callback=None) -> str:
-    prompt = _build_neutral_blog_meta_prompt(title=title, topic=topic, suggested_content=suggested_content, medium=medium)
+def generate_neutral_blog_meta_description(provider, title: str, topic: str, medium: dict, suggested_content: str = "", language: str = "English", progress_callback=None) -> str:
+    prompt = _build_neutral_blog_meta_prompt(title=title, topic=topic, suggested_content=suggested_content, medium=medium, language=language)
     attempt = 0
     while True:
         attempt += 1
@@ -322,8 +329,8 @@ def generate_neutral_blog_meta_description(provider, title: str, topic: str, med
         return meta_description
 
 
-def generate_neutral_blog_visuals(provider, title: str, topic: str, medium: dict, suggested_content: str = "", progress_callback=None) -> list[str]:
-    prompt = _build_neutral_blog_visual_prompt(title=title, topic=topic, suggested_content=suggested_content, medium=medium)
+def generate_neutral_blog_visuals(provider, title: str, topic: str, medium: dict, suggested_content: str = "", language: str = "English", progress_callback=None) -> list[str]:
+    prompt = _build_neutral_blog_visual_prompt(title=title, topic=topic, suggested_content=suggested_content, medium=medium, language=language)
     attempt = 0
     while True:
         attempt += 1
@@ -376,6 +383,7 @@ def generate_neutral_blog_content(
     meta_description: str,
     visual: str,
     suggested_content: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> dict:
     min_words = _int_or_zero(medium.get("min_words", 0))
@@ -390,6 +398,7 @@ def generate_neutral_blog_content(
         visual=visual,
         min_words=prompt_min_words,
         max_words=max_words,
+        language=language,
     )
     attempt = 0
     while True:
@@ -464,8 +473,8 @@ def generate_neutral_blog_content(
         }
 
 
-def generate_neutral_blog_tags(provider, title: str, topic: str, medium: dict, content: str, suggested_content: str = "", progress_callback=None) -> list[str]:
-    prompt = _build_neutral_blog_tags_prompt(title=title, topic=topic, suggested_content=suggested_content, medium=medium, content=content)
+def generate_neutral_blog_tags(provider, title: str, topic: str, medium: dict, content: str, suggested_content: str = "", language: str = "English", progress_callback=None) -> list[str]:
+    prompt = _build_neutral_blog_tags_prompt(title=title, topic=topic, suggested_content=suggested_content, medium=medium, content=content, language=language)
     attempt = 0
     while True:
         attempt += 1
@@ -549,8 +558,9 @@ Use this suggestion as optional direction for angle, facts, points, or style whe
 """
 
 
-def _build_neutral_blog_title_prompt(topic: str, medium: dict, suggested_content: str = "") -> str:
+def _build_neutral_blog_title_prompt(topic: str, medium: dict, suggested_content: str = "", language: str = "English") -> str:
     context = _neutral_medium_prompt_context(topic, medium)
+    language_section = build_language_instruction(language)
     title_rule = (
         f"- Keep the title under {context['title_max']} characters."
         if context["title_max"]
@@ -571,6 +581,7 @@ Publishing medium:
 - Preferred post type: {context["post_type"]}
 - Medium rules: {context["rules"]}
 
+{language_section}
 {_banned_words_prompt_section()}
 
 Rules:
@@ -589,8 +600,9 @@ Return JSON only in this format:
 """
 
 
-def _build_neutral_blog_meta_prompt(title: str, topic: str, medium: dict, suggested_content: str = "") -> str:
+def _build_neutral_blog_meta_prompt(title: str, topic: str, medium: dict, suggested_content: str = "", language: str = "English") -> str:
     context = _neutral_medium_prompt_context(topic, medium)
+    language_section = build_language_instruction(language)
     return f"""
 You are writing a meta description for a neutral editorial blog/post.
 
@@ -608,6 +620,7 @@ Publishing medium:
 - Medium type: {context["website_type"]}
 - Medium rules: {context["rules"]}
 
+{language_section}
 {_banned_words_prompt_section()}
 
 Rules:
@@ -627,8 +640,9 @@ Return JSON only in this format:
 """
 
 
-def _build_neutral_blog_visual_prompt(title: str, topic: str, medium: dict, suggested_content: str = "") -> str:
+def _build_neutral_blog_visual_prompt(title: str, topic: str, medium: dict, suggested_content: str = "", language: str = "English") -> str:
     context = _neutral_medium_prompt_context(topic, medium)
+    language_section = build_language_instruction(language)
     return f"""
 You are creating image directions for a neutral editorial blog/post.
 
@@ -646,6 +660,7 @@ Publishing medium:
 - Medium type: {context["website_type"]}
 - Medium rules: {context["rules"]}
 
+{language_section}
 {_banned_words_prompt_section()}
 
 Rules:
@@ -675,8 +690,10 @@ def _build_neutral_blog_content_prompt(
     min_words: int,
     max_words: int,
     suggested_content: str = "",
+    language: str = "English",
 ) -> str:
     context = _neutral_medium_prompt_context(topic, medium)
+    language_section = build_language_instruction(language)
     word_rule = "- Write a complete article."
     if min_words and max_words:
         word_rule = f"- Write at least {min_words} words and keep the article near {max_words} words where possible."
@@ -711,6 +728,7 @@ Publishing medium:
 - Preferred post type: {context["post_type"]}
 - Medium rules: {context["rules"]}
 
+{language_section}
 {_banned_words_prompt_section()}
 
 Rules:
@@ -745,8 +763,9 @@ Return JSON only in this format:
 """
 
 
-def _build_neutral_blog_tags_prompt(title: str, topic: str, medium: dict, content: str, suggested_content: str = "") -> str:
+def _build_neutral_blog_tags_prompt(title: str, topic: str, medium: dict, content: str, suggested_content: str = "", language: str = "English") -> str:
     context = _neutral_medium_prompt_context(topic, medium)
+    language_section = build_language_instruction(language)
     return f"""
 Create publishing tags for a neutral editorial blog/post.
 
@@ -764,6 +783,7 @@ Publishing medium:
 - Medium type: {context["website_type"]}
 - Medium rules: {context["rules"]}
 
+{language_section}
 Generated content:
 {(content or "")[:6000]}
 

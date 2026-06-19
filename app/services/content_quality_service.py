@@ -1,6 +1,7 @@
 import re
 from html.parser import HTMLParser
 
+from content_repetition import repeated_content_issue
 from word_bank import find_banned_terms_in_text
 
 
@@ -69,6 +70,7 @@ def analyze_generated_content(
     keyword_count = _phrase_count(visible_text, keyword)
     missing_alt_count = sum(1 for image in parser.images if not image["has_alt"])
     banned_terms = find_banned_terms_in_text("\n".join([title or "", meta_description or "", visible_text]))
+    repetition_issue = repeated_content_issue(content)
     required_url_count = (content or "").count(required_url) if required_url else 0
 
     checks = [
@@ -114,6 +116,12 @@ def analyze_generated_content(
             "None found" if not banned_terms else ", ".join(banned_terms[:8]),
             "Regenerate or edit any banned terms before publishing.",
         ),
+        _check(
+            "Repeated content",
+            "pass" if not repetition_issue else "fail",
+            "None found" if not repetition_issue else repetition_issue,
+            "Regenerate content that repeats the same sentence or paragraph.",
+        ),
     ]
 
     return {
@@ -126,6 +134,7 @@ def analyze_generated_content(
         "missing_alt_count": missing_alt_count,
         "keyword_count": keyword_count,
         "banned_terms": banned_terms,
+        "repetition_issue": repetition_issue,
         "checks": checks,
     }
 
@@ -154,6 +163,8 @@ def _range_detail(word_count: int, min_words: int, max_words: int) -> str:
 
 def _strip_markup(content: str) -> str:
     return re.sub(r"<[^>]+>|[#*_>`~-]+", " ", content or "")
+
+
 
 
 def _word_count(text: str) -> int:

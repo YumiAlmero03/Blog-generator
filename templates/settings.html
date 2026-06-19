@@ -34,6 +34,80 @@
 
       <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">
         <div class="sm:col-span-2">
+          <h2 class="text-base font-bold text-sand-950">Content Locale</h2>
+          <p class="mt-1 text-sm leading-6 text-sand-600">Used as the default country and language on generators and research tools.</p>
+        </div>
+        <div>
+          <label for="default_country_target" class="mb-2 block text-sm font-bold text-sand-900">Country target</label>
+          <select
+            id="default_country_target"
+            name="default_country_target"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          >
+            {% for country in country_options %}
+              <option value="{{ country }}" {% if default_country_target == country %}selected{% endif %}>{{ country }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="default_language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+          <select
+            id="default_language"
+            name="default_language"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          >
+            {% for option in language_options %}
+              <option value="{{ option }}" {% if default_language == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-5 rounded-3xl border border-sand-200 bg-sand-50/70 p-5">
+        <h2 class="text-base font-bold text-sand-950">Indexing</h2>
+        <p class="mt-1 text-sm leading-6 text-sand-600">Saved here and reused on the Indexing Hub page for IndexNow submissions.</p>
+        <label for="indexnow_key" class="mb-2 mt-4 block text-sm font-bold text-sand-900">IndexNow key</label>
+        <input
+          id="indexnow_key"
+          name="indexnow_key"
+          type="text"
+          value="{{ indexnow_key }}"
+          placeholder="your-indexnow-key"
+          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+
+        <label for="google_search_console_property" class="mb-2 mt-4 block text-sm font-bold text-sand-900">Google Search Console property</label>
+        <input
+          id="google_search_console_property"
+          name="google_search_console_property"
+          type="text"
+          value="{{ google_search_console_property }}"
+          placeholder="https://www.example.com/ or sc-domain:example.com"
+          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+
+        <label for="google_service_account_json" class="mb-2 mt-4 block text-sm font-bold text-sand-900">Google service account JSON</label>
+        <textarea
+          id="google_service_account_json"
+          name="google_service_account_json"
+          rows="5"
+          placeholder='{"type":"service_account","client_email":"...","private_key":"..."}'
+          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        >{{ google_service_account_json }}</textarea>
+
+        <label for="google_oauth_access_token" class="mb-2 mt-4 block text-sm font-bold text-sand-900">Google OAuth access token</label>
+        <input
+          id="google_oauth_access_token"
+          name="google_oauth_access_token"
+          type="password"
+          value="{{ google_oauth_access_token }}"
+          placeholder="Optional; service account JSON is preferred"
+          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+      </div>
+
+      <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">
+        <div class="sm:col-span-2">
           <h2 class="text-base font-bold text-sand-950">Blog Generator Words</h2>
           <p class="mt-1 text-sm text-sand-600">Used by the main Blog Generator page.</p>
         </div>

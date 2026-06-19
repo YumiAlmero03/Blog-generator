@@ -3,6 +3,16 @@ from flask import render_template, request
 from database import get_setting, set_setting
 
 from app.controllers.helpers import base_template_context
+from app.services.locale_settings import (
+    DEFAULT_COUNTRY_TARGET_KEY,
+    DEFAULT_LANGUAGE_KEY,
+    country_options,
+    get_default_country_target,
+    get_default_language,
+    language_options,
+    normalize_country_target,
+    normalize_language,
+)
 from app.services.word_limit_settings import (
     BLOG_MAX_WORDS_KEY,
     BLOG_MIN_WORDS_KEY,
@@ -23,6 +33,14 @@ def settings():
     page_min_words, page_max_words = get_page_word_limits()
     state = {
         "money_site": get_setting("money_site", ""),
+        "indexnow_key": get_setting("indexnow_key", ""),
+        "google_search_console_property": get_setting("google_search_console_property", ""),
+        "google_service_account_json": get_setting("google_service_account_json", ""),
+        "google_oauth_access_token": get_setting("google_oauth_access_token", ""),
+        "default_country_target": get_default_country_target(),
+        "default_language": get_default_language(),
+        "country_options": country_options(get_default_country_target()),
+        "language_options": language_options(get_default_language()),
         "blog_min_words": blog_min_words,
         "blog_max_words": blog_max_words,
         "page_min_words": page_min_words,
@@ -33,6 +51,14 @@ def settings():
 
     if request.method == "POST":
         state["money_site"] = request.form.get("money_site", "").strip()
+        state["indexnow_key"] = request.form.get("indexnow_key", "").strip()
+        state["google_search_console_property"] = request.form.get("google_search_console_property", "").strip()
+        state["google_service_account_json"] = request.form.get("google_service_account_json", "").strip()
+        state["google_oauth_access_token"] = request.form.get("google_oauth_access_token", "").strip()
+        state["default_country_target"] = normalize_country_target(request.form.get("default_country_target", "Worldwide"))
+        state["default_language"] = normalize_language(request.form.get("default_language", "English"))
+        state["country_options"] = country_options(state["default_country_target"])
+        state["language_options"] = language_options(state["default_language"])
         state["blog_min_words"], state["blog_max_words"] = normalize_word_limits(
             request.form.get("blog_min_words", ""),
             request.form.get("blog_max_words", ""),
@@ -46,6 +72,12 @@ def settings():
             DEFAULT_PAGE_MAX_WORDS,
         )
         set_setting("money_site", state["money_site"])
+        set_setting("indexnow_key", state["indexnow_key"])
+        set_setting("google_search_console_property", state["google_search_console_property"])
+        set_setting("google_service_account_json", state["google_service_account_json"])
+        set_setting("google_oauth_access_token", state["google_oauth_access_token"])
+        set_setting(DEFAULT_COUNTRY_TARGET_KEY, state["default_country_target"])
+        set_setting(DEFAULT_LANGUAGE_KEY, state["default_language"])
         set_setting(BLOG_MIN_WORDS_KEY, str(state["blog_min_words"]))
         set_setting(BLOG_MAX_WORDS_KEY, str(state["blog_max_words"]))
         set_setting(PAGE_MIN_WORDS_KEY, str(state["page_min_words"]))

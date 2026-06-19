@@ -45,6 +45,7 @@ def save_backlink(
     content_guidelines: str = "",
     notes: str = "",
     include_in_tier1: int | bool | str = 1,
+    include_in_website_checklist: int | bool | str = 0,
     brand_topic_mode: str = "example",
     backlink_id: int | None = None,
 ) -> dict:
@@ -76,6 +77,7 @@ def save_backlink(
     cleaned_content_guidelines = (content_guidelines or "").strip()
     cleaned_notes = (notes or "").strip()
     cleaned_include_in_tier1 = _normalize_flag(include_in_tier1)
+    cleaned_include_in_website_checklist = _normalize_flag(include_in_website_checklist)
     cleaned_brand_topic_mode = _normalize_brand_topic_mode(brand_topic_mode, cleaned_name, cleaned_website_type)
 
     if backlink_id:
@@ -83,7 +85,7 @@ def save_backlink(
             connection.execute(
                 """
                 UPDATE backlinks
-                SET website_name = ?, blog_name = ?, writer_name = ?, website_type = ?, post_type = ?, title_max_characters = ?, min_words = ?, max_characters = ?, blog_url = ?, tier_level = ?, posts_per_day = ?, content_guidelines = ?, notes = ?, include_in_tier1 = ?, brand_topic_mode = ?
+                SET website_name = ?, blog_name = ?, writer_name = ?, website_type = ?, post_type = ?, title_max_characters = ?, min_words = ?, max_characters = ?, blog_url = ?, tier_level = ?, posts_per_day = ?, content_guidelines = ?, notes = ?, include_in_tier1 = ?, include_in_website_checklist = ?, brand_topic_mode = ?
                 WHERE id = ?
                 """,
                 (
@@ -101,6 +103,7 @@ def save_backlink(
                     cleaned_content_guidelines,
                     cleaned_notes,
                     cleaned_include_in_tier1,
+                    cleaned_include_in_website_checklist,
                     cleaned_brand_topic_mode,
                     backlink_id,
                 ),
@@ -111,8 +114,8 @@ def save_backlink(
     with get_connection() as connection:
         cursor = connection.execute(
             """
-            INSERT INTO backlinks (website_name, blog_name, writer_name, website_type, post_type, title_max_characters, min_words, max_characters, blog_url, tier_level, posts_per_day, content_guidelines, notes, include_in_tier1, brand_topic_mode)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO backlinks (website_name, blog_name, writer_name, website_type, post_type, title_max_characters, min_words, max_characters, blog_url, tier_level, posts_per_day, content_guidelines, notes, include_in_tier1, include_in_website_checklist, brand_topic_mode)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 cleaned_name,
@@ -129,6 +132,7 @@ def save_backlink(
                 cleaned_content_guidelines,
                 cleaned_notes,
                 cleaned_include_in_tier1,
+                cleaned_include_in_website_checklist,
                 cleaned_brand_topic_mode,
             ),
         )

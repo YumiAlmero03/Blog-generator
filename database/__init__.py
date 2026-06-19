@@ -1,6 +1,7 @@
 from database.backlinks import delete_backlink, get_backlink, list_backlinks, save_backlink, update_backlink_notes
 from database.banned_words import list_custom_banned_words, replace_custom_banned_words
 from database.brands import delete_brand, get_brand_context, get_brand_record, list_brand_names, list_brand_records, upsert_brand, update_brand_notes
+from database.checklists import checklist_items_by_type, delete_checklist_item, list_checklist_items, list_checklist_states, reorder_checklist_items, save_checklist_item, save_checklist_subject_state, seed_default_checklist_items
 from database.common import DB_PATH, LEGACY_DB_PATH, normalize_brand_name, normalize_keyword, split_keywords
 from database.generation_history import (
     count_sent_posts_for_date,
@@ -36,7 +37,9 @@ from database.pages import (
 from database.schema import init_db
 from database.settings import get_setting, list_settings, set_setting
 from database.social_media import delete_social_profile, get_social_profile, list_social_profiles, save_social_profile
+from database.website_index import list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 
 
 init_db()
+seed_default_checklist_items()
 migrate_from_tinydb_json_if_needed()

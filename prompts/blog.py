@@ -1,6 +1,6 @@
 from word_bank import build_banned_words_prompt_section
 
-from prompts.shared import MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_brand_context_section
+from prompts.shared import MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_brand_context_section, build_language_instruction
 
 def build_title_prompt(
     keyword: str,
@@ -9,8 +9,10 @@ def build_title_prompt(
     count: int = 10,
     brand: str = "",
     brand_context: str = "",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an SEO blog title generator.
@@ -21,6 +23,7 @@ Generate exactly {count} blog title variants for this keyword/topic:
 Supporting ideas: {supporting_keyword}
 Brand: {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 Rules:
@@ -65,8 +68,10 @@ def build_meta_description_prompt(
     count: int = 3,
     brand: str = "",
     brand_context: str = "",
+    language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     return f"""
 You are an SEO meta description writer.
@@ -77,6 +82,7 @@ Generate exactly {count} compelling meta description variants for this blog post
 Keyword: {keyword}
 Brand: {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 Rules:
@@ -122,9 +128,11 @@ def build_content_prompt(
     change_request: str = "",
     min_words: int | str = MIN_BLOG_WORDS,
     max_words: int | str = MAX_BLOG_WORDS,
+    language: str = "English",
 ) -> str:
     links_section = ""
     context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     min_word_count = _positive_int(min_words, MIN_BLOG_WORDS)
     max_word_count = _positive_int(max_words, MAX_BLOG_WORDS)
@@ -188,6 +196,7 @@ Keyword: {keyword}
 Supporting keyword: {supporting_keyword}
 Brand: {brand}
 {context_section}
+{language_section}
 {banned_words_section}
 
 {links_section}

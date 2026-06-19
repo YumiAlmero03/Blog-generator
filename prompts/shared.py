@@ -3,6 +3,20 @@ from word_bank import build_banned_words_prompt_section
 MIN_BLOG_WORDS = "1300"
 MAX_BLOG_WORDS = "1400"
 
+
+def build_language_instruction(language: str = "English") -> str:
+    cleaned = " ".join(str(language or "English").split()).strip() or "English"
+    return f"""
+Target language:
+{cleaned}
+
+Language rules:
+- Write all generated titles, meta descriptions, tags, headings, and body content in {cleaned}.
+- Keep brand names, URLs, required anchor text, product names, and proper nouns unchanged unless the user-provided language naturally requires a common localized form.
+- Preserve the requested JSON keys exactly in English.
+"""
+
+
 def build_brand_context_section(brand_context: str = "") -> str:
     cleaned = (brand_context or "").strip()
     if not cleaned:

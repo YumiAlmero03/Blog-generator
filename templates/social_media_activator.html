@@ -30,7 +30,7 @@
         <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
       {% endif %}
 
-      <form method="post" id="contentForm" data-loading-message="Generating neutral blog..." class="grid gap-5">
+      <form method="post" id="contentForm" data-loading-message="Generating neutral blog..." data-background-submit class="grid gap-5">
         <div class="grid gap-4 lg:grid-cols-2">
           <div>
             <label for="topic" class="mb-2 block text-sm font-bold text-sand-900">Topic</label>
@@ -54,8 +54,17 @@
           <textarea id="suggested_content" name="suggested_content" rows="4" placeholder="Optional angle, notes, points to include, or style direction for this neutral blog" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ suggested_content }}</textarea>
         </div>
 
+        <div>
+          <label for="language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+          <select id="language" name="language" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            {% for option in language_options %}
+              <option value="{{ option }}" {% if language == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
         <input type="hidden" id="contentActionInput" name="action" value="generate_content" />
-        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate Neutral Blog</button>
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if content %}Regenerate Neutral Blog{% else %}Generate Neutral Blog{% endif %}</button>
 
         {% if content %}
           <div class="grid gap-5">
@@ -134,12 +143,14 @@
             {% endif %}
 
             {% include "_quality_report.html" %}
+            {% include "_content_checklist.html" %}
           </div>
 
           <input type="radio" name="selected_title" value="{{ selected_title }}" checked class="hidden" />
           <input type="radio" name="meta_description_choice" value="{{ meta_description }}" checked class="hidden" />
           <input type="hidden" name="visual" value="{{ visual }}" />
           <input type="hidden" name="history_id" value="{{ history_id }}" />
+          <input type="hidden" name="language" value="{{ language }}" />
           <input type="hidden" name="tags" value="{{ tag_suggestions|join(', ') }}" />
           <textarea name="reference_links" class="hidden-form" aria-hidden="true">{% for reference in reference_links %}{{ reference.title }}|{{ reference.url }}
 {% endfor %}</textarea>

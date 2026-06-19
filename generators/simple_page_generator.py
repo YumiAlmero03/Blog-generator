@@ -9,6 +9,7 @@ from prompts import (
 )
 from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
+from content_repetition import repeated_content_issue
 
 MIN_SIMPLE_PAGE_WORDS = 900
 MAX_SIMPLE_PAGE_WORDS = 1200
@@ -26,6 +27,7 @@ def generate_simple_page(
     change_request: str = "",
     min_words: int = MIN_SIMPLE_PAGE_WORDS,
     max_words: int = MAX_SIMPLE_PAGE_WORDS,
+    language: str = "English",
     progress_callback=None,
 ):
     from app.services.content_format_service import count_markdown_heading_level, count_markdown_words, markdown_to_html
@@ -40,6 +42,7 @@ def generate_simple_page(
         change_request=change_request,
         min_words=min_word_count,
         max_words=max_word_count,
+        language=language,
     )
 
     last_word_count = 0
@@ -51,10 +54,11 @@ def generate_simple_page(
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words, missed required ### subheadings, missed the word-count range, or missed the meta description character range.\n"
+                "- Your previous response used banned words, repeated content, missed required ### subheadings, missed the word-count range, or missed the meta description character range.\n"
                 f"- The page content must be at least {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
                 f"- Every meta description must be between {MIN_META_DESCRIPTION_CHARACTERS} and {MAX_META_DESCRIPTION_CHARACTERS} characters.\n"
                 "- Include at least 3 ### subheadings.\n"
+                "- Do not repeat the same sentence or paragraph. Rewrite repeated ideas with fresh details.\n"
                 "- Return a fresh simple page and avoid every banned term completely.\n"
             )
 
@@ -81,6 +85,18 @@ def generate_simple_page(
                     "Simple page used banned terms %s on attempt %d",
                     ", ".join(banned_terms),
                     attempt,
+                )
+                continue
+            repetition_issue = repeated_content_issue(markdown_content)
+            if repetition_issue:
+                _publish_progress(
+                    progress_callback,
+                    f"Simple page attempt {attempt}: {repetition_issue} Retrying...",
+                )
+                logger.warning(
+                    "Simple page repeated content on attempt %d: %s",
+                    attempt,
+                    repetition_issue,
                 )
                 continue
             invalid_meta_lengths = [
@@ -163,6 +179,7 @@ def generate_simple_page_title(
     brand: str = "",
     expectations: str = "",
     brand_context: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> str:
     prompt = build_simple_page_title_prompt(
@@ -171,6 +188,7 @@ def generate_simple_page_title(
         brand=brand,
         expectations=expectations,
         brand_context=brand_context,
+        language=language,
     )
     attempt = 0
     while True:
@@ -212,6 +230,7 @@ def generate_simple_page_meta_descriptions(
     brand: str = "",
     expectations: str = "",
     brand_context: str = "",
+    language: str = "English",
     progress_callback=None,
 ) -> list[dict]:
     prompt = build_simple_page_meta_prompt(
@@ -221,6 +240,7 @@ def generate_simple_page_meta_descriptions(
         brand=brand,
         expectations=expectations,
         brand_context=brand_context,
+        language=language,
     )
     attempt = 0
     while True:
@@ -281,6 +301,7 @@ def generate_simple_page_content(
     change_request: str = "",
     min_words: int = MIN_SIMPLE_PAGE_WORDS,
     max_words: int = MAX_SIMPLE_PAGE_WORDS,
+    language: str = "English",
     progress_callback=None,
 ):
     from app.services.content_format_service import count_markdown_heading_level, count_markdown_words, markdown_to_html
@@ -297,6 +318,7 @@ def generate_simple_page_content(
         change_request=change_request,
         min_words=min_word_count,
         max_words=max_word_count,
+        language=language,
     )
     last_word_count = 0
     attempt = 0
@@ -306,9 +328,10 @@ def generate_simple_page_content(
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous content used banned words, missed required ### subheadings, or missed the word-count range.\n"
+                "- Your previous content used banned words, repeated content, missed required ### subheadings, or missed the word-count range.\n"
                 f"- The page content must be at least {min_word_count} words.\n"
                 "- Include at least 3 ### subheadings.\n"
+                "- Do not repeat the same sentence or paragraph. Rewrite repeated ideas with fresh details.\n"
                 "- Return corrected content in valid JSON only.\n"
             )
         full_prompt = prompt + retry_instruction
@@ -324,6 +347,13 @@ def generate_simple_page_content(
                 _publish_progress(
                     progress_callback,
                     f"Simple page content attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
+                )
+                continue
+            repetition_issue = repeated_content_issue(markdown_content)
+            if repetition_issue:
+                _publish_progress(
+                    progress_callback,
+                    f"Simple page content attempt {attempt}: {repetition_issue} Retrying...",
                 )
                 continue
             h3_count = count_markdown_heading_level(markdown_content, 3)
