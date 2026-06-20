@@ -5,6 +5,8 @@ import queue
 import time
 from threading import Lock
 
+from generation_retry_policy import cancel_generation_token, clear_generation_cancel
+
 
 _STATUSES: dict[str, dict] = {}
 _SUBSCRIBERS: dict[str, set[queue.Queue]] = {}
@@ -27,6 +29,34 @@ def publish_generation_prompt(token: str = "", prompt: str = "") -> None:
     if not cleaned_token or not cleaned_prompt:
         return
     publish_generation_event(cleaned_token, {"prompt": cleaned_prompt})
+
+
+def publish_generation_draft(token: str = "", html: str = "", message: str = "") -> None:
+    cleaned_token = (token or "").strip()
+    cleaned_html = (html or "").strip()
+    if not cleaned_token or not cleaned_html:
+        return
+    payload = {"draft_html": cleaned_html}
+    cleaned_message = (message or "").strip()
+    if cleaned_message:
+        payload["message"] = cleaned_message
+    publish_generation_event(cleaned_token, payload)
+
+
+def cancel_generation(token: str = "") -> None:
+    cleaned_token = (token or "").strip()
+    if not cleaned_token:
+        return
+    cancel_generation_token(cleaned_token)
+    publish_generation_event(cleaned_token, {"cancelled": True, "message": "Stopping generation..."})
+
+
+def is_generation_cancelled(token: str = "") -> bool:
+    cleaned_token = (token or "").strip()
+    if not cleaned_token:
+        return False
+    with _LOCK:
+        return bool(_STATUSES.get(cleaned_token, {}).get("cancelled"))
 
 
 def publish_generation_event(token: str = "", payload: dict | None = None) -> None:
@@ -56,33 +86,55 @@ def get_generation_status(token: str = "") -> dict:
     _cleanup_old_statuses()
     with _LOCK:
         status = _STATUSES.get(cleaned_token, {})
-        return {"message": status.get("message", ""), "prompt": status.get("prompt", "")}
+        return {
+            "message": status.get("message", ""),
+            "prompt": status.get("prompt", ""),
+            "draft_html": status.get("draft_html", ""),
+            "cancelled": bool(status.get("cancelled")),
+        }
+
+
+def subscribe_generation_events(token: str = "") -> tuple[str, queue.Queue, dict]:
+    cleaned_token = (token or "").strip()
+    subscriber: queue.Queue = queue.Queue(maxsize=20)
+    with _LOCK:
+        _SUBSCRIBERS.setdefault(cleaned_token, set()).add(subscriber)
+        current_status = _STATUSES.get(cleaned_token, {})
+    return cleaned_token, subscriber, {
+        "message": current_status.get("message", "Connected to generation updates."),
+        "prompt": current_status.get("prompt", ""),
+        "draft_html": current_status.get("draft_html", ""),
+        "cancelled": bool(current_status.get("cancelled")),
+    }
+
+
+def unsubscribe_generation_events(token: str = "", subscriber: queue.Queue | None = None) -> None:
+    cleaned_token = (token or "").strip()
+    if not cleaned_token or subscriber is None:
+        return
+    with _LOCK:
+        subscribers = _SUBSCRIBERS.get(cleaned_token)
+        if subscribers:
+            subscribers.discard(subscriber)
+            if not subscribers:
+                _SUBSCRIBERS.pop(cleaned_token, None)
 
 
 def clear_generation_status(token: str = "") -> None:
     cleaned_token = (token or "").strip()
     if not cleaned_token:
         return
+    clear_generation_cancel(cleaned_token)
     publish_generation_status(cleaned_token, "Generation complete.")
     with _LOCK:
         _STATUSES.pop(cleaned_token, None)
 
 
 def stream_generation_events(token: str = ""):
-    cleaned_token = (token or "").strip()
-    subscriber: queue.Queue = queue.Queue(maxsize=20)
-
-    with _LOCK:
-        _SUBSCRIBERS.setdefault(cleaned_token, set()).add(subscriber)
-        current_status = _STATUSES.get(cleaned_token, {})
+    cleaned_token, subscriber, current_status = subscribe_generation_events(token)
 
     try:
-        yield _format_event(
-            {
-                "message": current_status.get("message", "Connected to generation updates."),
-                "prompt": current_status.get("prompt", ""),
-            }
-        )
+        yield _format_event(current_status)
         while True:
             try:
                 payload = subscriber.get(timeout=_HEARTBEAT_SECONDS)
@@ -90,12 +142,7 @@ def stream_generation_events(token: str = ""):
             except queue.Empty:
                 yield ": keep-alive\n\n"
     finally:
-        with _LOCK:
-            subscribers = _SUBSCRIBERS.get(cleaned_token)
-            if subscribers:
-                subscribers.discard(subscriber)
-                if not subscribers:
-                    _SUBSCRIBERS.pop(cleaned_token, None)
+        unsubscribe_generation_events(cleaned_token, subscriber)
 
 
 def _format_event(payload: dict) -> str:

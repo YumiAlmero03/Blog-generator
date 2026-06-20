@@ -5,7 +5,7 @@ from flask import render_template, request
 
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
-from app.services.generation_status_service import clear_generation_status, publish_generation_prompt, publish_generation_status
+from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.locale_settings import (
     country_options,
     get_default_country_target,
@@ -852,6 +852,10 @@ def _progress_callback(label: str, token: str):
         if kind == "prompt":
             publish_generation_prompt(token, message)
             return
+        if kind == "draft":
+            publish_generation_draft(token, message, f"{cleaned_label}: Draft available while retrying...")
+            return
         publish_generation_status(token, f"{cleaned_label}: {message}")
 
+    publish.generation_token = token
     return publish

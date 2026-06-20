@@ -1,5 +1,6 @@
 import json
 import re
+from generation_retry_policy import can_accept_close_enough, raise_if_generation_cancelled, wait_before_retry
 from prompts import build_backlink_meta_description_prompt, build_meta_description_prompt
 from utils import extract_json_string
 from logger import logger
@@ -21,14 +22,15 @@ def _generate_meta_descriptions_from_prompt(
 
     attempt = 0
     while attempt < MAX_ATTEMPTS:
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words or phrases, missed the 120-140 character range, or returned too few usable descriptions.\n"
+                "- Your previous response used banned words or phrases, missed the 130-160 character range, or returned too few usable descriptions.\n"
                 "- Return fresh meta descriptions that avoid every banned term completely.\n"
-                "- Make every meta description between 120 and 140 characters.\n"
+                "- Make every meta description between 130 and 160 characters.\n"
                 "- Count only the description text, not JSON syntax.\n"
             )
             if cleaned_forbidden_phrases:
@@ -49,6 +51,7 @@ def _generate_meta_descriptions_from_prompt(
             data = json.loads(json_text)
             meta_descriptions = data.get("meta_descriptions", [])
             valid_meta_descriptions = []
+            close_meta_descriptions = []
             rejected_lengths = []
             rejected_banned_terms = []
             rejected_forbidden_phrases = []
@@ -72,6 +75,13 @@ def _generate_meta_descriptions_from_prompt(
                 text_length = len(text)
                 if not MIN_META_DESCRIPTION_CHARACTERS <= text_length <= MAX_META_DESCRIPTION_CHARACTERS:
                     rejected_lengths.append(text_length)
+                    if _is_close_meta_length(text_length):
+                        close_meta_descriptions.append(
+                            {
+                                "text": text,
+                                "character_count": text_length,
+                            }
+                        )
                     continue
                 valid_meta_descriptions.append(
                     {
@@ -94,7 +104,7 @@ def _generate_meta_descriptions_from_prompt(
                 if rejected_lengths:
                     _publish_progress(
                         progress_callback,
-                        f"Meta attempt {attempt}: ignored descriptions outside 120-140 characters ({', '.join(str(length) for length in rejected_lengths)} chars).",
+                        f"Meta attempt {attempt}: ignored descriptions outside 130-160 characters ({', '.join(str(length) for length in rejected_lengths)} chars).",
                     )
                     logger.warning(
                         "Ignored meta descriptions outside %d-%d characters with lengths %s on attempt %d",
@@ -115,6 +125,19 @@ def _generate_meta_descriptions_from_prompt(
                     )
                 return valid_meta_descriptions[:target_count] if target_count else valid_meta_descriptions
 
+            if close_meta_descriptions and can_accept_close_enough(attempt):
+                selected = _rank_meta_descriptions(close_meta_descriptions)
+                _publish_progress(
+                    progress_callback,
+                    f"Meta attempt {attempt}: accepting close descriptions after strict retries.",
+                )
+                logger.warning(
+                    "Accepting close meta descriptions after %d attempts with lengths %s",
+                    attempt,
+                    ", ".join(str(item["character_count"]) for item in selected),
+                )
+                return selected[:target_count] if target_count else selected
+
             if rejected_forbidden_phrases:
                 last_failure_detail = f"Last meta descriptions included forbidden phrases {', '.join(rejected_forbidden_phrases)}."
                 _publish_progress(
@@ -126,6 +149,7 @@ def _generate_meta_descriptions_from_prompt(
                     ", ".join(rejected_forbidden_phrases),
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "forbidden phrase match")
                 continue
             if rejected_banned_terms:
                 last_failure_detail = f"Last meta descriptions used banned terms {', '.join(rejected_banned_terms)}."
@@ -138,6 +162,7 @@ def _generate_meta_descriptions_from_prompt(
                     ", ".join(rejected_banned_terms),
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
             if rejected_lengths:
                 last_failure_detail = (
@@ -147,7 +172,7 @@ def _generate_meta_descriptions_from_prompt(
                 )
                 _publish_progress(
                     progress_callback,
-                    f"Meta attempt {attempt}: descriptions missed 120-140 characters ({', '.join(str(length) for length in rejected_lengths)} chars). Retrying...",
+                    f"Meta attempt {attempt}: descriptions missed 130-160 characters ({', '.join(str(length) for length in rejected_lengths)} chars). Retrying...",
                 )
                 logger.warning(
                     "Generated meta descriptions missed %d-%d characters with lengths %s on attempt %d",
@@ -156,12 +181,14 @@ def _generate_meta_descriptions_from_prompt(
                     ", ".join(str(length) for length in rejected_lengths),
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "meta length miss")
                 continue
             last_failure_detail = "Last response did not include usable meta descriptions."
             _publish_progress(
                 progress_callback,
                 f"Meta attempt {attempt}: no usable descriptions returned. Retrying...",
             )
+            wait_before_retry(attempt, progress_callback, "empty meta response")
         except Exception as exc:
             logger.exception("generate_meta_descriptions failed on attempt %d. Raw response: %s", attempt, raw)
             raise ValueError("Could not parse JSON from model output.") from exc
@@ -192,6 +219,22 @@ def _matching_forbidden_phrases(text: str, phrases: list[str]) -> list[str]:
         if re.search(pattern, normalized_text):
             matches.append(phrase)
     return matches
+
+
+def _is_close_meta_length(length: int) -> bool:
+    return 100 <= length <= 160
+
+
+def _rank_meta_descriptions(items: list[dict]) -> list[dict]:
+    return sorted(
+        items,
+        key=lambda item: (
+            0
+            if MIN_META_DESCRIPTION_CHARACTERS <= int(item.get("character_count", 0)) <= MAX_META_DESCRIPTION_CHARACTERS
+            else 1,
+            abs(130 - int(item.get("character_count", 0))),
+        ),
+    )
 
 
 def _publish_progress(progress_callback, message: str, kind: str = "status") -> None:

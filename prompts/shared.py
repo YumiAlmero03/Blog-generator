@@ -7,7 +7,7 @@ MAX_BLOG_WORDS = "1400"
 def build_language_instruction(language: str = "English") -> str:
     cleaned = " ".join(str(language or "English").split()).strip() or "English"
     return f"""
-Target language:
+Required language:
 {cleaned}
 
 Language rules:

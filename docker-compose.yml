@@ -4,9 +4,12 @@ services:
     container_name: blog-generator
     ports:
       - "3444:3444"
+      - "3445:3445"
     environment:
       APP_HOST: 0.0.0.0
       APP_PORT: 3444
+      GENERATION_WEBSOCKET_HOST: 0.0.0.0
+      GENERATION_WEBSOCKET_PORT: 3445
       FLASK_DEBUG: ${FLASK_DEBUG:-false}
       PROVIDER: ${PROVIDER:-ollama}
       MODEL: ${MODEL:-qwen3:8b}

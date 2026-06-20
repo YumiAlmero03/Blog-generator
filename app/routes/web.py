@@ -42,9 +42,11 @@ web.add_url_rule("/banned-words", view_func=settings_controller.banned_words, me
 web.add_url_rule("/preview", view_func=tool_controller.preview, methods=["POST"])
 web.add_url_rule("/download_doc", view_func=tool_controller.download_doc, methods=["POST"])
 web.add_url_rule("/generation-status/<token>", view_func=generation_events_view.generation_status, methods=["GET"])
+web.add_url_rule("/generation-status/<token>/cancel", view_func=generation_events_view.cancel_generation_status, methods=["POST"])
 web.add_url_rule("/events/generation/<token>", view_func=generation_events_view.generation_events, methods=["GET"])
 web.add_url_rule("/background-jobs", view_func=background_job_controller.create_background_job, methods=["POST"])
 web.add_url_rule("/background-jobs-dashboard", view_func=background_job_controller.background_jobs_dashboard, methods=["GET"])
+web.add_url_rule("/background-jobs-dashboard/data", view_func=background_job_controller.background_jobs_dashboard_data, methods=["GET"])
 web.add_url_rule("/background-jobs/<job_id>", view_func=background_job_controller.background_job_status, methods=["GET"])
 
 

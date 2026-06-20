@@ -1,7 +1,7 @@
 from flask import current_app, jsonify, render_template, request
 
 from app.controllers.helpers import base_template_context
-from app.services.background_job_service import background_worker_count, get_background_job, list_background_jobs, start_background_post
+from app.services.background_job_service import background_job_stats, get_background_job, list_background_jobs, start_background_post
 
 
 def create_background_job():
@@ -27,17 +27,14 @@ def background_job_status(job_id: str):
 
 def background_jobs_dashboard():
     jobs = list_background_jobs()
-    stats = {
-        "queued": sum(1 for job in jobs if job.get("status") == "queued"),
-        "running": sum(1 for job in jobs if job.get("status") == "running"),
-        "complete": sum(1 for job in jobs if job.get("status") == "complete"),
-        "failed": sum(1 for job in jobs if job.get("status") == "failed"),
-        "total": len(jobs),
-        "slots": background_worker_count(),
-    }
     return render_template(
         "background_jobs_dashboard.html",
         **base_template_context(),
         jobs=jobs,
-        stats=stats,
+        stats=background_job_stats(jobs),
     )
+
+
+def background_jobs_dashboard_data():
+    jobs = list_background_jobs()
+    return jsonify({"jobs": jobs, "stats": background_job_stats(jobs)})

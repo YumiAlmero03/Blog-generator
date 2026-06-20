@@ -13,34 +13,36 @@
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-6">
           <div class="rounded-2xl bg-sand-50 px-4 py-3">
             <div class="text-xs font-bold uppercase tracking-[0.14em] text-sand-500">Total</div>
-            <div class="mt-1 text-2xl font-bold text-sand-950">{{ stats.total }}</div>
+            <div class="mt-1 text-2xl font-bold text-sand-950" data-job-stat="total">{{ stats.total }}</div>
           </div>
           <div class="rounded-2xl bg-sand-50 px-4 py-3">
             <div class="text-xs font-bold uppercase tracking-[0.14em] text-sand-500">Slots</div>
-            <div class="mt-1 text-2xl font-bold text-sand-950">{{ stats.slots }}</div>
+            <div class="mt-1 text-2xl font-bold text-sand-950" data-job-stat="slots">{{ stats.slots }}</div>
           </div>
           <div class="rounded-2xl bg-amber-50 px-4 py-3">
             <div class="text-xs font-bold uppercase tracking-[0.14em] text-amber-700">Queued</div>
-            <div class="mt-1 text-2xl font-bold text-amber-900">{{ stats.queued }}</div>
+            <div class="mt-1 text-2xl font-bold text-amber-900" data-job-stat="queued">{{ stats.queued }}</div>
           </div>
           <div class="rounded-2xl bg-blue-50 px-4 py-3">
             <div class="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Running</div>
-            <div class="mt-1 text-2xl font-bold text-blue-900">{{ stats.running }}</div>
+            <div class="mt-1 text-2xl font-bold text-blue-900" data-job-stat="running">{{ stats.running }}</div>
           </div>
           <div class="rounded-2xl bg-green-50 px-4 py-3">
             <div class="text-xs font-bold uppercase tracking-[0.14em] text-green-700">Complete</div>
-            <div class="mt-1 text-2xl font-bold text-green-900">{{ stats.complete }}</div>
+            <div class="mt-1 text-2xl font-bold text-green-900" data-job-stat="complete">{{ stats.complete }}</div>
           </div>
           <div class="rounded-2xl bg-red-50 px-4 py-3">
             <div class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Failed</div>
-            <div class="mt-1 text-2xl font-bold text-red-900">{{ stats.failed }}</div>
+            <div class="mt-1 text-2xl font-bold text-red-900" data-job-stat="failed">{{ stats.failed }}</div>
           </div>
         </div>
-        <a href="/background-jobs-dashboard" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Refresh</a>
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="text-xs font-bold text-sand-500" data-jobs-live-status>Live updates on.</span>
+          <a href="/background-jobs-dashboard" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Refresh</a>
+        </div>
       </div>
 
-      {% if jobs %}
-        <div class="overflow-hidden rounded-[22px] border border-sand-200 bg-white">
+      <div class="overflow-hidden rounded-[22px] border border-sand-200 bg-white {% if not jobs %}hidden{% endif %}" data-jobs-table>
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
               <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
@@ -54,7 +56,7 @@
                   <th class="px-4 py-3">Updated</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-sand-100 text-sand-800">
+              <tbody class="divide-y divide-sand-100 text-sand-800" data-jobs-body>
                 {% for job in jobs %}
                   <tr>
                     <td class="px-4 py-3">
@@ -79,12 +81,111 @@
               </tbody>
             </table>
           </div>
-        </div>
-      {% else %}
-        <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
-          No background jobs are currently stored. Jobs appear here after a generator starts in the background.
-        </div>
-      {% endif %}
+      </div>
+      <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700 {% if jobs %}hidden{% endif %}" data-jobs-empty>
+        No background jobs are currently stored. Jobs appear here after a generator starts in the background.
+      </div>
     </section>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      const body = document.querySelector("[data-jobs-body]");
+      const table = document.querySelector("[data-jobs-table]");
+      const empty = document.querySelector("[data-jobs-empty]");
+      const liveStatus = document.querySelector("[data-jobs-live-status]");
+      let isLoading = false;
+
+      const escapeHtml = function (value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      };
+
+      const statusPill = function (status) {
+        const cleaned = String(status || "unknown");
+        if (cleaned === "running") {
+          return '<span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-blue-700">Running</span>';
+        }
+        if (cleaned === "queued") {
+          return '<span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">Queued</span>';
+        }
+        if (cleaned === "complete") {
+          return '<span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Complete</span>';
+        }
+        if (cleaned === "cancelled") {
+          return '<span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">Cancelled</span>';
+        }
+        return '<span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">' + escapeHtml(cleaned) + "</span>";
+      };
+
+      const renderJobs = function (jobs) {
+        if (!body || !table || !empty) {
+          return;
+        }
+        const items = Array.isArray(jobs) ? jobs : [];
+        table.classList.toggle("hidden", items.length === 0);
+        empty.classList.toggle("hidden", items.length !== 0);
+        body.innerHTML = items.map(function (job) {
+          return [
+            "<tr>",
+            '<td class="px-4 py-3">' + statusPill(job.status) + "</td>",
+            '<td class="max-w-xs px-4 py-3 font-mono text-xs text-sand-900">' + escapeHtml(job.path || "") + "</td>",
+            '<td class="max-w-md px-4 py-3">' + escapeHtml(job.error || job.message || "") + "</td>",
+            '<td class="px-4 py-3">' + escapeHtml(job.queue_position || "-") + "</td>",
+            '<td class="px-4 py-3">' + escapeHtml(job.status_code || "-") + "</td>",
+            '<td class="whitespace-nowrap px-4 py-3">' + escapeHtml(job.created_at || "") + "</td>",
+            '<td class="whitespace-nowrap px-4 py-3">' + escapeHtml(job.updated_at || "") + "</td>",
+            "</tr>",
+          ].join("");
+        }).join("");
+      };
+
+      const renderStats = function (stats) {
+        Object.keys(stats || {}).forEach(function (key) {
+          const target = document.querySelector('[data-job-stat="' + key + '"]');
+          if (target) {
+            target.textContent = stats[key];
+          }
+        });
+      };
+
+      const refresh = function () {
+        if (isLoading) {
+          return;
+        }
+        isLoading = true;
+        fetch("/background-jobs-dashboard/data", { headers: { Accept: "application/json" } })
+          .then(function (response) {
+            if (!response.ok) {
+              throw new Error("Background jobs update failed.");
+            }
+            return response.json();
+          })
+          .then(function (payload) {
+            renderStats(payload.stats || {});
+            renderJobs(payload.jobs || []);
+            if (liveStatus) {
+              liveStatus.textContent = "Live updates on.";
+            }
+          })
+          .catch(function () {
+            if (liveStatus) {
+              liveStatus.textContent = "Live update paused.";
+            }
+          })
+          .then(function () {
+            isLoading = false;
+          });
+      };
+
+      refresh();
+      window.setInterval(refresh, 2500);
+    })();
+  </script>
 {% endblock %}

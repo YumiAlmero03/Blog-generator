@@ -11,6 +11,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY . .
 
-EXPOSE 3444
+EXPOSE 3444 3445
 
 CMD ["python", "ui.py"]

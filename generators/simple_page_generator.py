@@ -1,5 +1,12 @@
 import json
 
+from generation_retry_policy import (
+    can_accept_close_enough,
+    max_generation_attempts,
+    publish_generation_draft,
+    raise_if_generation_cancelled,
+    wait_before_retry,
+)
 from logger import logger
 from prompts import (
     build_simple_page_content_prompt,
@@ -48,7 +55,8 @@ def generate_simple_page(
     last_word_count = 0
 
     attempt = 0
-    while True:
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
@@ -86,6 +94,7 @@ def generate_simple_page(
                     ", ".join(banned_terms),
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
             repetition_issue = repeated_content_issue(markdown_content)
             if repetition_issue:
@@ -98,6 +107,7 @@ def generate_simple_page(
                     attempt,
                     repetition_issue,
                 )
+                wait_before_retry(attempt, progress_callback, "repeated content")
                 continue
             invalid_meta_lengths = [
                 len(item.get("text", ""))
@@ -107,7 +117,7 @@ def generate_simple_page(
             if invalid_meta_lengths:
                 _publish_progress(
                     progress_callback,
-                    f"Simple page attempt {attempt}: meta descriptions missed 120-140 characters ({', '.join(str(length) for length in invalid_meta_lengths)} chars). Retrying...",
+                    f"Simple page attempt {attempt}: meta descriptions missed 130-160 characters ({', '.join(str(length) for length in invalid_meta_lengths)} chars). Retrying...",
                 )
                 logger.warning(
                     "Simple page meta descriptions missed %d-%d characters with lengths %s on attempt %d",
@@ -116,6 +126,7 @@ def generate_simple_page(
                     ", ".join(str(length) for length in invalid_meta_lengths),
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "meta length miss")
                 continue
             h3_count = count_markdown_heading_level(markdown_content, 3)
             if h3_count < 3:
@@ -128,6 +139,7 @@ def generate_simple_page(
                     h3_count,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "missing subheadings")
                 continue
 
             if word_count < min_word_count:
@@ -141,6 +153,7 @@ def generate_simple_page(
                     min_word_count,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "short simple page")
                 continue
 
             if not min_word_count and word_count > max_word_count:
@@ -154,6 +167,7 @@ def generate_simple_page(
                     max_word_count,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "long simple page")
                 continue
 
             logger.info("Simple page generated successfully for '%s' with %d words", page_title, word_count)
@@ -191,7 +205,8 @@ def generate_simple_page_title(
         language=language,
     )
     attempt = 0
-    while True:
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
@@ -208,6 +223,7 @@ def generate_simple_page_title(
             title = (data.get("title", "") or "").strip()
             if not title:
                 _publish_progress(progress_callback, f"Simple page title attempt {attempt}: no title returned. Retrying...")
+                wait_before_retry(attempt, progress_callback, "empty title")
                 continue
             banned_terms = find_banned_terms_in_text(title)
             if banned_terms:
@@ -215,11 +231,14 @@ def generate_simple_page_title(
                     progress_callback,
                     f"Simple page title attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
             return title
         except Exception as exc:
             logger.exception("generate_simple_page_title failed on attempt %d. Raw response: %s", attempt, raw)
             raise ValueError("Could not parse JSON from model output.") from exc
+
+    raise ValueError("Generated simple page title could not satisfy the rules.")
 
 
 def generate_simple_page_meta_descriptions(
@@ -243,13 +262,14 @@ def generate_simple_page_meta_descriptions(
         language=language,
     )
     attempt = 0
-    while True:
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words, missed the 120-140 character range, or returned too few descriptions.\n"
+                "- Your previous response used banned words, missed the 130-160 character range, or returned too few descriptions.\n"
                 "- Return exactly 3 fresh meta descriptions in valid JSON only.\n"
             )
         full_prompt = prompt + retry_instruction
@@ -263,6 +283,7 @@ def generate_simple_page_meta_descriptions(
                     progress_callback,
                     f"Simple page meta attempt {attempt}: returned {len(meta_descriptions)} usable descriptions, target is 3. Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "too few meta descriptions")
                 continue
             meta_text = "\n".join(item.get("text", "") for item in meta_descriptions)
             banned_terms = find_banned_terms_in_text(meta_text)
@@ -271,6 +292,7 @@ def generate_simple_page_meta_descriptions(
                     progress_callback,
                     f"Simple page meta attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
             invalid_lengths = [
                 len(item.get("text", ""))
@@ -278,15 +300,24 @@ def generate_simple_page_meta_descriptions(
                 if not MIN_META_DESCRIPTION_CHARACTERS <= len(item.get("text", "")) <= MAX_META_DESCRIPTION_CHARACTERS
             ]
             if invalid_lengths:
+                if all(_is_close_meta_length(length) for length in invalid_lengths) and can_accept_close_enough(attempt):
+                    _publish_progress(
+                        progress_callback,
+                        f"Simple page meta attempt {attempt}: accepting close descriptions after strict retries.",
+                    )
+                    return meta_descriptions[:3]
                 _publish_progress(
                     progress_callback,
-                    f"Simple page meta attempt {attempt}: descriptions missed 120-140 characters ({', '.join(str(length) for length in invalid_lengths)} chars). Retrying...",
+                    f"Simple page meta attempt {attempt}: descriptions missed 130-160 characters ({', '.join(str(length) for length in invalid_lengths)} chars). Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "meta length miss")
                 continue
             return meta_descriptions[:3]
         except Exception as exc:
             logger.exception("generate_simple_page_meta_descriptions failed on attempt %d. Raw response: %s", attempt, raw)
             raise ValueError("Could not parse JSON from model output.") from exc
+
+    raise ValueError("Generated simple page meta descriptions could not satisfy the rules.")
 
 
 def generate_simple_page_content(
@@ -321,8 +352,11 @@ def generate_simple_page_content(
         language=language,
     )
     last_word_count = 0
+    best_markdown_content = ""
+    best_word_count = 0
     attempt = 0
-    while True:
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
@@ -348,6 +382,7 @@ def generate_simple_page_content(
                     progress_callback,
                     f"Simple page content attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
             repetition_issue = repeated_content_issue(markdown_content)
             if repetition_issue:
@@ -355,6 +390,7 @@ def generate_simple_page_content(
                     progress_callback,
                     f"Simple page content attempt {attempt}: {repetition_issue} Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "repeated content")
                 continue
             h3_count = count_markdown_heading_level(markdown_content, 3)
             if h3_count < 3:
@@ -362,23 +398,52 @@ def generate_simple_page_content(
                     progress_callback,
                     f"Simple page content attempt {attempt}: only {h3_count} ### subheadings, minimum is 3. Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "missing subheadings")
                 continue
-            if word_count < min_word_count:
-                _publish_progress(
+            if word_count > best_word_count:
+                best_markdown_content = markdown_content
+                best_word_count = word_count
+                publish_generation_draft(
                     progress_callback,
-                    f"Simple page content attempt {attempt}: {word_count} words, minimum is {min_word_count}. Retrying...",
+                    markdown_to_html(markdown_content),
+                    f"Showing a draft while retrying for the checklist ({word_count} words).",
                 )
-                continue
+            if word_count < min_word_count:
+                if _is_close_word_count(word_count, min_word_count) and can_accept_close_enough(attempt):
+                    _publish_progress(
+                        progress_callback,
+                        f"Simple page content attempt {attempt}: accepting close word count after strict retries ({word_count} words).",
+                    )
+                else:
+                    _publish_progress(
+                        progress_callback,
+                        f"Simple page content attempt {attempt}: {word_count} words, minimum is {min_word_count}. Retrying...",
+                    )
+                    wait_before_retry(attempt, progress_callback, "short simple page content")
+                    continue
             if not min_word_count and word_count > max_word_count:
                 _publish_progress(
                     progress_callback,
                     f"Simple page content attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "long simple page content")
                 continue
             return markdown_to_html(markdown_content)
         except Exception as exc:
             logger.exception("generate_simple_page_content failed on attempt %d. Raw response: %s", attempt, raw)
             raise ValueError("Could not parse JSON from model output.") from exc
+
+    if best_markdown_content and _is_close_word_count(best_word_count, min_word_count):
+        _publish_progress(
+            progress_callback,
+            f"Using best available simple page content after {attempt} attempts ({best_word_count} words).",
+        )
+        logger.warning(
+            "Using best-effort simple page content with %d words after %d attempts.",
+            best_word_count,
+            attempt,
+        )
+        return markdown_to_html(best_markdown_content)
 
     raise ValueError(
         "Generated simple page content could not satisfy the rules. "
@@ -413,6 +478,16 @@ def _normalize_meta_descriptions(raw_items) -> list[dict]:
         if len(normalized) >= 3:
             break
     return normalized
+
+
+def _is_close_meta_length(length: int) -> bool:
+    return 100 <= length <= 160
+
+
+def _is_close_word_count(word_count: int, min_word_count: int) -> bool:
+    if not min_word_count:
+        return True
+    return word_count >= int(min_word_count * 0.85)
 
 
 def _normalize_word_limits(min_words: int, max_words: int) -> tuple[int, int]:

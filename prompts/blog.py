@@ -97,7 +97,7 @@ Rules:
 - If a brand is provided, align the wording with the brand and mention the brand only if it fits naturally.
 - Vary the approach for each variant.
 - Do not add any extra text before or after the JSON.
-- Ensure each meta description is complete, natural, and within the 120-140 character limit.
+- Ensure each meta description is complete, natural, and within the 130-160 character limit.
 - Start your response with '{' and end with '}'
 
 Return valid JSON only in this format:

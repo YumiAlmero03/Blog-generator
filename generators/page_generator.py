@@ -2,6 +2,13 @@ import json
 import random
 import re
 
+from generation_retry_policy import (
+    can_accept_close_enough,
+    max_generation_attempts,
+    publish_generation_draft,
+    raise_if_generation_cancelled,
+    wait_before_retry,
+)
 from logger import logger
 from prompts import build_page_content_prompt, build_page_meta_description_prompt, build_page_prompt, build_page_title_prompt
 from utils import extract_json_string
@@ -81,9 +88,14 @@ def generate_page(
     )
 
     last_word_count = 0
+    best_markdown_content = ""
+    best_word_count = 0
+    best_title = ""
+    best_meta_description = ""
 
     attempt = 0
-    while True:
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
@@ -122,23 +134,31 @@ def generate_page(
                     keyword,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
 
             meta_description_length = len(meta_description)
             if not MIN_META_DESCRIPTION_CHARACTERS <= meta_description_length <= MAX_META_DESCRIPTION_CHARACTERS:
-                _publish_progress(
-                    progress_callback,
-                    f"Page attempt {attempt}: meta description is {meta_description_length} characters, target is 120-140. Retrying...",
-                )
-                logger.warning(
-                    "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d",
-                    meta_description_length,
-                    MIN_META_DESCRIPTION_CHARACTERS,
-                    MAX_META_DESCRIPTION_CHARACTERS,
-                    keyword,
-                    attempt,
-                )
-                continue
+                if _is_close_meta_length(meta_description_length) and can_accept_close_enough(attempt):
+                    _publish_progress(
+                        progress_callback,
+                        f"Page attempt {attempt}: accepting close meta description after strict retries.",
+                    )
+                else:
+                    _publish_progress(
+                        progress_callback,
+                        f"Page attempt {attempt}: meta description is {meta_description_length} characters, target is 130-160. Retrying...",
+                    )
+                    logger.warning(
+                        "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d",
+                        meta_description_length,
+                        MIN_META_DESCRIPTION_CHARACTERS,
+                        MAX_META_DESCRIPTION_CHARACTERS,
+                        keyword,
+                        attempt,
+                    )
+                    wait_before_retry(attempt, progress_callback, "meta length miss")
+                    continue
 
             repetition_issue = repeated_content_issue(markdown_content)
             if repetition_issue:
@@ -152,21 +172,40 @@ def generate_page(
                     attempt,
                     repetition_issue,
                 )
+                wait_before_retry(attempt, progress_callback, "repeated content")
                 continue
 
-            if word_count <= min_word_count:
-                _publish_progress(
+            if word_count > best_word_count:
+                best_markdown_content = markdown_content
+                best_word_count = word_count
+                best_title = title
+                best_meta_description = meta_description
+                publish_generation_draft(
                     progress_callback,
-                    f"Page attempt {attempt}: {word_count} words, content must be more than {min_word_count}. Retrying...",
+                    markdown_to_html(markdown_content),
+                    f"Showing a draft while retrying for the checklist ({word_count} words).",
                 )
-                logger.warning(
-                    "Page word count is %d (must be more than: %d) for keyword '%s' on attempt %d",
-                    word_count,
-                    min_word_count,
-                    keyword,
-                    attempt,
-                )
-                continue
+
+            if word_count <= min_word_count:
+                if _is_close_word_count(word_count, min_word_count) and can_accept_close_enough(attempt):
+                    _publish_progress(
+                        progress_callback,
+                        f"Page attempt {attempt}: accepting close word count after strict retries ({word_count} words).",
+                    )
+                else:
+                    _publish_progress(
+                        progress_callback,
+                        f"Page attempt {attempt}: {word_count} words, content must be more than {min_word_count}. Retrying...",
+                    )
+                    logger.warning(
+                        "Page word count is %d (must be more than: %d) for keyword '%s' on attempt %d",
+                        word_count,
+                        min_word_count,
+                        keyword,
+                        attempt,
+                    )
+                    wait_before_retry(attempt, progress_callback, "short page content")
+                    continue
 
             if not min_word_count and word_count > max_word_count:
                 _publish_progress(
@@ -180,6 +219,7 @@ def generate_page(
                     keyword,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "long page content")
                 continue
 
             content = markdown_to_html(markdown_content)
@@ -200,6 +240,26 @@ def generate_page(
         except Exception as exc:
             logger.exception("generate_page failed on attempt %d. Raw response: %s", attempt, raw)
             raise ValueError("Could not parse JSON from model output.") from exc
+
+    if best_markdown_content and _is_close_word_count(best_word_count, min_word_count):
+        content = markdown_to_html(best_markdown_content)
+        content, injected_count = inject_image_placeholders(content)
+        _publish_progress(
+            progress_callback,
+            f"Using best available page after {attempt} attempts ({best_word_count} words).",
+        )
+        logger.warning(
+            "Using best-effort page for keyword '%s' with %d words after %d attempts.",
+            keyword,
+            best_word_count,
+            attempt,
+        )
+        return {
+            "title": best_title,
+            "meta_description": best_meta_description,
+            "content": content,
+            "image_count": injected_count,
+        }
 
     raise ValueError(
         "Generated page could not satisfy the rules. "
@@ -229,7 +289,8 @@ def generate_page_title(
     )
 
     attempt = 0
-    while True:
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
@@ -249,6 +310,7 @@ def generate_page_title(
             title = (data.get("title", "") or "").strip()
             if not title:
                 _publish_progress(progress_callback, f"Page title attempt {attempt}: no title returned. Retrying...")
+                wait_before_retry(attempt, progress_callback, "empty title")
                 continue
             banned_terms = find_banned_terms_in_text(title)
             if banned_terms:
@@ -262,11 +324,14 @@ def generate_page_title(
                     keyword,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
             return title
         except Exception as exc:
             logger.exception("generate_page_title failed on attempt %d. Raw response: %s", attempt, raw)
             raise ValueError("Could not parse JSON from model output.") from exc
+
+    raise ValueError("Generated page title could not satisfy the rules.")
 
 
 def generate_page_meta_description(
@@ -293,13 +358,14 @@ def generate_page_meta_description(
     )
 
     attempt = 0
-    while True:
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous meta description was missing, used banned words, or missed the 120-140 character range.\n"
+                "- Your previous meta description was missing, used banned words, or missed the 130-160 character range.\n"
                 "- Return one fresh meta description in valid JSON only.\n"
                 "- Count only the description text, not JSON syntax.\n"
             )
@@ -314,6 +380,7 @@ def generate_page_meta_description(
             meta_description = (data.get("meta_description", "") or "").strip()
             if not meta_description:
                 _publish_progress(progress_callback, f"Page meta attempt {attempt}: no meta description returned. Retrying...")
+                wait_before_retry(attempt, progress_callback, "empty meta description")
                 continue
             banned_terms = find_banned_terms_in_text(meta_description)
             if banned_terms:
@@ -327,12 +394,19 @@ def generate_page_meta_description(
                     keyword,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
             meta_description_length = len(meta_description)
             if not MIN_META_DESCRIPTION_CHARACTERS <= meta_description_length <= MAX_META_DESCRIPTION_CHARACTERS:
+                if _is_close_meta_length(meta_description_length) and can_accept_close_enough(attempt):
+                    _publish_progress(
+                        progress_callback,
+                        f"Page meta attempt {attempt}: accepting close description after strict retries.",
+                    )
+                    return meta_description
                 _publish_progress(
                     progress_callback,
-                    f"Page meta attempt {attempt}: {meta_description_length} characters, target is 120-140. Retrying...",
+                    f"Page meta attempt {attempt}: {meta_description_length} characters, target is 130-160. Retrying...",
                 )
                 logger.warning(
                     "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d",
@@ -342,11 +416,14 @@ def generate_page_meta_description(
                     keyword,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "meta length miss")
                 continue
             return meta_description
         except Exception as exc:
             logger.exception("generate_page_meta_description failed on attempt %d. Raw response: %s", attempt, raw)
             raise ValueError("Could not parse JSON from model output.") from exc
+
+    raise ValueError("Generated page meta description could not satisfy the rules.")
 
 
 def generate_page_content(
@@ -384,8 +461,11 @@ def generate_page_content(
     )
 
     last_word_count = 0
+    best_markdown_content = ""
+    best_word_count = 0
     attempt = 0
-    while True:
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
@@ -422,6 +502,7 @@ def generate_page_content(
                     keyword,
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
 
             repetition_issue = repeated_content_issue(markdown_content)
@@ -436,27 +517,45 @@ def generate_page_content(
                     attempt,
                     repetition_issue,
                 )
+                wait_before_retry(attempt, progress_callback, "repeated content")
                 continue
 
-            if word_count <= min_word_count:
-                _publish_progress(
+            if word_count > best_word_count:
+                best_markdown_content = markdown_content
+                best_word_count = word_count
+                publish_generation_draft(
                     progress_callback,
-                    f"Page content attempt {attempt}: {word_count} words, content must be more than {min_word_count}. Retrying...",
+                    markdown_to_html(markdown_content),
+                    f"Showing a draft while retrying for the checklist ({word_count} words).",
                 )
-                logger.warning(
-                    "Page content word count is %d (must be more than: %d) for keyword '%s' on attempt %d",
-                    word_count,
-                    min_word_count,
-                    keyword,
-                    attempt,
-                )
-                continue
+
+            if word_count <= min_word_count:
+                if _is_close_word_count(word_count, min_word_count) and can_accept_close_enough(attempt):
+                    _publish_progress(
+                        progress_callback,
+                        f"Page content attempt {attempt}: accepting close word count after strict retries ({word_count} words).",
+                    )
+                else:
+                    _publish_progress(
+                        progress_callback,
+                        f"Page content attempt {attempt}: {word_count} words, content must be more than {min_word_count}. Retrying...",
+                    )
+                    logger.warning(
+                        "Page content word count is %d (must be more than: %d) for keyword '%s' on attempt %d",
+                        word_count,
+                        min_word_count,
+                        keyword,
+                        attempt,
+                    )
+                    wait_before_retry(attempt, progress_callback, "short page content")
+                    continue
 
             if not min_word_count and word_count > max_word_count:
                 _publish_progress(
                     progress_callback,
                     f"Page content attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "long page content")
                 continue
 
             content = markdown_to_html(markdown_content)
@@ -476,6 +575,24 @@ def generate_page_content(
             logger.exception("generate_page_content failed on attempt %d. Raw response: %s", attempt, raw)
             raise ValueError("Could not parse JSON from model output.") from exc
 
+    if best_markdown_content and _is_close_word_count(best_word_count, min_word_count):
+        content = markdown_to_html(best_markdown_content)
+        content, injected_count = inject_image_placeholders(content)
+        _publish_progress(
+            progress_callback,
+            f"Using best available page content after {attempt} attempts ({best_word_count} words).",
+        )
+        logger.warning(
+            "Using best-effort page content for keyword '%s' with %d words after %d attempts.",
+            keyword,
+            best_word_count,
+            attempt,
+        )
+        return {
+            "content": content,
+            "image_count": injected_count,
+        }
+
     raise ValueError(
         "Generated page content could not satisfy the rules. "
         f"Last attempt was {last_word_count} words."
@@ -491,6 +608,16 @@ def _publish_progress(progress_callback, message: str, kind: str = "status") -> 
         progress_callback(message)
     except Exception:
         logger.exception("generation progress callback failed")
+
+
+def _is_close_meta_length(length: int) -> bool:
+    return 100 <= length <= 160
+
+
+def _is_close_word_count(word_count: int, min_word_count: int) -> bool:
+    if not min_word_count:
+        return True
+    return word_count >= int(min_word_count * 0.85)
 
 
 def _normalize_word_limits(min_words: int, max_words: int) -> tuple[int, int]:

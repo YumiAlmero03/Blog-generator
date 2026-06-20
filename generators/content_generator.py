@@ -1,5 +1,6 @@
 import json
 import re
+from generation_retry_policy import max_generation_attempts, publish_generation_draft, raise_if_generation_cancelled, wait_before_retry
 from prompts import build_backlink_content_prompt, build_content_prompt, build_scoped_content_revision_prompt
 from utils import extract_json_string
 from logger import logger
@@ -134,7 +135,7 @@ Selected title: {title}
 Primary keyword or anchor: {keyword}
 Supporting keyword: {supporting_keyword}
 Brand: {brand}
-Target language: {language}
+Required language: {language}
 
 Content:
 {(content or '')[:6000]}
@@ -188,7 +189,7 @@ Return valid JSON only.
 Selected title: {title}
 Topic keyword: {keyword}
 Brand: {brand}
-Target language: {language}
+Required language: {language}
 Context:
 {context}
 
@@ -281,7 +282,9 @@ def _generate_content_from_prompt(
     best_effort_word_count = 0
 
     attempt = 0
-    while not max_attempts or attempt < max_attempts:
+    effective_max_attempts = max_attempts or max_generation_attempts()
+    while attempt < effective_max_attempts:
+        raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
         if attempt > 1:
@@ -338,6 +341,7 @@ def _generate_content_from_prompt(
                     ", ".join(banned_terms),
                     attempt,
                 )
+                wait_before_retry(attempt, progress_callback, "banned term match")
                 continue
 
             repetition_issue = repeated_content_issue(content)
@@ -356,11 +360,17 @@ def _generate_content_from_prompt(
                     attempt,
                     repetition_issue,
                 )
+                wait_before_retry(attempt, progress_callback, "repeated content")
                 continue
 
             if word_count > best_effort_word_count:
                 best_effort_content = content
                 best_effort_word_count = word_count
+                publish_generation_draft(
+                    progress_callback,
+                    content,
+                    f"Showing a draft while retrying for the checklist ({word_count} words).",
+                )
 
             if min_words and word_count < min_words:
                 last_failure_detail = (
@@ -378,6 +388,7 @@ def _generate_content_from_prompt(
                     attempt,
                     len(raw),
                 )
+                wait_before_retry(attempt, progress_callback, "short content")
                 continue
 
             if max_words and not min_words and word_count > max_words:
@@ -397,6 +408,7 @@ def _generate_content_from_prompt(
                     attempt,
                     len(raw),
                 )
+                wait_before_retry(attempt, progress_callback, "long content")
                 continue
 
             if validator:
@@ -415,6 +427,7 @@ def _generate_content_from_prompt(
                         attempt,
                         validation_error,
                     )
+                    wait_before_retry(attempt, progress_callback, "content validation")
                     continue
 
             logger.info(
@@ -431,6 +444,7 @@ def _generate_content_from_prompt(
                     progress_callback,
                     f"Content attempt {attempt}: model returned no usable content. Retrying...",
                 )
+                wait_before_retry(attempt, progress_callback, "parse failure")
                 continue
             raise ValueError("Could not parse JSON from model output.") from exc
 

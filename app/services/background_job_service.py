@@ -9,11 +9,13 @@ from uuid import uuid4
 
 from flask import Flask
 
+from generation_retry_policy import GenerationCancelled
 from logger import logger
 
 
-TERMINAL_STATUSES = {"complete", "failed"}
+TERMINAL_STATUSES = {"complete", "failed", "cancelled"}
 _JOBS: dict[str, "BackgroundJob"] = {}
+_SYSTEM_JOBS: dict[str, "BackgroundJob"] = {}
 _PENDING_IDS: list[str] = []
 _JOB_QUEUE: Queue[tuple[str, str, dict[str, list[str]]]] = Queue()
 _LOCK = RLock()
@@ -71,12 +73,58 @@ def get_background_job(job_id: str) -> dict | None:
 def list_background_jobs() -> list[dict]:
     cleanup_background_jobs()
     with _LOCK:
-        jobs = sorted(_JOBS.values(), key=lambda item: item.created_at, reverse=True)
+        jobs = sorted(
+            [*_JOBS.values(), *_SYSTEM_JOBS.values()],
+            key=lambda item: item.created_at,
+            reverse=True,
+        )
         return [job.to_dict(include_html=False) | _job_times(job) for job in jobs]
+
+
+def background_job_stats(jobs: list[dict] | None = None) -> dict:
+    listed_jobs = jobs if jobs is not None else list_background_jobs()
+    return {
+        "queued": sum(1 for job in listed_jobs if job.get("status") == "queued"),
+        "running": sum(1 for job in listed_jobs if job.get("status") == "running"),
+        "complete": sum(1 for job in listed_jobs if job.get("status") == "complete"),
+        "failed": sum(1 for job in listed_jobs if job.get("status") == "failed"),
+        "cancelled": sum(1 for job in listed_jobs if job.get("status") == "cancelled"),
+        "total": len(listed_jobs),
+        "slots": background_worker_count(),
+    }
 
 
 def background_worker_count() -> int:
     return _worker_count()
+
+
+def start_system_background_job(path: str, message: str = "Running...") -> str:
+    cleanup_background_jobs()
+    job = BackgroundJob(
+        id=uuid4().hex,
+        path=path,
+        status="running",
+        message=message,
+    )
+    with _LOCK:
+        _SYSTEM_JOBS[job.id] = job
+    return job.id
+
+
+def update_system_background_job(
+    job_id: str,
+    status: str,
+    message: str = "",
+    error: str = "",
+    status_code: int = 0,
+) -> None:
+    _update_job(
+        job_id,
+        status=status,
+        message=message,
+        error=error,
+        status_code=status_code,
+    )
 
 
 def cleanup_background_jobs(max_age_minutes: int = 30) -> None:
@@ -89,6 +137,13 @@ def cleanup_background_jobs(max_age_minutes: int = 30) -> None:
         ]
         for job_id in expired_ids:
             _JOBS.pop(job_id, None)
+        expired_system_ids = [
+            job_id
+            for job_id, job in _SYSTEM_JOBS.items()
+            if job.updated_at < cutoff and job.status in TERMINAL_STATUSES
+        ]
+        for job_id in expired_system_ids:
+            _SYSTEM_JOBS.pop(job_id, None)
 
 
 def _ensure_workers(app: Flask) -> None:
@@ -140,6 +195,15 @@ def _run_background_post(app: Flask, job_id: str, path: str, form_data: dict[str
                 status_code=response.status_code,
             )
     except Exception as exc:
+        if isinstance(exc, GenerationCancelled):
+            _update_job(
+                job_id,
+                status="cancelled",
+                message="Generation stopped.",
+                error=str(exc) or "Generation stopped by user.",
+                status_code=499,
+            )
+            return
         logger.exception("background generation job failed")
         _update_job(
             job_id,
@@ -152,7 +216,7 @@ def _run_background_post(app: Flask, job_id: str, path: str, form_data: dict[str
 
 def _update_job(job_id: str, **changes) -> None:
     with _LOCK:
-        job = _JOBS.get(job_id)
+        job = _JOBS.get(job_id) or _SYSTEM_JOBS.get(job_id)
         if not job:
             return
         for key, value in changes.items():
