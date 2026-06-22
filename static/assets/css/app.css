@@ -100,7 +100,10 @@ img {
 
 .crop-stage img {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  max-height: min(70vh, 720px);
+  margin: 0 auto;
   height: auto;
 }
 

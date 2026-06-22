@@ -48,7 +48,7 @@ def cancel_generation(token: str = "") -> None:
     if not cleaned_token:
         return
     cancel_generation_token(cleaned_token)
-    publish_generation_event(cleaned_token, {"cancelled": True, "message": "Stopping generation..."})
+    publish_generation_event(cleaned_token, {"cancelled": True, "message": "Skipping current generation..."})
 
 
 def is_generation_cancelled(token: str = "") -> bool:
@@ -77,6 +77,13 @@ def publish_generation_event(token: str = "", payload: dict | None = None) -> No
             subscriber.put_nowait(event_payload)
         except queue.Full:
             pass
+
+    try:
+        from app.services.background_job_service import update_background_job_from_generation_event
+
+        update_background_job_from_generation_event(cleaned_token, event_payload)
+    except Exception:
+        pass
 
 
 def get_generation_status(token: str = "") -> dict:

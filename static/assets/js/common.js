@@ -47,7 +47,7 @@
       actions = document.createElement("div");
       actions.className = "mt-4 flex flex-wrap items-center justify-center gap-2";
       actions.setAttribute("data-loading-actions", "");
-      actions.innerHTML = '<button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100" data-loading-stop>Stop Generating</button>';
+      actions.innerHTML = '<button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100" data-loading-stop>Skip Generating</button>';
       text.parentElement.appendChild(actions);
     }
     return actions;
@@ -77,13 +77,58 @@
   let loadingCompletionFallback = null;
   let loadingResultHandled = false;
   let loadingUsesBackgroundJob = false;
+  let activeLoadingForm = null;
   const generationStatusPollDelay = 1500;
   let latestLoadingPrompt = "";
 
+  function usesInlineLoading() {
+    return activeLoadingForm && activeLoadingForm.hasAttribute("data-inline-loading");
+  }
+
+  function getInlineTarget(attributeName) {
+    if (!activeLoadingForm) {
+      return null;
+    }
+    const selector = activeLoadingForm.dataset[attributeName] || "";
+    if (!selector) {
+      return null;
+    }
+    return document.querySelector(selector);
+  }
+
   function setLoadingStatus(message) {
+    const cleanedMessage = String(message || "");
+    if (usesInlineLoading() && ["Queued in background...", "Generating..."].includes(cleanedMessage)) {
+      return;
+    }
+    if (usesInlineLoading()) {
+      const status = getInlineTarget("inlineStatusTarget");
+      if (status) {
+        status.textContent = cleanedMessage;
+        status.classList.toggle("hidden", !cleanedMessage);
+      }
+      return;
+    }
     const status = getOverlayStatus();
     if (status) {
-      status.textContent = message || "";
+      status.textContent = cleanedMessage;
+    }
+  }
+
+  function setLoadingError(message) {
+    const cleanedMessage = String(message || "");
+    if (usesInlineLoading()) {
+      const error = getInlineTarget("inlineErrorTarget");
+      if (error) {
+        error.textContent = cleanedMessage;
+        error.classList.toggle("hidden", !cleanedMessage);
+      } else if (cleanedMessage) {
+        setLoadingStatus(cleanedMessage);
+      }
+      return;
+    }
+    if (cleanedMessage) {
+      setLoadingStatus(cleanedMessage);
     }
   }
 
@@ -123,6 +168,15 @@
   }
 
   function showLoading(message) {
+    if (usesInlineLoading()) {
+      setLoadingStatus(message || "Generating...");
+      setLoadingPrompt("");
+      const actions = getInlineTarget("inlineActionsTarget");
+      if (actions) {
+        actions.classList.remove("hidden");
+      }
+      return;
+    }
     const overlay = getOverlay();
     const text = getOverlayText();
     if (!overlay) {
@@ -141,6 +195,10 @@
     const overlay = getOverlay();
     if (overlay) {
       overlay.classList.remove("active");
+    }
+    const actions = getInlineTarget("inlineActionsTarget");
+    if (actions) {
+      actions.classList.add("hidden");
     }
     if (loadingEventSource) {
       loadingEventSource.close();
@@ -163,6 +221,7 @@
     loadingResultHandled = false;
     loadingUsesBackgroundJob = false;
     setLoadingStatus("");
+    activeLoadingForm = null;
     setLoadingPrompt("");
     const draft = document.querySelector("[data-loading-draft]");
     if (draft) {
@@ -338,9 +397,11 @@
 
   function startFormLoading(form, message) {
     if (!form) {
+      activeLoadingForm = null;
       showLoading(message);
       return "";
     }
+    activeLoadingForm = form;
     const token = ensureStatusToken(form);
     currentGenerationToken = token;
     loadingResultHandled = false;
@@ -351,6 +412,10 @@
   }
 
   function setLoadingDraft(html) {
+    document.dispatchEvent(new CustomEvent("app:generation-draft", { detail: { html: html } }));
+    if (usesInlineLoading()) {
+      return;
+    }
     const draft = getOverlayDraft();
     const frame = draft ? draft.querySelector("[data-loading-draft-frame]") : null;
     if (!draft || !frame || !html) {
@@ -362,15 +427,20 @@
 
   function stopCurrentGeneration() {
     if (!currentGenerationToken) {
-      setLoadingStatus("No running generation to stop.");
+      setLoadingStatus("No running generation to skip.");
       return;
     }
-    setLoadingStatus("Stopping generation...");
+    setLoadingStatus("Skipping current generation...");
+    document.querySelectorAll("[data-loading-stop]").forEach(function (button) {
+      button.disabled = true;
+      button.classList.add("cursor-not-allowed", "opacity-60");
+      button.textContent = "Skip requested";
+    });
     fetch("/generation-status/" + encodeURIComponent(currentGenerationToken) + "/cancel", {
       method: "POST",
       headers: { Accept: "application/json" },
     }).catch(function () {
-      setLoadingStatus("Could not send stop request.");
+      setLoadingStatus("Could not send skip request.");
     });
   }
 
@@ -421,7 +491,10 @@
     if (!form) {
       return;
     }
-    const token = startFormLoading(form, form.dataset.loadingMessage);
+    const message = submitter && submitter.dataset && submitter.dataset.loadingMessage
+      ? submitter.dataset.loadingMessage
+      : form.dataset.loadingMessage;
+    const token = startFormLoading(form, message);
     loadingUsesBackgroundJob = true;
     setLoadingStatus("Queued in background...");
     let formData;
@@ -453,8 +526,10 @@
         pollBackgroundJob(payload.id);
       })
       .catch(function (error) {
-        setLoadingStatus(error.message || "Could not start background job.");
-        window.setTimeout(hideLoading, 1800);
+        setLoadingError(error.message || "Could not start background job.");
+        if (!usesInlineLoading()) {
+          window.setTimeout(hideLoading, 1800);
+        }
       });
   }
 
@@ -485,8 +560,10 @@
             return;
           }
           if (payload.status === "failed") {
-            setLoadingStatus(payload.error || "Background generation failed.");
-            window.setTimeout(hideLoading, 2200);
+            setLoadingError(payload.error || "Background generation failed.");
+            if (!usesInlineLoading()) {
+              window.setTimeout(hideLoading, 2200);
+            }
             return;
           }
           if (payload.status === "cancelled") {
@@ -496,8 +573,10 @@
           window.setTimeout(poll, 1200);
         })
         .catch(function (error) {
-          setLoadingStatus(error.message || "Background job status failed.");
-          window.setTimeout(hideLoading, 2200);
+          setLoadingError(error.message || "Background job status failed.");
+          if (!usesInlineLoading()) {
+            window.setTimeout(hideLoading, 2200);
+          }
         });
     };
 
@@ -692,7 +771,10 @@
       submitFormInBackground(form, event.submitter || null);
       return;
     }
-    startFormLoading(form, form.dataset.loadingMessage);
+    const message = event.submitter && event.submitter.dataset && event.submitter.dataset.loadingMessage
+      ? event.submitter.dataset.loadingMessage
+      : form.dataset.loadingMessage;
+    startFormLoading(form, message);
   });
 
   document.addEventListener("click", function (event) {

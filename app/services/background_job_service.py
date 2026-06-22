@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from queue import Queue
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -21,6 +22,7 @@ _JOB_QUEUE: Queue[tuple[str, str, dict[str, list[str]]]] = Queue()
 _LOCK = RLock()
 _WORKERS_STARTED = False
 _WORKER_APP: Flask | None = None
+_TOKEN_JOB_IDS: dict[str, str] = {}
 
 
 @dataclass
@@ -32,6 +34,7 @@ class BackgroundJob:
     html: str = ""
     status_code: int = 0
     error: str = ""
+    repeat_reason: str = ""
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -45,6 +48,7 @@ class BackgroundJob:
             "queue_position": queue_position,
             "status_code": self.status_code,
             "error": self.error,
+            "repeat_reason": self.repeat_reason,
         }
         if include_html:
             payload["html"] = self.html
@@ -58,6 +62,9 @@ def start_background_post(app: Flask, path: str, form_data: dict[str, list[str]]
     with _LOCK:
         _JOBS[job.id] = job
         _PENDING_IDS.append(job.id)
+        token = _generation_token_from_form(form_data)
+        if token:
+            _TOKEN_JOB_IDS[token] = job.id
     _JOB_QUEUE.put((job.id, path, form_data))
     return job
 
@@ -127,6 +134,29 @@ def update_system_background_job(
     )
 
 
+def update_background_job_from_generation_event(token: str = "", payload: dict | None = None) -> None:
+    cleaned_token = (token or "").strip()
+    if not cleaned_token:
+        return
+
+    event_payload = payload or {}
+    message = str(event_payload.get("message", "") or "").strip()
+    if not message:
+        return
+
+    with _LOCK:
+        job_id = _TOKEN_JOB_IDS.get(cleaned_token)
+        job = _JOBS.get(job_id or "")
+        if not job or job.status in TERMINAL_STATUSES:
+            return
+
+    changes = {"message": message}
+    repeat_reason = _repeat_reason_from_message(message)
+    if repeat_reason:
+        changes["repeat_reason"] = repeat_reason
+    _update_job(job_id, **changes)
+
+
 def cleanup_background_jobs(max_age_minutes: int = 30) -> None:
     cutoff = datetime.utcnow() - timedelta(minutes=max_age_minutes)
     with _LOCK:
@@ -137,6 +167,14 @@ def cleanup_background_jobs(max_age_minutes: int = 30) -> None:
         ]
         for job_id in expired_ids:
             _JOBS.pop(job_id, None)
+        active_job_ids = set(_JOBS)
+        expired_tokens = [
+            token
+            for token, job_id in _TOKEN_JOB_IDS.items()
+            if job_id not in active_job_ids
+        ]
+        for token in expired_tokens:
+            _TOKEN_JOB_IDS.pop(token, None)
         expired_system_ids = [
             job_id
             for job_id, job in _SYSTEM_JOBS.items()
@@ -179,10 +217,11 @@ def _worker_loop() -> None:
 
 
 def _run_background_post(app: Flask, job_id: str, path: str, form_data: dict[str, list[str]]) -> None:
+    generation_token = _generation_token_from_form(form_data)
     with _LOCK:
         if job_id in _PENDING_IDS:
             _PENDING_IDS.remove(job_id)
-    _update_job(job_id, status="running", message="Generating...")
+    _update_job(job_id, status="running", message=_initial_background_message(path))
     try:
         with app.test_client() as client:
             response = client.post(path, data=form_data)
@@ -199,8 +238,8 @@ def _run_background_post(app: Flask, job_id: str, path: str, form_data: dict[str
             _update_job(
                 job_id,
                 status="cancelled",
-                message="Generation stopped.",
-                error=str(exc) or "Generation stopped by user.",
+                message="Generation skipped.",
+                error=str(exc) or "Generation skipped by user.",
                 status_code=499,
             )
             return
@@ -212,6 +251,11 @@ def _run_background_post(app: Flask, job_id: str, path: str, form_data: dict[str
             error=str(exc) or "Background generation failed.",
             status_code=500,
         )
+    finally:
+        if generation_token:
+            with _LOCK:
+                if _TOKEN_JOB_IDS.get(generation_token) == job_id:
+                    _TOKEN_JOB_IDS.pop(generation_token, None)
 
 
 def _update_job(job_id: str, **changes) -> None:
@@ -246,3 +290,53 @@ def _worker_count() -> int:
         return max(1, min(4, int(raw_value)))
     except ValueError:
         return 1
+
+
+def _generation_token_from_form(form_data: dict[str, list[str]]) -> str:
+    raw_value = form_data.get("generation_status_token", "")
+    if isinstance(raw_value, list):
+        raw_value = raw_value[0] if raw_value else ""
+    return str(raw_value or "").strip()
+
+
+def _initial_background_message(path: str) -> str:
+    cleaned_path = (path or "").lower()
+    if "seo-checker" in cleaned_path:
+        return "Running website SEO check..."
+    if "page-generator" in cleaned_path:
+        return "Generating page..."
+    if "simple-page" in cleaned_path:
+        return "Generating simple page..."
+    if "news-generator" in cleaned_path:
+        return "Generating news content..."
+    if "blog-generator" in cleaned_path:
+        return "Generating blog content..."
+    if "keyword-suggestions" in cleaned_path:
+        return "Generating keyword suggestions..."
+    return "Starting background job..."
+
+
+def _repeat_reason_from_message(message: str = "") -> str:
+    cleaned_message = " ".join(str(message or "").split())
+    if not cleaned_message:
+        return ""
+
+    lowered = cleaned_message.lower()
+    if "retry" not in lowered and "attempt" not in lowered:
+        return ""
+
+    reason = cleaned_message
+    if ": " in reason:
+        reason = reason.split(": ", 1)[1]
+
+    reason = re.sub(r"\s*retrying\.\.\.$", "", reason, flags=re.IGNORECASE).strip()
+    reason = re.sub(
+        r"^waiting\s+\d+s\s+before\s+retrying\s+after\s+",
+        "",
+        reason,
+        flags=re.IGNORECASE,
+    ).strip()
+    reason = reason.rstrip(".").strip()
+    if not reason:
+        return ""
+    return reason[:180] + ("..." if len(reason) > 180 else "")

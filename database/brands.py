@@ -230,12 +230,12 @@ def get_brand_context(brand: str) -> str:
         sections.append(f"Preferred brand tone: {tone}")
     if notes:
         sections.append(f"Brand rules: {notes}")
-    if page_lines:
-        sections.append("Existing pages for this brand:\n" + "\n".join(page_lines))
+    # if page_lines:
+    #     sections.append("Existing pages for this brand:\n" + "\n".join(page_lines))
     if blog_lines:
         sections.append("Existing blogs for this brand:\n" + "\n".join(blog_lines))
-    if related_keywords:
-        sections.append("Brand-related keywords from saved pages and blogs:\n" + "\n".join(f"- {item}" for item in related_keywords[:25]))
+    # if related_keywords:
+    #     sections.append("Brand-related keywords from saved pages and blogs:\n" + "\n".join(f"- {item}" for item in related_keywords[:25]))
 
     return "\n\n".join(sections)
 

@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% set active_page = "website-pages" %}
+
+{% block title %}Website Pages{% endblock %}
+{% block eyebrow %}Workspace{% endblock %}
+{% block hero_title %}Website Pages{% endblock %}
+{% block hero_text %}Discover page URLs from a website sitemap and save them into the Website Index tracker.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="post" class="grid gap-5">
+      <div class="grid gap-4 lg:grid-cols-[1fr_180px]">
+        <div>
+          <label for="site_url" class="mb-2 block text-sm font-bold text-sand-900">Website</label>
+          <input
+            id="site_url"
+            name="site_url"
+            type="text"
+            value="{{ site_url }}"
+            placeholder="https://www.example.com"
+            class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+            required
+          />
+        </div>
+        <div>
+          <label for="limit" class="mb-2 block text-sm font-bold text-sand-900">Limit</label>
+          <input
+            id="limit"
+            name="limit"
+            type="number"
+            min="1"
+            max="1000"
+            value="{{ limit }}"
+            class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" name="action" value="discover" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">List Pages</button>
+        {% if result and result.pages %}
+          <button type="submit" name="action" value="save" class="inline-flex min-h-12 items-center justify-center rounded-full bg-moss-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-moss-700/90">Save All to Website Index</button>
+        {% endif %}
+      </div>
+
+      {% if result and result.pages %}
+        <textarea name="discovered_urls" class="hidden">{% for page in result.pages %}{{ page }}
+{% endfor %}</textarea>
+      {% endif %}
+
+      {% if error %}
+        <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{{ success }}</div>
+      {% endif %}
+    </form>
+  </section>
+
+  <section class="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
+    <aside class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Saved Websites</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ saved_domains|length }}</h2>
+        </div>
+        <a href="/website-index-dashboard" class="inline-flex min-h-10 items-center justify-center rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Index</a>
+      </div>
+
+      <div class="mt-5 grid gap-2">
+        {% for domain in saved_domains %}
+          <a
+            href="/website-pages?domain={{ domain.domain|urlencode }}"
+            class="rounded-2xl border px-4 py-3 transition {% if selected_domain == domain.domain %}border-sand-600 bg-sand-100{% else %}border-sand-200 bg-white hover:bg-sand-50{% endif %}"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <span class="break-all text-sm font-bold text-sand-950">{{ domain.domain }}</span>
+              <span class="shrink-0 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">{{ domain.percent }}%</span>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2 text-xs font-bold text-sand-600">
+              <span>{{ domain.total }} saved</span>
+              <span>{{ domain.indexed }} indexed</span>
+              <span>{{ domain.unchecked }} unchecked</span>
+            </div>
+          </a>
+        {% else %}
+          <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-5 py-8 text-center text-sm leading-6 text-sand-700">
+            No saved websites yet. List pages above, then save them to Website Index.
+          </div>
+        {% endfor %}
+      </div>
+    </aside>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Website Page List</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">
+            {% if selected_domain %}{{ selected_domain }}{% else %}Select a saved website{% endif %}
+          </h2>
+          {% if selected_domain and selected_domain_pagination.total %}
+            <p class="mt-2 text-sm font-bold text-sand-600">
+              Showing {{ selected_domain_pagination.start }}-{{ selected_domain_pagination.end }} of {{ selected_domain_pagination.total }} saved URL{% if selected_domain_pagination.total != 1 %}s{% endif %}
+            </p>
+          {% endif %}
+        </div>
+        {% if selected_domain %}
+          <a href="/website-pages/download.csv?domain={{ selected_domain|urlencode }}" class="inline-flex min-h-12 items-center justify-center rounded-full bg-moss-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-moss-700/90">Download CSV</a>
+        {% endif %}
+      </div>
+
+      {% if selected_domain and selected_domain_urls %}
+        <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+          <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+            <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+              <tr>
+                <th class="px-4 py-3">URL</th>
+                <th class="px-4 py-3">Google</th>
+                <th class="px-4 py-3">Bing</th>
+                <th class="px-4 py-3">Yahoo</th>
+                <th class="px-4 py-3">Coverage</th>
+                <th class="px-4 py-3">Last Checked</th>
+                <th class="px-4 py-3">Last Crawl</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-sand-100">
+              {% for item in selected_domain_page_urls %}
+                <tr>
+                  <td class="max-w-xl break-words px-4 py-3 font-semibold text-sand-900">{{ item.url }}</td>
+                  <td class="px-4 py-3">
+                    {% if item.google_status == "indexed" %}
+                      <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Indexed</span>
+                    {% elif item.google_status == "not-indexed" %}
+                      <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-amber-700">Not Indexed</span>
+                    {% elif item.google_status == "error" %}
+                      <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-red-700">Error</span>
+                    {% else %}
+                      <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-700">Unchecked</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3">{{ item.bing_status or "unchecked" }}</td>
+                  <td class="px-4 py-3">{{ item.yahoo_status or "unchecked" }}</td>
+                  <td class="min-w-[220px] px-4 py-3 text-sand-700">{{ item.google_coverage_state or item.last_error or "n/a" }}</td>
+                  <td class="min-w-[170px] px-4 py-3 text-sand-700">{{ item.last_checked_at or "n/a" }}</td>
+                  <td class="min-w-[170px] px-4 py-3 text-sand-700">{{ item.google_last_crawl_time or "n/a" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if selected_domain_pagination.total_pages > 1 %}
+          <nav class="mt-4 flex flex-wrap items-center gap-2" aria-label="Website pages pagination">
+            {% if selected_domain_pagination.has_previous %}
+              <a href="/website-pages?domain={{ selected_domain|urlencode }}&page={{ selected_domain_pagination.previous_page }}" class="inline-flex min-h-10 items-center justify-center rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Previous</a>
+            {% else %}
+              <span class="inline-flex min-h-10 items-center justify-center rounded-full border border-sand-200 bg-sand-100 px-4 py-2 text-sm font-bold text-sand-400">Previous</span>
+            {% endif %}
+
+            {% if selected_domain_pagination.page_numbers[0] > 1 %}
+              <a href="/website-pages?domain={{ selected_domain|urlencode }}&page=1" class="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-sand-300 bg-white px-3 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">1</a>
+              {% if selected_domain_pagination.page_numbers[0] > 2 %}
+                <span class="px-2 text-sm font-bold text-sand-500">...</span>
+              {% endif %}
+            {% endif %}
+
+            {% for page_number in selected_domain_pagination.page_numbers %}
+              {% if page_number == selected_domain_pagination.page %}
+                <span class="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full bg-sand-600 px-3 py-2 text-sm font-bold text-sand-50">{{ page_number }}</span>
+              {% else %}
+                <a href="/website-pages?domain={{ selected_domain|urlencode }}&page={{ page_number }}" class="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-sand-300 bg-white px-3 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">{{ page_number }}</a>
+              {% endif %}
+            {% endfor %}
+
+            {% if selected_domain_pagination.page_numbers[-1] < selected_domain_pagination.total_pages %}
+              {% if selected_domain_pagination.page_numbers[-1] < selected_domain_pagination.total_pages - 1 %}
+                <span class="px-2 text-sm font-bold text-sand-500">...</span>
+              {% endif %}
+              <a href="/website-pages?domain={{ selected_domain|urlencode }}&page={{ selected_domain_pagination.total_pages }}" class="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-sand-300 bg-white px-3 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">{{ selected_domain_pagination.total_pages }}</a>
+            {% endif %}
+
+            {% if selected_domain_pagination.has_next %}
+              <a href="/website-pages?domain={{ selected_domain|urlencode }}&page={{ selected_domain_pagination.next_page }}" class="inline-flex min-h-10 items-center justify-center rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Next</a>
+            {% else %}
+              <span class="inline-flex min-h-10 items-center justify-center rounded-full border border-sand-200 bg-sand-100 px-4 py-2 text-sm font-bold text-sand-400">Next</span>
+            {% endif %}
+          </nav>
+        {% endif %}
+      {% elif selected_domain %}
+        <div class="mt-5 rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          No saved URLs found for this website.
+        </div>
+      {% else %}
+        <div class="mt-5 rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          Choose a saved website on the left to view its page list and index updates.
+        </div>
+      {% endif %}
+    </section>
+  </section>
+
+  {% if result %}
+    <section class="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
+      <aside class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Pages Found</p>
+        <div class="mt-4 font-display text-6xl font-bold leading-none text-sand-950">{{ result.pages|length }}</div>
+        <p class="mt-3 break-words text-sm leading-6 text-sand-700">{{ result.base_url }}</p>
+
+        <div class="mt-6">
+          <h2 class="text-sm font-extrabold uppercase tracking-[0.14em] text-sand-600">Sitemaps</h2>
+          <div class="mt-3 grid gap-2">
+            {% for sitemap in result.sitemaps %}
+              <article class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  {% if sitemap.status == "found" %}
+                    <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Found</span>
+                  {% else %}
+                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-red-700">Error</span>
+                  {% endif %}
+                  <span class="text-xs font-bold text-sand-600">{{ sitemap.page_count }} page{% if sitemap.page_count != 1 %}s{% endif %}</span>
+                </div>
+                <p class="mt-2 break-words text-xs leading-5 text-sand-700">{{ sitemap.url }}</p>
+              </article>
+            {% else %}
+              <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No XML sitemap was found.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </aside>
+
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="font-display text-3xl font-bold text-sand-950">Page URLs</h2>
+          {% if result.pages %}
+            <button type="button" data-toggle-pages class="inline-flex min-h-10 items-center justify-center rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Toggle All</button>
+          {% endif %}
+        </div>
+
+        {% if result.pages %}
+          <form method="post" class="mt-5">
+            <input type="hidden" name="action" value="save" />
+            <input type="hidden" name="site_url" value="{{ site_url }}" />
+            <input type="hidden" name="limit" value="{{ limit }}" />
+            <textarea name="discovered_urls" class="hidden">{% for page in result.pages %}{{ page }}
+{% endfor %}</textarea>
+            <div class="max-h-[620px] overflow-y-auto rounded-2xl border border-sand-200 bg-white">
+              <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+                <thead class="sticky top-0 bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+                  <tr>
+                    <th class="w-16 px-4 py-3">Save</th>
+                    <th class="px-4 py-3">URL</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-sand-100">
+                  {% for page in result.pages %}
+                    <tr>
+                      <td class="px-4 py-3 align-top">
+                        <input type="checkbox" name="selected_urls" value="{{ page }}" checked class="h-5 w-5 rounded border-sand-300 text-sand-700 focus:ring-sand-400" data-page-checkbox />
+                      </td>
+                      <td class="break-words px-4 py-3 font-semibold text-sand-900">{{ page }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-4 flex flex-wrap items-center gap-3">
+              <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-moss-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-moss-700/90">Save Selected to Website Index</button>
+              <a href="/website-index-dashboard" class="inline-flex min-h-12 items-center justify-center rounded-full border border-sand-300 bg-white px-6 py-3 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Open Index Dashboard</a>
+            </div>
+          </form>
+        {% else %}
+          <div class="mt-5 rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+            No page URLs were discovered for this website.
+          </div>
+        {% endif %}
+
+        {% if result.errors %}
+          <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p class="text-sm font-bold text-amber-800">Discovery notes</p>
+            <ul class="mt-2 grid gap-1 text-sm leading-6 text-amber-800">
+              {% for item in result.errors[:5] %}
+                <li class="break-words">{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </section>
+    </section>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      const toggle = document.querySelector("[data-toggle-pages]");
+      const checkboxes = Array.from(document.querySelectorAll("[data-page-checkbox]"));
+      if (!toggle || !checkboxes.length) {
+        return;
+      }
+      toggle.addEventListener("click", function () {
+        const shouldCheck = checkboxes.some(function (checkbox) {
+          return !checkbox.checked;
+        });
+        checkboxes.forEach(function (checkbox) {
+          checkbox.checked = shouldCheck;
+        });
+      });
+    })();
+  </script>
+{% endblock %}

@@ -50,6 +50,7 @@
                   <th class="px-4 py-3">Status</th>
                   <th class="px-4 py-3">Path</th>
                   <th class="px-4 py-3">Message</th>
+                  <th class="px-4 py-3">Repeat Reason</th>
                   <th class="px-4 py-3">Queue</th>
                   <th class="px-4 py-3">HTTP</th>
                   <th class="px-4 py-3">Created</th>
@@ -72,6 +73,7 @@
                     </td>
                     <td class="max-w-xs px-4 py-3 font-mono text-xs text-sand-900">{{ job.path }}</td>
                     <td class="max-w-md px-4 py-3">{{ job.error or job.message }}</td>
+                    <td class="max-w-sm px-4 py-3 text-xs text-sand-600">{{ job.repeat_reason or "-" }}</td>
                     <td class="px-4 py-3">{{ job.queue_position or "-" }}</td>
                     <td class="px-4 py-3">{{ job.status_code or "-" }}</td>
                     <td class="whitespace-nowrap px-4 py-3">{{ job.created_at }}</td>
@@ -137,6 +139,7 @@
             '<td class="px-4 py-3">' + statusPill(job.status) + "</td>",
             '<td class="max-w-xs px-4 py-3 font-mono text-xs text-sand-900">' + escapeHtml(job.path || "") + "</td>",
             '<td class="max-w-md px-4 py-3">' + escapeHtml(job.error || job.message || "") + "</td>",
+            '<td class="max-w-sm px-4 py-3 text-xs text-sand-600">' + escapeHtml(job.repeat_reason || "-") + "</td>",
             '<td class="px-4 py-3">' + escapeHtml(job.queue_position || "-") + "</td>",
             '<td class="px-4 py-3">' + escapeHtml(job.status_code || "-") + "</td>",
             '<td class="whitespace-nowrap px-4 py-3">' + escapeHtml(job.created_at || "") + "</td>",

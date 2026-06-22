@@ -43,7 +43,12 @@
   const state = {
     naturalWidth: 0,
     naturalHeight: 0,
-    scale: 1,
+    scaleX: 1,
+    scaleY: 1,
+    imageLeft: 0,
+    imageTop: 0,
+    imageWidth: 0,
+    imageHeight: 0,
     boxLeft: 0,
     boxTop: 0,
     boxWidth: 0,
@@ -96,7 +101,7 @@
   }
 
   function updateHiddenFields() {
-    if (!state.scale || state.boxWidth <= 0 || state.boxHeight <= 0) {
+    if (!state.scaleX || !state.scaleY || state.boxWidth <= 0 || state.boxHeight <= 0) {
       cropXInput.value = "0";
       cropYInput.value = "0";
       cropWidthInput.value = "";
@@ -104,10 +109,10 @@
       return;
     }
 
-    cropXInput.value = String(Math.round(state.boxLeft / state.scale));
-    cropYInput.value = String(Math.round(state.boxTop / state.scale));
-    cropWidthInput.value = String(Math.round(state.boxWidth / state.scale));
-    cropHeightInput.value = String(Math.round(state.boxHeight / state.scale));
+    cropXInput.value = String(Math.round((state.boxLeft - state.imageLeft) / state.scaleX));
+    cropYInput.value = String(Math.round((state.boxTop - state.imageTop) / state.scaleY));
+    cropWidthInput.value = String(Math.round(state.boxWidth / state.scaleX));
+    cropHeightInput.value = String(Math.round(state.boxHeight / state.scaleY));
     cropScaleInput.value = cropScaleSlider.value;
     if (watermarkPreview && watermarkXInput && watermarkYInput) {
       const centerX = state.watermarkLeft + (state.watermarkWidth / 2);
@@ -218,10 +223,23 @@
   }
 
   function clampPosition(left, top) {
-    const maxLeft = Math.max(0, cropImage.clientWidth - state.boxWidth);
-    const maxTop = Math.max(0, cropImage.clientHeight - state.boxHeight);
-    state.boxLeft = Math.min(Math.max(0, left), maxLeft);
-    state.boxTop = Math.min(Math.max(0, top), maxTop);
+    const minLeft = state.imageLeft;
+    const minTop = state.imageTop;
+    const maxLeft = state.imageLeft + Math.max(0, state.imageWidth - state.boxWidth);
+    const maxTop = state.imageTop + Math.max(0, state.imageHeight - state.boxHeight);
+    state.boxLeft = Math.min(Math.max(minLeft, left), maxLeft);
+    state.boxTop = Math.min(Math.max(minTop, top), maxTop);
+  }
+
+  function syncImageGeometry() {
+    const stageRect = cropStage.getBoundingClientRect();
+    const imageRect = cropImage.getBoundingClientRect();
+    state.imageLeft = imageRect.left - stageRect.left;
+    state.imageTop = imageRect.top - stageRect.top;
+    state.imageWidth = imageRect.width;
+    state.imageHeight = imageRect.height;
+    state.scaleX = state.imageWidth / state.naturalWidth;
+    state.scaleY = state.imageHeight / state.naturalHeight;
   }
 
   function initializeCropBox() {
@@ -229,10 +247,14 @@
       disableCrop("Load an image to start framing the crop.");
       return;
     }
-    state.scale = cropImage.clientWidth / state.naturalWidth;
+    syncImageGeometry();
+    if (!state.imageWidth || !state.imageHeight || !state.scaleX || !state.scaleY) {
+      disableCrop("Load an image to start framing the crop.");
+      return;
+    }
     const ratio = getCurrentRatio();
-    const stageWidth = cropImage.clientWidth;
-    const stageHeight = cropImage.clientHeight;
+    const stageWidth = state.imageWidth;
+    const stageHeight = state.imageHeight;
     const sliderScale = Math.max(20, Math.min(100, parseInt(cropScaleSlider.value || cropScaleInput.value || "70", 10)));
     const previousCenterX = state.boxLeft + (state.boxWidth / 2);
     const previousCenterY = state.boxTop + (state.boxHeight / 2);
@@ -253,8 +275,8 @@
       state.boxLeft = previousCenterX - (state.boxWidth / 2);
       state.boxTop = previousCenterY - (state.boxHeight / 2);
     } else {
-      state.boxLeft = (stageWidth - state.boxWidth) / 2;
-      state.boxTop = (stageHeight - state.boxHeight) / 2;
+      state.boxLeft = state.imageLeft + ((stageWidth - state.boxWidth) / 2);
+      state.boxTop = state.imageTop + ((stageHeight - state.boxHeight) / 2);
     }
     clampPosition(state.boxLeft, state.boxTop);
     cropBox.hidden = false;
@@ -355,8 +377,8 @@
       }
       const position = getPointerPosition(event);
       const ratio = getCurrentRatio();
-      const maxWidth = cropImage.clientWidth - state.resizeAnchorX;
-      const maxHeight = cropImage.clientHeight - state.resizeAnchorY;
+      const maxWidth = state.imageLeft + state.imageWidth - state.resizeAnchorX;
+      const maxHeight = state.imageTop + state.imageHeight - state.resizeAnchorY;
       let nextWidth = Math.max(40, position.x - state.resizeAnchorX);
       let nextHeight = nextWidth * (ratio[1] / ratio[0]);
       if (nextHeight > maxHeight) {
@@ -369,8 +391,8 @@
       }
       state.boxWidth = nextWidth;
       state.boxHeight = nextHeight;
-      const scaleByWidth = (state.boxWidth / cropImage.clientWidth) * 100;
-      const scaleByHeight = (state.boxHeight / cropImage.clientHeight) * 100;
+      const scaleByWidth = (state.boxWidth / state.imageWidth) * 100;
+      const scaleByHeight = (state.boxHeight / state.imageHeight) * 100;
       cropScaleSlider.value = String(Math.max(20, Math.min(100, Math.round(Math.max(scaleByWidth, scaleByHeight)))));
       renderBox();
     });

@@ -27,12 +27,12 @@
 
       <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for landing pages, service pages, about pages, local pages, or any custom WordPress page layout.</p>
 
-      <form method="post" id="pageGeneratorForm" data-loading-message="{% if not page_title %}Generating page title...{% elif not meta_description %}Generating page meta description...{% else %}Generating page content...{% endif %}" data-background-submit class="grid gap-1">
+      <form method="post" id="pageGeneratorForm" data-loading-message="Generating page title..." data-inline-loading data-inline-status-target="#pageGenerationStatus" data-inline-error-target="#pageGenerationError" data-inline-actions-target="#pageGenerationActions" data-background-submit class="grid gap-1">
         <input type="hidden" name="history_id" value="{{ history_id }}" />
-        <input type="hidden" name="page_title" value="{{ page_title }}" />
-        <input type="hidden" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="pageTitleHidden" name="page_title" value="{{ page_title }}" />
+        <input type="hidden" id="pageMetaHidden" name="meta_description" value="{{ meta_description }}" />
         <input type="hidden" name="image_count" value="{{ image_count }}" />
-        <textarea name="page_content" class="hidden-form" aria-hidden="true">{{ page_content }}</textarea>
+        <textarea id="pageContentHidden" name="page_content" class="hidden-form" aria-hidden="true">{{ page_content }}</textarea>
         <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
         <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="e.g. Phoenix Home Services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
@@ -69,16 +69,15 @@
         {% endif %}
 
         <div class="flex flex-wrap gap-3">
-          <button type="submit" name="action" value="generate_page_title" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if page_title %}Regenerate Title{% else %}Generate Title{% endif %}</button>
-          {% if page_title %}
-            <button type="submit" name="action" value="generate_page_meta" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if meta_description %}Regenerate Meta{% else %}Generate Meta{% endif %}</button>
-          {% endif %}
-          {% if page_title and meta_description %}
-            <button type="submit" name="action" value="generate_page_content" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if page_content %}Regenerate Content{% else %}Generate Content{% endif %}</button>
-          {% endif %}
+          <button type="submit" name="action" value="generate_page_all" data-loading-message="Generating page title..." class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if page_content %}Regenerate Page{% else %}Generate Page{% endif %}</button>
           {% if page_content %}
             <button type="button" id="copyHtmlButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Copy HTML</button>
           {% endif %}
+        </div>
+        <p id="pageGenerationStatus" class="mt-3 hidden text-sm font-bold leading-6 text-moss-700"></p>
+        <p id="pageGenerationError" class="mt-2 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+        <div id="pageGenerationActions" class="mt-2 hidden">
+          <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100" data-loading-stop>Skip Generating</button>
         </div>
       </form>
     </section>
@@ -92,7 +91,7 @@
                 <label for="titleOutput" class="block text-sm font-bold text-sand-900">Selected title</label>
                 <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full bg-stone-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-black" data-copy-target="titleOutput" data-copy-message="Title copied.">Copy Title</button>
               </div>
-              <p class="text-base font-bold leading-7 text-sand-950">{{ page_title }}</p>
+              <input id="pageTitleEditor" type="text" value="{{ page_title }}" class="w-full rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-base font-bold leading-7 text-sand-950 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
               <textarea id="titleOutput" readonly class="sr-copy-field">{{ page_title }}</textarea>
             </div>
           {% endif %}
@@ -102,25 +101,41 @@
                 <label for="metaOutput" class="block text-sm font-bold text-sand-900">Selected meta description</label>
                 <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full bg-stone-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-black" data-copy-target="metaOutput" data-copy-message="Meta description copied.">Copy Meta</button>
               </div>
-              <p class="text-sm leading-6 text-sand-800">{{ meta_description }}</p>
+              <textarea id="pageMetaEditor" rows="3" class="w-full rounded-2xl border border-amber-200 bg-white/80 px-4 py-3 text-sm leading-6 text-sand-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100">{{ meta_description }}</textarea>
               <textarea id="metaOutput" readonly class="sr-copy-field">{{ meta_description }}</textarea>
             </div>
           {% endif %}
         </div>
       {% endif %}
 
+      <div id="pageLiveDraftWorkspace" class="hidden">
+        <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 class="font-display text-3xl text-sand-950">Generated Draft</h2>
+            <div class="mt-2 text-sm leading-6 text-sand-700">A draft is available while generation continues in the background.</div>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button type="submit" form="savePageForm" class="inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Save Generated Page</button>
+            <button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black" data-copy-target="pageLiveHtmlOutput" data-copy-message="HTML copied. You can now paste it into WordPress Gutenberg.">Copy HTML</button>
+          </div>
+        </div>
+        <div id="pageLivePreviewArea" class="rounded-[22px] border border-sand-200 bg-white px-6 py-6 text-sand-900"></div>
+        <label for="pageLiveHtmlOutput" class="mt-5 mb-2 block text-sm font-bold text-sand-900">HTML output</label>
+        <textarea id="pageLiveHtmlOutput" class="mt-0 min-h-[260px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none"></textarea>
+      </div>
+
       {% if page_content %}
         <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 class="font-display text-3xl text-sand-950">{{ page_title or "Generated Page" }}</h2>
+            <h2 id="pageGeneratedHeading" class="font-display text-3xl text-sand-950">{{ page_title or "Generated Page" }}</h2>
             <div class="mt-2 text-sm leading-6 text-sand-700">{{ image_count }} image placeholder{% if image_count != 1 %}s{% endif %} added for Gutenberg-ready paste</div>
           </div>
           <div class="flex flex-wrap gap-3">
+            <button type="submit" form="savePageForm" class="inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Save Generated Page</button>
             {% if meta_description %}
               <button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black" data-copy-target="metaOutput" data-copy-message="Meta description copied.">Copy Meta</button>
             {% endif %}
             <button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black" data-copy-target="htmlOutput" data-copy-message="HTML copied. You can now paste it into WordPress Gutenberg.">Copy HTML</button>
-            <button type="submit" form="savePageForm" class="inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Save Generated Page</button>
           </div>
         </div>
 
@@ -140,7 +155,7 @@
         {% include "_content_checklist.html" %}
 
         <label for="htmlOutput" class="mt-5 mb-2 block text-sm font-bold text-sand-900">HTML output</label>
-        <textarea id="htmlOutput" readonly class="mt-0 min-h-[260px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ page_content }}</textarea>
+        <textarea id="htmlOutput" class="mt-0 min-h-[260px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ page_content }}</textarea>
         <div class="mt-5 grid gap-4 lg:grid-cols-3">
           <div>
             <label for="markdownOutput" class="mb-2 block text-sm font-bold text-sand-900">Markdown output</label>
@@ -155,20 +170,6 @@
             <textarea id="gutenbergOutput" readonly class="min-h-[220px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm text-stone-50 outline-none">{{ html_to_gutenberg(page_content) }}</textarea>
           </div>
         </div>
-        <form id="savePageForm" method="post" class="hidden-form" aria-hidden="true">
-          <input type="hidden" name="action" value="save_generated_blog" />
-          <input type="hidden" name="history_id" value="{{ history_id }}" />
-          <input type="hidden" name="brand" value="{{ brand }}" />
-          <input type="hidden" name="language" value="{{ language }}" />
-          <input type="hidden" name="keyword" value="{{ keyword }}" />
-          <input type="hidden" name="supporting_keywords" value="{{ supporting_keywords }}" />
-          <input type="hidden" name="page_type" value="{{ page_type }}" />
-          <input type="hidden" name="expectations" value="{{ expectations }}" />
-          <input type="hidden" name="page_title" value="{{ page_title }}" />
-          <input type="hidden" name="meta_description" value="{{ meta_description }}" />
-          <input type="hidden" name="image_count" value="{{ image_count }}" />
-          <textarea name="page_content">{{ page_content }}</textarea>
-        </form>
       {% else %}
         <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
           {% if page_title and meta_description %}
@@ -180,6 +181,20 @@
           {% endif %}
         </div>
       {% endif %}
+      <form id="savePageForm" method="post" class="hidden-form" aria-hidden="true">
+        <input type="hidden" name="action" value="save_generated_blog" />
+        <input type="hidden" name="history_id" value="{{ history_id }}" />
+        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="language" value="{{ language }}" />
+        <input type="hidden" name="keyword" value="{{ keyword }}" />
+        <input type="hidden" name="supporting_keywords" value="{{ supporting_keywords }}" />
+        <input type="hidden" name="page_type" value="{{ page_type }}" />
+        <input type="hidden" name="expectations" value="{{ expectations }}" />
+        <input type="hidden" id="savePageTitle" name="page_title" value="{{ page_title }}" />
+        <input type="hidden" id="savePageMeta" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" name="image_count" value="{{ image_count }}" />
+        <textarea id="savePageContent" name="page_content">{{ page_content }}</textarea>
+      </form>
     </section>
   </div>
 

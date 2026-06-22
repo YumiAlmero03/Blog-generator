@@ -11,7 +11,7 @@ Required language:
 {cleaned}
 
 Language rules:
-- Write all generated titles, meta descriptions, tags, headings, and body content in {cleaned}.
+- Write the content in {cleaned}.
 - Keep brand names, URLs, required anchor text, product names, and proper nouns unchanged unless the user-provided language naturally requires a common localized form.
 - Preserve the requested JSON keys exactly in English.
 """
@@ -21,10 +21,10 @@ def build_brand_context_section(brand_context: str = "") -> str:
     cleaned = (brand_context or "").strip()
     if not cleaned:
         return ""
-    return f"""
-Known brand database context:
-{cleaned}
-"""
+#     return f"""
+# Known brand database context:
+# {cleaned}
+# """
 
 
 def build_backlink_context_section(

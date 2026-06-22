@@ -69,8 +69,8 @@ def crop_image_to_box(image, crop_x: str, crop_y: str, crop_width: str, crop_hei
     crop_height_value = int(float(crop_height or 0))
     if crop_width_value <= 0 or crop_height_value <= 0:
         raise ValueError("Set a crop area before processing the image.")
-    if crop_width_value > image.width or crop_height_value > image.height:
-        raise ValueError("The crop size is larger than the source image. Reduce the target crop size.")
+    crop_width_value = min(crop_width_value, image.width)
+    crop_height_value = min(crop_height_value, image.height)
 
     crop_x_value = int(float(crop_x or 0))
     crop_y_value = int(float(crop_y or 0))

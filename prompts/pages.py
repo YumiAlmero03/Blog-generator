@@ -175,11 +175,6 @@ Write one meta description for this WordPress page title:
 Primary keyword:
 {keyword}
 
-Supporting keywords:
-{supporting_keywords}
-
-Brand:
-{brand}
 {context_section}
 {language_section}
 {banned_words_section}
@@ -238,26 +233,15 @@ Apply this request while keeping the page complete, conversion-focused, and alig
     return f"""
 You are an expert SEO landing page writer for WordPress.
 
-Use this selected page title exactly:
-{title}
+Use this selected page title exactly:{title}
+Primary keyword:{keyword}
+Supporting keywords:{supporting_keywords}
 
-Use this selected meta description as context only. Do not rewrite it:
-{meta_description}
-
-Primary keyword:
-{keyword}
-
-Supporting keywords:
-{supporting_keywords}
-
-Brand:
-{brand}
 {context_section}
 {language_section}
 {banned_words_section}
 
-Page type:
-{page_type}
+Page type:{page_type}
 
 What to expect in the page:
 {expectations}
@@ -266,7 +250,6 @@ What to expect in the page:
 Rules:
 - Keep the main keyword exactly as provided. Do not split, rearrange, or alter it.
 - Write for real users, not just search engines.
-- Use the selected title as the single # H1 heading at the top.
 - Use the main keyword naturally 3-5 times in total: once in the introduction, once in a subheading, and once in the conclusion when natural.
 - Include supporting keywords naturally where they fit.
 - Avoid keyword stuffing and unnatural phrasing.
@@ -274,20 +257,14 @@ Rules:
 - Content must be more than {min_word_count} words, structured with clear sections and subheadings. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.
 - Do not finish at exactly {min_word_count} words; the content must exceed that minimum.
 - Paragraphs should be short and easy to read.
-- Include at least 5 sections after the introduction with relevant subheadings.
+- Include at least 5 or more sections after the introduction with relevant subheadings.
 - Follow Yoast SEO guidelines for keyword usage and structure.
 - Use the "What to expect in the page" notes as guidance for sections, tone, and key details.
 - If a brand is provided, match the brand’s voice, positioning, and audience naturally.
 - When brand database context is provided, avoid duplicating existing pages too closely.
-- Return clean Markdown source. The app will convert it to HTML or Gutenberg after generation.
-- Use Markdown headings, paragraphs, lists, bold, emphasis, and blockquotes only.
-- Do not use raw HTML.
-- Do not use <b> tags.
-- Use Markdown bold only for emphasis on non-keyword phrases.
+- Return clean Markdown.
+- Use bold only for emphasis on non-keyword phrases.
 - Never apply bold or emphasis to the main or supporting keywords.
-- If helpful, insert image placeholders using:
-  [IMAGE: alt text describing the image here]
-- Add no more than 3 image placeholders.
 - Do not add explanations before or after the JSON.
 - Start your response with '{{' and end with '}}'
 

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% set active_page = "context-planner" %}
+
+{% block title %}Context Planner{% endblock %}
+{% block eyebrow %}Workspace Plan{% endblock %}
+{% block hero_title %}Context Planner{% endblock %}
+{% block hero_text %}Create a structured content brief for blogs, news, pages, simple pages, brands, and medium posts before generation.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    {% if success %}
+      <div class="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ success }}</div>
+    {% endif %}
+
+    <form method="post" class="grid gap-5">
+      <div class="grid gap-4 lg:grid-cols-4">
+        <div>
+          <label for="content_type" class="mb-2 block text-sm font-bold text-sand-900">Content type</label>
+          <select id="content_type" name="content_type" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            {% for option in ["Blog", "News", "Page", "Simple Page", "Brand Edit", "Medium Edit", "Medium Blog", "Tier 2 Blog", "Neutral Blog"] %}
+              <option value="{{ option }}" {% if content_type == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="target_country" class="mb-2 block text-sm font-bold text-sand-900">Country / Region</label>
+          <select id="target_country" name="target_country" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            {% for country in target_countries %}
+              <option value="{{ country }}" {% if target_country == country %}selected{% endif %}>{{ country }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+          <select id="language" name="language" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            {% for option in languages %}
+              <option value="{{ option }}" {% if language == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="search_intent" class="mb-2 block text-sm font-bold text-sand-900">Search intent</label>
+          <select id="search_intent" name="search_intent" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            {% for option in ["Informational", "Commercial", "Transactional", "Navigational", "News"] %}
+              <option value="{{ option }}" {% if search_intent == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div>
+          <label for="topic" class="mb-2 block text-sm font-bold text-sand-900">Topic <span class="text-red-600">*</span></label>
+          <input id="topic" name="topic" type="text" value="{{ topic }}" required placeholder="slots, football, sportsbook guide" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
+          <input id="brand" name="brand" type="text" value="{{ brand }}" list="contextBrandSuggestions" placeholder="Optional brand" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="medium" class="mb-2 block text-sm font-bold text-sand-900">Medium / Website</label>
+          <input id="medium" name="medium" type="text" value="{{ medium }}" list="contextMediumSuggestions" placeholder="Optional publishing site" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div>
+          <label for="audience" class="mb-2 block text-sm font-bold text-sand-900">Audience</label>
+          <input id="audience" name="audience" type="text" value="{{ audience }}" placeholder="New players, football fans, site visitors" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="primary_keyword" class="mb-2 block text-sm font-bold text-sand-900">Main keyword</label>
+          <input id="primary_keyword" name="primary_keyword" type="text" value="{{ primary_keyword }}" placeholder="Primary Yoast keyword" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="supporting_keywords" class="mb-2 block text-sm font-bold text-sand-900">Supporting keywords</label>
+          <input id="supporting_keywords" name="supporting_keywords" type="text" value="{{ supporting_keywords }}" placeholder="Comma separated keywords" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div>
+          <label for="entities" class="mb-2 block text-sm font-bold text-sand-900">Entities / topics</label>
+          <textarea id="entities" name="entities" rows="4" placeholder="Leagues, teams, games, locations, features, regulations" class="w-full resize-y rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ entities }}</textarea>
+        </div>
+        <div>
+          <label for="internal_links" class="mb-2 block text-sm font-bold text-sand-900">Internal links</label>
+          <textarea id="internal_links" name="internal_links" rows="4" placeholder="URL + anchor text per line" class="w-full resize-y rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ internal_links }}</textarea>
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div>
+          <label for="must_include" class="mb-2 block text-sm font-bold text-sand-900">Must include</label>
+          <textarea id="must_include" name="must_include" rows="4" placeholder="Facts, angles, brand points, sections, examples" class="w-full resize-y rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ must_include }}</textarea>
+        </div>
+        <div>
+          <label for="avoid" class="mb-2 block text-sm font-bold text-sand-900">Avoid</label>
+          <textarea id="avoid" name="avoid" rows="4" placeholder="Claims, old angle, wording, competitors, banned phrasing" class="w-full resize-y rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ avoid }}</textarea>
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div>
+          <label for="competitor_notes" class="mb-2 block text-sm font-bold text-sand-900">SERP / competitor notes</label>
+          <textarea id="competitor_notes" name="competitor_notes" rows="5" placeholder="Observed headings, gaps, useful references" class="w-full resize-y rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ competitor_notes }}</textarea>
+        </div>
+        <div>
+          <label for="outline_notes" class="mb-2 block text-sm font-bold text-sand-900">Outline notes</label>
+          <textarea id="outline_notes" name="outline_notes" rows="5" placeholder="H2/H3 plan, section order, FAQs" class="w-full resize-y rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ outline_notes }}</textarea>
+        </div>
+        <div>
+          <label for="cta" class="mb-2 block text-sm font-bold text-sand-900">CTA</label>
+          <textarea id="cta" name="cta" rows="5" placeholder="Next action or soft conclusion" class="w-full resize-y rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ cta }}</textarea>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Create Brief</button>
+        {% if context_brief %}
+          <button type="button" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black" data-copy-target="contextBriefOutput" data-copy-message="Context brief copied." data-copy-status="contextBriefCopyStatus">Copy Brief</button>
+          <span id="contextBriefCopyStatus" class="text-xs font-bold uppercase tracking-[0.12em] text-moss-700"></span>
+        {% endif %}
+      </div>
+
+      <datalist id="contextBrandSuggestions">
+        {% for name in brand_names %}
+          <option value="{{ name }}"></option>
+        {% endfor %}
+      </datalist>
+      <datalist id="contextMediumSuggestions">
+        {% for item in mediums %}
+          {% if item.website_name %}
+            <option value="{{ item.website_name }}"></option>
+          {% endif %}
+        {% endfor %}
+      </datalist>
+    </form>
+  </section>
+
+  {% if context_brief %}
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-display text-3xl text-sand-950">Context Brief</h2>
+        <button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black" data-copy-target="contextBriefOutput" data-copy-message="Context brief copied." data-copy-status="contextBriefCopyStatusBottom">Copy Brief</button>
+      </div>
+      <textarea id="contextBriefOutput" readonly rows="24" class="w-full resize-y rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 font-mono text-sm leading-6 text-sand-900 outline-none">{{ context_brief }}</textarea>
+      <span id="contextBriefCopyStatusBottom" class="mt-3 block text-xs font-bold uppercase tracking-[0.12em] text-moss-700"></span>
+    </section>
+  {% endif %}
+{% endblock %}

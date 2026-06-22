@@ -3,8 +3,9 @@ import json
 from flask import render_template, request
 
 from database import get_brand_context, get_generation_history_item, list_brand_names, list_checklist_items, record_generation, record_page, upsert_brand
+from generation_retry_policy import GenerationCancelled, raise_if_generation_cancelled
 from generators.content_generator import count_html_words, revise_existing_content
-from generators.page_generator import generate_page_content, generate_page_meta_description, generate_page_title
+from generators.page_generator import generate_page_content, generate_page_meta_description, generate_page_title, inject_image_placeholders
 from generators.simple_page_generator import (
     generate_simple_page_content,
     generate_simple_page_meta_descriptions,
@@ -14,7 +15,7 @@ from logger import logger
 
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
-from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
+from app.services.generation_status_service import clear_generation_status, get_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_page_word_limits
@@ -68,13 +69,14 @@ def page_generator():
         elif not state["keyword"]:
             state["error"] = "Please enter a keyword."
         else:
+            generation_token = request.form.get("generation_status_token", "")
+            min_words, max_words = get_page_word_limits()
             try:
                 provider = get_provider()
                 if state["brand"]:
                     upsert_brand(state["brand"])
                 brand_context = get_brand_context(state["brand"])
-                min_words, max_words = get_page_word_limits()
-                progress = _progress_callback("Page", request.form.get("generation_status_token", ""))
+                progress = _progress_callback("Page", generation_token)
                 is_minor_revision = bool(state["page_content"] and state["change_request"])
                 if is_minor_revision:
                     progress("Applying minor page changes...")
@@ -90,6 +92,54 @@ def page_generator():
                         language=state["language"],
                         progress_callback=progress,
                     )
+                    _record_completed_page(state, min_words, max_words)
+                elif action == "generate_page_all":
+                    progress("Generating page title...")
+                    state["page_title"] = generate_page_title(
+                        provider,
+                        keyword=state["keyword"],
+                        brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
+                        page_type=state["page_type"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        language=state["language"],
+                        progress_callback=progress,
+                    )
+                    raise_if_generation_cancelled(progress)
+                    progress("Generating page meta description...")
+                    state["meta_description"] = generate_page_meta_description(
+                        provider,
+                        keyword=state["keyword"],
+                        title=state["page_title"],
+                        brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
+                        page_type=state["page_type"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        language=state["language"],
+                        progress_callback=progress,
+                    )
+                    raise_if_generation_cancelled(progress)
+                    progress("Generating page content...")
+                    result = generate_page_content(
+                        provider,
+                        keyword=state["keyword"],
+                        title=state["page_title"],
+                        meta_description=state["meta_description"],
+                        brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
+                        page_type=state["page_type"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
+                        min_words=min_words,
+                        max_words=max_words,
+                        language=state["language"],
+                        progress_callback=progress,
+                    )
+                    state["page_content"] = result.get("content", "")
+                    state["image_count"] = result.get("image_count", 0)
                     _record_completed_page(state, min_words, max_words)
                 elif action == "generate_page_meta" and not state["page_title"]:
                     state["error"] = "Please generate the page title first."
@@ -145,7 +195,19 @@ def page_generator():
                     state["page_content"] = result.get("content", "")
                     state["image_count"] = result.get("image_count", 0)
                     _record_completed_page(state, min_words, max_words)
-                clear_generation_status(request.form.get("generation_status_token", ""))
+                clear_generation_status(generation_token)
+            except GenerationCancelled:
+                if action in {"generate_page_content", "generate_page_all"}:
+                    draft_html = get_generation_status(generation_token).get("draft_html", "")
+                    if draft_html:
+                        state["page_content"], state["image_count"] = inject_image_placeholders(draft_html)
+                        _record_completed_page(state, min_words, max_words)
+                        state["success"] = "Generation skipped. The last generated draft is loaded below."
+                    else:
+                        state["error"] = "Generation skipped before a draft was available."
+                    clear_generation_status(generation_token)
+                else:
+                    raise
             except Exception as exc:
                 logger.exception("page_generator action failed")
                 state["error"] = generation_error_message(

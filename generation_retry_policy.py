@@ -88,7 +88,7 @@ def is_generation_cancelled(progress_callback=None) -> bool:
 
 def raise_if_generation_cancelled(progress_callback=None) -> None:
     if is_generation_cancelled(progress_callback):
-        raise GenerationCancelled("Generation stopped by user.")
+        raise GenerationCancelled("Generation skipped by user.")
 
 
 def _int_env(name: str, default: int, minimum: int, maximum: int) -> int:

@@ -37,7 +37,6 @@ def build_banned_words_prompt_section() -> str:
     return f"""
 Forbidden word bank:
 - Never use any of the following banned words or phrases anywhere in the response.
-- This rule applies to titles, meta descriptions, headings, body copy, CTAs, labels, and summaries.
 - If a sentence would naturally use one of them, rewrite the sentence to avoid it completely.
 {banned_lines}
 """

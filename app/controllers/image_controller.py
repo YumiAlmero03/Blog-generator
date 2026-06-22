@@ -97,7 +97,7 @@ def _handle_image_tools_post(state: dict):
         return
 
     try:
-        from PIL import Image
+        from PIL import Image, ImageOps
 
         if uploaded_image and uploaded_image.filename:
             source_filename = save_uploaded_image(uploaded_image, IMAGE_TOOL_DIR, "source")
@@ -115,7 +115,7 @@ def _handle_image_tools_post(state: dict):
         normalized_format = "jpg" if state["output_format"] == "jpeg" else state["output_format"]
 
         with Image.open(source_path) as source_image:
-            working_image = source_image.convert("RGBA")
+            working_image = ImageOps.exif_transpose(source_image).convert("RGBA")
             working_image = crop_image_to_box(
                 working_image,
                 state["crop_x"],
@@ -137,7 +137,7 @@ def _handle_image_tools_post(state: dict):
                 with Image.open(logo_path) as logo_image:
                     working_image = apply_logo_watermark(
                         working_image,
-                        logo_image,
+                        ImageOps.exif_transpose(logo_image),
                         state["watermark_position"],
                         state["watermark_opacity"],
                         state["logo_scale"],
