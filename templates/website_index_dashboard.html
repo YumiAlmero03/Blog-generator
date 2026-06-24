@@ -4,7 +4,7 @@
 {% block title %}Website Index Dashboard{% endblock %}
 {% block eyebrow %}Workspace{% endblock %}
 {% block hero_title %}Website Index Dashboard{% endblock %}
-{% block hero_text %}Track saved website URLs separately from blog history and see which ones are due for the weekly Google index check.{% endblock %}
+{% block hero_text %}Track saved website URLs separately from blog history and see which ones are due for the 30-minute Google index check.{% endblock %}
 
 {% block content %}
   <div class="grid gap-6">
@@ -26,7 +26,7 @@
         <div class="mt-3 font-display text-4xl font-bold text-sand-700">{{ stats.unchecked_count }}</div>
       </div>
       <div class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md">
-        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Due This Week</p>
+        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Due Now</p>
         <div class="mt-3 font-display text-4xl font-bold text-blue-800">{{ due_count }}</div>
       </div>
     </section>
@@ -71,8 +71,8 @@
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="font-display text-3xl font-bold text-sand-950">Weekly Check Queue</h2>
-          <p class="mt-2 text-sm leading-6 text-sand-700">URLs are due when they have never been checked or their last check is older than 7 days.</p>
+          <h2 class="font-display text-3xl font-bold text-sand-950">30-Minute Check Queue</h2>
+          <p class="mt-2 text-sm leading-6 text-sand-700">URLs are due when they have never been checked or their last check is older than 30 minutes.</p>
           <p class="mt-2 text-sm leading-6 text-sand-700">Google uses the URL Inspection API. Bing and Yahoo are tracked as manual webmaster checks because they do not provide the same public URL inspection endpoint here.</p>
         </div>
         <a href="/website-index" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Open Website Index</a>
@@ -94,7 +94,7 @@
             </select>
           </div>
           <div>
-            <label for="websiteIndexWeeklyFilter" class="mb-2 block text-sm font-bold text-sand-900">Weekly</label>
+            <label for="websiteIndexWeeklyFilter" class="mb-2 block text-sm font-bold text-sand-900">Due</label>
             <select id="websiteIndexWeeklyFilter" class="min-h-11 w-full rounded-2xl border border-sand-200 bg-white px-4 py-2.5 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
               <option value="">All</option>
               <option value="due">Due</option>
@@ -138,7 +138,7 @@
               <tr>
                 <th class="px-4 py-3">URL</th>
                 <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3">Weekly</th>
+                <th class="px-4 py-3">Due</th>
                 <th class="px-4 py-3">Google</th>
                 <th class="px-4 py-3">Bing</th>
                 <th class="px-4 py-3">Yahoo</th>

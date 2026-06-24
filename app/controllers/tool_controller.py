@@ -27,6 +27,7 @@ from app.services.locale_settings import (
 )
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.seo_checker_service import run_seo_audit
+from app.services.generation_status_service import publish_generation_prompt, publish_generation_status
 from app.services.website_page_discovery_service import discover_website_pages
 from database import get_setting, list_backlinks, list_brand_names, set_setting
 from database import list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
@@ -92,12 +93,15 @@ def keyword_suggestions():
             state["count"] = 30
         try:
             provider = get_provider()
+            progress = _keyword_suggestions_progress_callback(request.form.get("generation_status_token", ""))
             state["result"] = generate_keyword_suggestions(
                 provider,
                 topic=state["topic"],
                 target_country=state["target_country"],
                 count=state["count"],
+                progress_callback=progress,
             )
+            publish_generation_status(request.form.get("generation_status_token", ""), "Keyword Suggestions: Generation complete.")
         except Exception as exc:
             logger.exception("keyword suggestions action failed")
             state["error"] = generation_error_message(
@@ -106,6 +110,21 @@ def keyword_suggestions():
             )
     state["target_countries"] = country_options(state["target_country"])
     return render_template("keyword_suggestions.html", **base_template_context(), **state)
+
+
+def _keyword_suggestions_progress_callback(token: str):
+    cleaned_token = (token or "").strip()
+
+    def progress(message: str, kind: str = "status") -> None:
+        if not cleaned_token:
+            return
+        if kind == "prompt":
+            publish_generation_prompt(cleaned_token, message)
+            publish_generation_status(cleaned_token, "Keyword Suggestions: Generating keyword estimates...")
+            return
+        publish_generation_status(cleaned_token, f"Keyword Suggestions: {message}")
+
+    return progress
 
 
 def _default_context_planner_state() -> dict:
@@ -505,7 +524,7 @@ def indexnow():
                 due_rows = list_due_website_index_urls()
                 due_urls = [item["url"] for item in due_rows[:WEBSITE_INDEX_CHECK_LIMIT]]
                 if not due_urls:
-                    state["success"] = "No saved URLs are due for a weekly Google index check."
+                    state["success"] = "No saved URLs are due for a Google index check."
                 else:
                     mark_website_index_urls_checking(due_urls)
                     update_website_index_bing_yahoo_weekly_result(due_urls)
@@ -518,9 +537,9 @@ def indexnow():
                         )
                         for item in state["google_inspection_result"].items:
                             update_website_index_google_result(item)
-                        state["success"] = f"Weekly check ran for {len(due_urls)} URL(s). Bing/Yahoo were marked for manual webmaster review."
+                        state["success"] = f"Due check ran for {len(due_urls)} URL(s). Bing/Yahoo were marked for manual webmaster review."
                     else:
-                        state["success"] = f"Weekly check marked Bing/Yahoo for {len(due_urls)} URL(s). Add Google settings to include Google URL Inspection."
+                        state["success"] = f"Due check marked Bing/Yahoo for {len(due_urls)} URL(s). Add Google settings to include Google URL Inspection."
                     if len(due_rows) > WEBSITE_INDEX_CHECK_LIMIT:
                         state["success"] += f" {len(due_rows) - WEBSITE_INDEX_CHECK_LIMIT} URL(s) remain queued for the next run."
             elif action == "sitemap":

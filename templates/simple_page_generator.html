@@ -27,7 +27,7 @@
 
       <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for straightforward pages that do not need the full SEO landing-page structure.</p>
 
-      <form method="post" data-loading-message="{% if not generated_title %}Generating simple page title...{% elif not meta_descriptions %}Generating simple page meta descriptions...{% else %}Generating simple page content...{% endif %}" data-background-submit class="grid gap-1">
+      <form method="post" id="simplePageGeneratorForm" data-loading-message="Generating simple page title..." data-inline-loading data-inline-status-target="#simplePageGenerationStatus" data-inline-error-target="#simplePageGenerationError" data-inline-actions-target="#simplePageGenerationActions" data-background-submit class="grid gap-1">
         <input type="hidden" name="history_id" value="{{ history_id }}" />
         <input type="hidden" name="generated_title" value="{{ generated_title }}" />
         <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
@@ -76,16 +76,15 @@
         {% endif %}
 
         <div class="flex flex-wrap gap-3">
-          <button type="submit" name="action" value="generate_simple_page_title" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if generated_title %}Regenerate Title{% else %}Generate Title{% endif %}</button>
-          {% if generated_title %}
-            <button type="submit" name="action" value="generate_simple_page_meta" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if meta_descriptions %}Regenerate Meta{% else %}Generate Meta{% endif %}</button>
-          {% endif %}
-          {% if generated_title and meta_descriptions %}
-            <button type="submit" name="action" value="generate_simple_page_content" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if generated_content %}Regenerate Content{% else %}Generate Content{% endif %}</button>
-          {% endif %}
+          <button type="submit" name="action" value="generate_simple_page_all" data-loading-message="Generating simple page title..." class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if generated_content %}Regenerate Simple Page{% else %}Generate Simple Page{% endif %}</button>
           {% if generated_content %}
             <button type="button" id="copySimpleHtmlButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Copy HTML</button>
           {% endif %}
+        </div>
+        <p id="simplePageGenerationStatus" class="mt-3 hidden text-sm font-bold leading-6 text-moss-700"></p>
+        <p id="simplePageGenerationError" class="mt-2 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+        <div id="simplePageGenerationActions" class="mt-2 hidden">
+          <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100" data-loading-stop>Skip Generating</button>
         </div>
       </form>
     </section>

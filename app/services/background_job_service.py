@@ -309,6 +309,8 @@ def _initial_background_message(path: str) -> str:
         return "Generating simple page..."
     if "news-generator" in cleaned_path:
         return "Generating news content..."
+    if "blog-rework-generator" in cleaned_path:
+        return "Reworking source blog..."
     if "blog-generator" in cleaned_path:
         return "Generating blog content..."
     if "keyword-suggestions" in cleaned_path:

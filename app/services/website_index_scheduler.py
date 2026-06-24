@@ -17,7 +17,7 @@ from logger import logger
 
 
 CHECK_LIMIT = 10
-DEFAULT_INTERVAL_SECONDS = 60 * 60 * 24 * 7
+DEFAULT_INTERVAL_SECONDS = 60 * 30
 _STARTED = False
 _LOCK = threading.Lock()
 
@@ -38,12 +38,12 @@ def start_website_index_scheduler() -> None:
 
 
 def run_website_index_weekly_batch() -> int:
-    job_id = start_system_background_job("/website-index-dashboard", "Website Index weekly check starting...")
+    job_id = start_system_background_job("/website-index-dashboard", "Website Index scheduled check starting...")
     try:
         due_rows = list_due_website_index_urls()
         due_urls = [item["url"] for item in due_rows[:CHECK_LIMIT]]
         if not due_urls:
-            update_system_background_job(job_id, "complete", "Website Index weekly check complete. No due URLs.", status_code=204)
+            update_system_background_job(job_id, "complete", "Website Index scheduled check complete. No due URLs.", status_code=204)
             return 0
 
         update_system_background_job(job_id, "running", f"Website Index checking {len(due_urls)} URL(s)...")

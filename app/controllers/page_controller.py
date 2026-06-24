@@ -245,7 +245,7 @@ def simple_page_generator():
         _load_simple_page_history_item(state, int(edit_history_id))
 
     if request.method == "POST":
-        action = request.form.get("action", "generate_simple_page_title").strip()
+        action = request.form.get("action", "generate_simple_page_all").strip()
         state["brand"] = request.form.get("brand", "").strip()
         state["language"] = _language_from_request()
         state["page_title"] = request.form.get("page_title", "").strip()
@@ -263,13 +263,14 @@ def simple_page_generator():
         elif not state["page_title"]:
             state["error"] = "Please enter the page title or page name."
         else:
+            generation_token = request.form.get("generation_status_token", "")
             try:
                 provider = get_provider()
                 if state["brand"]:
                     upsert_brand(state["brand"])
                 brand_context = get_brand_context(state["brand"])
                 min_words, max_words = get_page_word_limits()
-                progress = _progress_callback("Simple page", request.form.get("generation_status_token", ""))
+                progress = _progress_callback("Simple page", generation_token)
                 is_minor_revision = bool(state["generated_content"] and state["change_request"])
                 if is_minor_revision:
                     progress("Applying minor simple page changes...")
@@ -288,6 +289,50 @@ def simple_page_generator():
                     if not state["generated_title"]:
                         state["generated_title"] = state["page_title"]
                     selected_meta = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+                    _record_completed_simple_page(state, selected_meta, min_words, max_words)
+                elif action == "generate_simple_page_all":
+                    progress("Generating simple page title...")
+                    state["generated_title"] = generate_simple_page_title(
+                        provider,
+                        page_title=state["page_title"],
+                        page_type=state["page_type"],
+                        brand=state["brand"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        language=state["language"],
+                        progress_callback=progress,
+                    )
+                    raise_if_generation_cancelled(progress)
+                    progress("Generating simple page meta descriptions...")
+                    state["meta_descriptions"] = generate_simple_page_meta_descriptions(
+                        provider,
+                        page_title=state["page_title"],
+                        generated_title=state["generated_title"],
+                        page_type=state["page_type"],
+                        brand=state["brand"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        language=state["language"],
+                        progress_callback=progress,
+                    )
+                    raise_if_generation_cancelled(progress)
+                    selected_meta = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+                    progress("Generating simple page content...")
+                    state["generated_content"] = generate_simple_page_content(
+                        provider,
+                        page_title=state["page_title"],
+                        generated_title=state["generated_title"],
+                        selected_meta_description=selected_meta,
+                        page_type=state["page_type"],
+                        brand=state["brand"],
+                        expectations=state["expectations"],
+                        brand_context=brand_context,
+                        change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
+                        min_words=min_words,
+                        max_words=max_words,
+                        language=state["language"],
+                        progress_callback=progress,
+                    )
                     _record_completed_simple_page(state, selected_meta, min_words, max_words)
                 elif action == "generate_simple_page_meta" and not state["generated_title"]:
                     state["error"] = "Please generate the simple page title first."
@@ -339,7 +384,22 @@ def simple_page_generator():
                         progress_callback=progress,
                     )
                     _record_completed_simple_page(state, selected_meta, min_words, max_words)
-                clear_generation_status(request.form.get("generation_status_token", ""))
+                clear_generation_status(generation_token)
+            except GenerationCancelled:
+                if action in {"generate_simple_page_content", "generate_simple_page_all"}:
+                    draft_html = get_generation_status(generation_token).get("draft_html", "")
+                    if draft_html:
+                        state["generated_content"] = draft_html
+                        if not state["generated_title"]:
+                            state["generated_title"] = state["page_title"]
+                        selected_meta = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+                        _record_completed_simple_page(state, selected_meta, min_words, max_words)
+                        state["success"] = "Generation skipped. The last generated draft is loaded below."
+                    else:
+                        state["error"] = "Generation skipped before a draft was available."
+                    clear_generation_status(generation_token)
+                else:
+                    raise
             except Exception as exc:
                 logger.exception("simple_page_generator action failed")
                 state["error"] = generation_error_message(

@@ -63,6 +63,7 @@ def generate_keyword_suggestions(
         count=count,
     )
     _publish_progress(progress_callback, prompt, kind="prompt")
+    _publish_progress(progress_callback, "Generating keyword estimates...")
     raw = provider.generate_json(prompt)
     try:
         data = json.loads(extract_json_string(raw))

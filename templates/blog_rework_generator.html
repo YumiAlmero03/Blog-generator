@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% set active_page = "blog-rework" %}
+
+{% block title %}Blog Rework Generator{% endblock %}
+
+{% block head_extras %}
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+{% endblock %}
+
+{% block overlay %}
+  <div class="loading-overlay" data-loading-overlay>
+    <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[22px] bg-white/95 px-7 py-7 text-center shadow-2xl">
+      <div class="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-4 border-sand-200 border-t-sand-600"></div>
+      <div class="text-base font-bold text-sand-700" data-loading-text>Reworking blog...</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block eyebrow %}Blog Workflow{% endblock %}
+{% block hero_title %}Blog Rework Generator{% endblock %}
+{% block hero_text %}Paste one blog link and generate a reworked title, meta description, keywords, visual image ideas, tags, and article content in one run.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
+      {% endif %}
+
+      <form method="post" data-loading-message="Reworking source blog..." data-background-submit class="grid gap-5">
+        <input type="hidden" name="action" value="generate_rework" />
+
+        <div>
+          <label for="source_url" class="mb-2 block text-sm font-bold text-sand-900">Blog Link <span class="text-red-600">*</span></label>
+          <input id="source_url" name="source_url" type="url" value="{{ source_url }}" required placeholder="https://example.com/blog/article" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-3">
+          <div>
+            <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
+            <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Optional brand" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+          <div>
+            <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Tone</label>
+            <select id="tone" name="tone" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="natural" {% if tone == 'natural' %}selected{% endif %}>Natural</option>
+              <option value="professional" {% if tone == 'professional' %}selected{% endif %}>Professional</option>
+              <option value="friendly" {% if tone == 'friendly' %}selected{% endif %}>Friendly</option>
+            </select>
+          </div>
+          <div>
+            <label for="language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+            <select id="language" name="language" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              {% for option in language_options %}
+                <option value="{{ option }}" {% if language == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if content %}Rework Again{% else %}Rework Blog{% endif %}</button>
+      </form>
+    </section>
+
+    {% if content %}
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        <form method="post" id="contentForm" class="grid gap-6">
+          <input type="hidden" id="contentActionInput" name="action" value="save_blog_rework" />
+          <input type="hidden" name="source_url" value="{{ source_url }}" />
+          <input type="hidden" name="source_title" value="{{ source_title }}" />
+          <input type="hidden" name="brand" value="{{ brand }}" />
+          <input type="hidden" name="language" value="{{ language }}" />
+          <input type="hidden" name="tone" value="{{ tone }}" />
+          <input type="hidden" name="selected_title" value="{{ selected_title }}" />
+          <input type="hidden" name="keyword" value="{{ keyword }}" />
+          <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+          <input type="hidden" name="history_id" value="{{ history_id }}" />
+          <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
+          <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
+          <input type="hidden" name="tags_json" value='{{ tag_suggestions | tojson }}' />
+          <input type="radio" name="selected_title" value="{{ selected_title }}" checked class="hidden" aria-hidden="true" />
+          <input type="radio" name="meta_description_choice" value="{{ meta_description }}" checked class="hidden" aria-hidden="true" />
+
+          <div class="grid gap-4 lg:grid-cols-[1fr_260px]">
+            <div>
+              <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Generated Rework</p>
+              <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ selected_title }}</h2>
+              {% if source_title %}
+                <p class="mt-2 text-sm leading-6 text-sand-700">Source: {{ source_title }}</p>
+              {% endif %}
+            </div>
+            <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-800">
+              <div><strong>Keyword:</strong> {{ keyword }}</div>
+              {% if supporting_keyword %}<div><strong>Supporting:</strong> {{ supporting_keyword }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+            <label for="metaDescriptionDisplay" class="mb-2 block text-sm font-bold text-sand-900">Meta Description</label>
+            <textarea id="metaDescriptionDisplay" rows="3" readonly class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900">{{ meta_description }}</textarea>
+            {% if meta_descriptions|length > 1 %}
+              <div class="mt-3 grid gap-2">
+                {% for item in meta_descriptions %}
+                  <p class="rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">{{ item.text }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+            <label for="visual" class="mb-2 block text-sm font-bold text-sand-900">Visual / Image Descriptions</label>
+            <textarea id="visual" name="visual" rows="5" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900">{{ visual }}</textarea>
+          </div>
+
+          <div class="grid gap-4">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h3 class="font-display text-2xl text-sand-950">Article Content</h3>
+                <p class="mt-2 text-sm leading-6 text-sand-700">Edit the generated HTML directly before previewing, downloading, or saving.</p>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <button type="button" id="previewDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Print Preview</button>
+                <button type="button" id="downloadDocButton" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Download .doc</button>
+                <button type="button" id="saveGeneratedButton" data-save-action="save_blog_rework" class="inline-flex min-h-12 items-center justify-center rounded-full bg-moss-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-moss-500">Save Rework</button>
+              </div>
+            </div>
+            <div id="editorContainer">
+              <div id="contentEditor" class="quill-editor rounded-b-2xl">{{ content }}</div>
+            </div>
+            {% include "_output_views.html" %}
+            <div id="editorWordCount" class="text-sm font-medium text-sand-700">Word count: 0</div>
+          </div>
+
+          {% if tag_suggestions %}
+            <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <h3 class="font-display text-2xl text-sand-950">Suggested Tags</h3>
+                <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ tag_suggestions|length }} Tags</span>
+              </div>
+              <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm font-bold leading-6 text-sand-800">{{ tag_suggestions|join(', ') }}</div>
+            </div>
+          {% endif %}
+
+          {% include "_quality_report.html" %}
+        </form>
+      </section>
+
+      <form id="previewForm" method="post" action="/preview" class="hidden-form" aria-hidden="true">
+        <input type="hidden" id="previewSelectedTitle" name="selected_title" value="{{ selected_title }}" />
+        <input type="hidden" name="keyword" value="{{ keyword }}" />
+        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+        <input type="hidden" id="previewMetaDescription" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="previewContentHtml" name="content_html" value="" />
+      </form>
+
+      <form id="downloadForm" method="post" action="/download_doc" class="hidden-form" aria-hidden="true">
+        <input type="hidden" id="downloadSelectedTitle" name="selected_title" value="{{ selected_title }}" />
+        <input type="hidden" name="keyword" value="{{ keyword }}" />
+        <input type="hidden" name="brand" value="{{ brand }}" />
+        <input type="hidden" name="supporting_keyword" value="{{ supporting_keyword }}" />
+        <input type="hidden" id="downloadMetaDescription" name="meta_description" value="{{ meta_description }}" />
+        <input type="hidden" id="downloadContentHtml" name="content_html" value="" />
+      </form>
+    {% endif %}
+  </div>
+
+  <datalist id="brandSuggestions">
+    {% for item in brand_names %}
+      <option value="{{ item }}"></option>
+    {% endfor %}
+  </datalist>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script src="{{ url_for('static', filename='assets/js/index.js') }}"></script>
+{% endblock %}

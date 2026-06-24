@@ -4,7 +4,7 @@
 {% block title %}Website Index{% endblock %}
 {% block eyebrow %}Search Indexing{% endblock %}
 {% block hero_title %}Website Index{% endblock %}
-{% block hero_text %}Save website URLs separately from blog history, submit discovery signals, and run weekly Google index checks through the official Search Console URL Inspection API.{% endblock %}
+{% block hero_text %}Save website URLs separately from blog history, submit discovery signals, and run 30-minute Google index checks through the official Search Console URL Inspection API.{% endblock %}
 
 {% block content %}
   <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
@@ -157,7 +157,7 @@
         <button type="submit" name="action" value="indexnow" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Submit to IndexNow</button>
         <button type="submit" name="action" value="google" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-black">Submit to Google API</button>
         <button type="submit" name="action" value="google_inspect" class="inline-flex min-h-12 items-center justify-center rounded-full bg-blue-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-950">Check Google Index</button>
-        <button type="submit" name="action" value="weekly_check" formnovalidate class="inline-flex min-h-12 items-center justify-center rounded-full bg-blue-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-800">Weekly Due Check{% if due_count %} ({{ due_count }}){% endif %}</button>
+        <button type="submit" name="action" value="weekly_check" formnovalidate class="inline-flex min-h-12 items-center justify-center rounded-full bg-blue-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-800">Due Check{% if due_count %} ({{ due_count }}){% endif %}</button>
         <button type="submit" name="action" value="sitemap" formnovalidate class="inline-flex min-h-12 items-center justify-center rounded-full bg-moss-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-moss-700/90">Download Sitemap</button>
         {% if parsed_count %}
           <span class="rounded-full bg-sand-100 px-4 py-2 text-sm font-bold text-sand-700">{{ parsed_count }} URL{% if parsed_count != 1 %}s{% endif %} found</span>
@@ -229,7 +229,7 @@
           <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Saved Website Index</p>
           <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ website_index_urls|length }} saved URL{% if website_index_urls|length != 1 %}s{% endif %}</h2>
         </div>
-        <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ due_count }} due for weekly check</span>
+        <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ due_count }} due for 30-minute check</span>
       </div>
       <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
         <table class="min-w-full divide-y divide-sand-100 text-left text-sm">

@@ -54,3 +54,9 @@ def test_scheduler_batch_updates_google_results_when_configured(monkeypatch):
     assert checked_count == 2
     assert calls["google_kwargs"]["urls"] == ["https://example.com/a", "https://example.com/b"]
     assert calls["google_items"] == ["item-1", "item-2"]
+
+
+def test_scheduler_default_interval_is_30_minutes(monkeypatch):
+    monkeypatch.delenv("WEBSITE_INDEX_SCHEDULER_INTERVAL_SECONDS", raising=False)
+
+    assert website_index_scheduler._interval_seconds() == 60 * 30

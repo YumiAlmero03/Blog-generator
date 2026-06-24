@@ -1,5 +1,6 @@
 import json
 
+from app import create_app
 from app.services import keyword_suggestion_service
 from app.services.keyword_suggestion_service import fetch_google_autocomplete_keywords, generate_keyword_suggestions
 
@@ -67,3 +68,15 @@ def test_generate_keyword_suggestions_normalizes_model_output(monkeypatch):
             "notes": "Useful for evergreen content",
         }
     ]
+
+
+def test_keyword_suggestions_page_uses_inline_background_loading():
+    app = create_app()
+    app.testing = True
+    response = app.test_client().get("/keyword-suggestions")
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "data-background-submit" in html
+    assert "data-inline-loading" in html
+    assert "keywordSuggestionsStatus" in html

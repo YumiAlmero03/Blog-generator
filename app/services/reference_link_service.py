@@ -83,6 +83,10 @@ def fetch_reference_context(links: list[dict], timeout: int = 12) -> tuple[str, 
     return "\n\n---\n\n".join(context_parts).strip(), fetched
 
 
+def fetch_url_text(url: str, timeout: int = 12) -> dict:
+    return _fetch_url_text(url, timeout=timeout)
+
+
 def _fetch_url_text(url: str, timeout: int = 12) -> dict:
     request = Request(
         url,
