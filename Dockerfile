@@ -9,6 +9,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+RUN python -m playwright install --with-deps chromium
+
 COPY . .
 
 EXPOSE 3444 3445

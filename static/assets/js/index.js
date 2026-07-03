@@ -1,6 +1,10 @@
 (function () {
   const minimumEditorWords = 800;
   const contentForm = document.getElementById("contentForm");
+  const blogReworkSourceForm = document.getElementById("blogReworkSourceForm");
+  const sourceUrlInput = document.getElementById("source_url");
+  const sourceContentEditor = document.getElementById("sourceContentEditor");
+  const sourceContentHtmlInput = document.getElementById("sourceContentHtmlInput");
   const previewForm = document.getElementById("previewForm");
   const downloadForm = document.getElementById("downloadForm");
   const contentHtmlInput = document.getElementById("contentHtmlInput");
@@ -33,6 +37,7 @@
   const copySelectedTitle = document.getElementById("copySelectedTitle");
   const copySelectedMeta = document.getElementById("copySelectedMeta");
   let quill = null;
+  let sourceQuill = null;
   let linkFieldCounter = 0;
 
   function getSelectedTitle() {
@@ -152,6 +157,43 @@
       return 0;
     }
     return text.split(/\s+/).filter(Boolean).length;
+  }
+
+  function hasReadableHtml(html) {
+    const temp = document.createElement("div");
+    temp.innerHTML = html || "";
+    return Boolean((temp.textContent || temp.innerText || "").trim());
+  }
+
+  function syncSourceContentInput() {
+    if (sourceQuill && sourceContentHtmlInput) {
+      sourceContentHtmlInput.value = sourceQuill.root.innerHTML;
+    }
+  }
+
+  function validateBlogReworkSourceForm() {
+    if (!blogReworkSourceForm) {
+      return true;
+    }
+    syncSourceContentInput();
+    const hasUrl = sourceUrlInput && sourceUrlInput.value.trim();
+    const hasSourceContent = sourceContentHtmlInput && hasReadableHtml(sourceContentHtmlInput.value);
+    if (hasUrl || hasSourceContent) {
+      return true;
+    }
+    let box = document.getElementById("blogReworkSourceValidationMessage");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "blogReworkSourceValidationMessage";
+      box.className = "rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700";
+      blogReworkSourceForm.insertBefore(box, blogReworkSourceForm.firstChild);
+    }
+    box.textContent = "Please enter a blog link or paste the source content to rework.";
+    box.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (sourceUrlInput && typeof sourceUrlInput.focus === "function") {
+      sourceUrlInput.focus();
+    }
+    return false;
   }
 
   function updateEditorWordCount() {
@@ -505,6 +547,15 @@
     });
   }
 
+  if (blogReworkSourceForm) {
+    blogReworkSourceForm.addEventListener("submit", function (event) {
+      if (!validateBlogReworkSourceForm()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
+  }
+
   if (customTitleInput) {
     customTitleInput.addEventListener("input", syncCustomTitleRadio);
     customTitleInput.addEventListener("focus", syncCustomTitleRadio);
@@ -536,6 +587,26 @@
       updateEditorWordCount();
       refreshOutputViews();
     });
+  }
+
+  if (sourceContentEditor && window.Quill) {
+    const rawSourceHtml = sourceContentEditor.innerHTML;
+    sourceQuill = new window.Quill("#sourceContentEditor", {
+      theme: "snow",
+      modules: {
+        toolbar: [
+          ["bold", "italic", "underline"],
+          ["blockquote", "code-block"],
+          [{ header: [1, 2, 3, false] }],
+          [{ list: "ordered" }, { list: "bullet" }],
+          ["link"],
+          ["clean"],
+        ],
+      },
+    });
+    sourceQuill.root.innerHTML = rawSourceHtml;
+    syncSourceContentInput();
+    sourceQuill.on("text-change", syncSourceContentInput);
   }
 
   outputViewButtons.forEach(function (button) {

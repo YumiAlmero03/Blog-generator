@@ -43,9 +43,12 @@ class PageSeoParser(HTMLParser):
         self.twitter_cards = {}
         self.images = []
         self.headings = {f"h{level}": [] for level in range(1, 7)}
+        self.heading_sequence = []
         self.links = []
         self.text_parts = []
         self._tag_stack = []
+        self._heading_stack = []
+        self._open_link_indexes = []
         self._skip_depth = 0
 
     def handle_starttag(self, tag, attrs):
@@ -81,10 +84,18 @@ class PageSeoParser(HTMLParser):
         elif tag == "a":
             href = attrs_dict.get("href", "").strip()
             if href:
-                self.links.append(href)
+                self.links.append({"href": href, "text": ""})
+                self._open_link_indexes.append(len(self.links) - 1)
+        elif tag in self.headings:
+            self._heading_stack.append({"tag": tag, "parts": []})
 
     def handle_endtag(self, tag):
         tag = tag.lower()
+        if tag in self.headings:
+            self._flush_heading(tag)
+        elif tag == "a" and self._open_link_indexes:
+            self._open_link_indexes.pop()
+
         if tag in {"script", "style", "noscript", "svg"} and self._skip_depth > 0:
             self._skip_depth -= 1
         if self._tag_stack:
@@ -96,10 +107,13 @@ class PageSeoParser(HTMLParser):
             return
 
         current_tag = self._tag_stack[-1] if self._tag_stack else ""
+        if self._heading_stack:
+            self._heading_stack[-1]["parts"].append(text)
+        for link_index in self._open_link_indexes:
+            self.links[link_index]["text"] = " ".join([self.links[link_index]["text"], text]).strip()
+
         if current_tag == "title":
             self.title_parts.append(text)
-        elif current_tag in self.headings:
-            self.headings[current_tag].append(text)
         elif current_tag not in {"head", "meta", "link"}:
             self.text_parts.append(text)
 
@@ -110,6 +124,16 @@ class PageSeoParser(HTMLParser):
     @property
     def body_text(self):
         return " ".join(self.text_parts).strip()
+
+    def _flush_heading(self, tag: str):
+        for index in range(len(self._heading_stack) - 1, -1, -1):
+            if self._heading_stack[index]["tag"] == tag:
+                heading = self._heading_stack.pop(index)
+                text = " ".join(" ".join(heading["parts"]).split()).strip()
+                if text:
+                    self.headings[tag].append(text)
+                    self.heading_sequence.append({"level": tag, "text": text})
+                return
 
 
 def run_seo_audit(raw_url: str, verify_ssl: bool = True) -> dict:
@@ -123,9 +147,10 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True) -> dict:
     robots_result = _fetch_optional_text(urljoin(base_url, "/robots.txt"), verify_ssl=page.ssl_verified)
     sitemap_result = _check_sitemaps(base_url, robots_result.get("text", ""), verify_ssl=page.ssl_verified)
     link_report = _build_link_report(parser.links, page.url, base_url, verify_ssl=page.ssl_verified)
+    scrape_report = _build_scrape_report(parser, link_report)
     checks = _build_checks(parser, page, sitemap_result, robots_result, link_report)
     score = _score_checks(checks)
-    ai_summary = _generate_ai_summary(parser, checks, score, page.url)
+    ai_summary = _generate_ai_summary(parser, checks, score, page.url, scrape_report)
 
     return {
         "url": page.url,
@@ -154,6 +179,8 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True) -> dict:
             "robots_sitemap_count": len(_sitemap_urls_from_robots(robots_result.get("text", ""))),
             "sitemaps": sitemap_result["sitemaps"],
             "heading_outline": parser.headings,
+            "heading_sequence": parser.heading_sequence,
+            "scrape_report": scrape_report,
             "links": link_report,
             "ssl_verified": page.ssl_verified,
             "ssl_warning": page.ssl_warning,
@@ -429,10 +456,16 @@ def _word_count(text: str) -> int:
     return len(re.findall(r"\b[\w'-]+\b", text or ""))
 
 
-def _build_link_report(links: list[str], page_url: str, base_url: str, verify_ssl: bool = True) -> dict:
+def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bool = True) -> dict:
     parsed_base = urlparse(base_url)
     normalized_links = []
-    for href in links:
+    for link in links:
+        if isinstance(link, dict):
+            href = link.get("href", "")
+            anchor_text = " ".join(str(link.get("text", "")).split()).strip()
+        else:
+            href = link
+            anchor_text = ""
         cleaned = (href or "").strip()
         if not cleaned or cleaned.startswith(("#", "mailto:", "tel:", "javascript:")):
             continue
@@ -441,7 +474,7 @@ def _build_link_report(links: list[str], page_url: str, base_url: str, verify_ss
         if parsed_link.scheme not in {"http", "https"} or not parsed_link.netloc:
             continue
         link_type = "internal" if parsed_link.netloc == parsed_base.netloc else "external"
-        normalized_links.append({"url": absolute_url, "type": link_type})
+        normalized_links.append({"url": absolute_url, "text": anchor_text, "type": link_type})
 
     sample_checks = []
     seen = set()
@@ -457,8 +490,39 @@ def _build_link_report(links: list[str], page_url: str, base_url: str, verify_ss
         "total_count": len(normalized_links),
         "internal_count": sum(1 for item in normalized_links if item["type"] == "internal"),
         "external_count": sum(1 for item in normalized_links if item["type"] == "external"),
+        "items": normalized_links,
         "sample_checks": sample_checks,
         "broken_sample_count": sum(1 for item in sample_checks if item["status"] in {"broken", "unreachable"}),
+    }
+
+
+def _build_scrape_report(parser: PageSeoParser, link_report: dict) -> dict:
+    images = [
+        {
+            "src": image.get("src", ""),
+            "alt": image.get("alt", ""),
+            "has_alt": image.get("has_alt", False),
+        }
+        for image in parser.images
+    ]
+    headings = {
+        level: list(values)
+        for level, values in parser.headings.items()
+    }
+    heading_total = sum(len(values) for values in headings.values())
+
+    return {
+        "headings": headings,
+        "heading_sequence": list(parser.heading_sequence),
+        "heading_total": heading_total,
+        "images": images,
+        "image_total": len(images),
+        "images_with_alt": sum(1 for image in images if image["has_alt"]),
+        "images_missing_alt": sum(1 for image in images if not image["has_alt"]),
+        "links": link_report.get("items", []),
+        "link_total": link_report.get("total_count", 0),
+        "internal_link_total": link_report.get("internal_count", 0),
+        "external_link_total": link_report.get("external_count", 0),
     }
 
 
@@ -483,20 +547,22 @@ def _check_link_url(url: str, link_type: str, verify_ssl: bool = True) -> dict:
     return {"url": url, "type": link_type, "status_code": status_code, "status": status}
 
 
-def _generate_ai_summary(parser: PageSeoParser, checks: list[dict], score: int, url: str) -> dict:
+def _generate_ai_summary(parser: PageSeoParser, checks: list[dict], score: int, url: str, scrape_report: dict) -> dict:
     fallback = _fallback_recommendations(checks)
     prompt = {
         "task": "Return concise SEO audit recommendations as JSON.",
         "rules": [
             "Do not rate or discuss Google Search Console.",
             "Do not make claims about Google index status.",
-            "Focus on meta title, meta description, missing alt text, content quality, headings, canonical, robots.txt, and sitemap.",
+            "Use the scraped page facts before making suggestions.",
+            "Focus on meta title, meta description, missing alt text, content quality, headings, links, canonical, robots.txt, and sitemap.",
         ],
         "url": url,
         "score": score,
         "title": parser.title,
         "meta_description": parser.meta_description,
         "word_count": _word_count(parser.body_text),
+        "scraped_page_facts": _ai_scrape_context(scrape_report),
         "checks": checks,
         "response_schema": {
             "summary": "one sentence",
@@ -520,6 +586,21 @@ def _generate_ai_summary(parser: PageSeoParser, checks: list[dict], score: int, 
     except Exception as exc:
         logger.warning("AI SEO summary failed; using fallback recommendations: %s", exc)
         return fallback
+
+
+def _ai_scrape_context(scrape_report: dict) -> dict:
+    return {
+        "heading_total": scrape_report.get("heading_total", 0),
+        "headings": scrape_report.get("headings", {}),
+        "image_total": scrape_report.get("image_total", 0),
+        "images_with_alt": scrape_report.get("images_with_alt", 0),
+        "images_missing_alt": scrape_report.get("images_missing_alt", 0),
+        "images": scrape_report.get("images", [])[:40],
+        "link_total": scrape_report.get("link_total", 0),
+        "internal_link_total": scrape_report.get("internal_link_total", 0),
+        "external_link_total": scrape_report.get("external_link_total", 0),
+        "links": scrape_report.get("links", [])[:60],
+    }
 
 
 def _fallback_recommendations(checks: list[dict]) -> dict:

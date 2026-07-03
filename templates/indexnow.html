@@ -4,7 +4,7 @@
 {% block title %}Website Index{% endblock %}
 {% block eyebrow %}Search Indexing{% endblock %}
 {% block hero_title %}Website Index{% endblock %}
-{% block hero_text %}Save website URLs separately from blog history, submit discovery signals, and run 30-minute Google index checks through the official Search Console URL Inspection API.{% endblock %}
+{% block hero_text %}Save website URLs separately from blog history, submit discovery signals, and run 10-minute Google index checks through the official Search Console URL Inspection API.{% endblock %}
 
 {% block content %}
   <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
@@ -70,17 +70,8 @@
       <div class="rounded-[24px] border border-sand-200 bg-sand-50/70 p-4">
         <h2 class="font-display text-2xl font-bold text-sand-950">Google Indexing API</h2>
         <p class="mt-2 text-sm leading-6 text-sand-700">Use this only for pages Google allows through the Indexing API: JobPosting pages or livestream pages with BroadcastEvent inside VideoObject. The service account must be a verified owner in Search Console. For normal blog pages, use the sitemap export and Search Console.</p>
-        <div class="mt-4">
-          <label for="google_site_url" class="mb-2 block text-sm font-bold text-sand-900">Search Console Property</label>
-          <input
-            id="google_site_url"
-            name="google_site_url"
-            type="text"
-            value="{{ google_site_url }}"
-            placeholder="https://www.example.com/ or sc-domain:example.com"
-            class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
-          />
-          <p class="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Required for Check Google Index</p>
+        <div class="mt-4 rounded-2xl border border-sand-200 bg-white/70 px-4 py-3 text-sm leading-6 text-sand-700">
+          Google URL Inspection uses each saved URL's domain as the Search Console property, formatted like <strong>https://example.com/</strong>. Make sure each domain is added in Search Console for the Google account or service account below.
         </div>
         <div class="mt-4 grid gap-4 lg:grid-cols-[1fr_220px]">
           <div>
@@ -229,7 +220,7 @@
           <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Saved Website Index</p>
           <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ website_index_urls|length }} saved URL{% if website_index_urls|length != 1 %}s{% endif %}</h2>
         </div>
-        <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ due_count }} due for 30-minute check</span>
+        <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ due_count }} due for 10-minute check</span>
       </div>
       <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
         <table class="min-w-full divide-y divide-sand-100 text-left text-sm">

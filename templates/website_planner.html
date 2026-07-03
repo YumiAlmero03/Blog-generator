@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% set active_page = "website-planner" %}
+
+{% block title %}Website Planner{% endblock %}
+{% block eyebrow %}Website Planning{% endblock %}
+{% block hero_title %}Website Planner{% endblock %}
+{% block hero_text %}Plan the main pages, trust pages, and blog keyword targets needed for a website using the page lists saved in Settings.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" class="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+        <div>
+          <label for="page_count" class="mb-2 block text-sm font-bold text-sand-900">How many pages</label>
+          <input id="page_count" name="page_count" type="number" min="0" max="500" value="{{ page_count }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="trust_page_count" class="mb-2 block text-sm font-bold text-sand-900">How many trust pages</label>
+          <input id="trust_page_count" name="trust_page_count" type="number" min="0" max="500" value="{{ trust_page_count }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="blog_count" class="mb-2 block text-sm font-bold text-sand-900">How many blogs</label>
+          <input id="blog_count" name="blog_count" type="number" min="0" max="500" value="{{ blog_count }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div class="lg:col-span-4">
+          <label for="keyword_categories" class="mb-2 block text-sm font-bold text-sand-900">Keyword Category</label>
+          <select id="keyword_categories" name="keyword_categories" multiple size="7" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            {% for category in keyword_categories %}
+              <option value="{{ category }}" {% if category in selected_keyword_categories %}selected{% endif %}>{{ category }}</option>
+            {% endfor %}
+          </select>
+          <div class="mt-3 flex flex-col gap-3 sm:flex-row">
+            <input id="custom_keyword_categories" name="custom_keyword_categories" type="text" value="{{ custom_keyword_categories }}" placeholder="Add custom categories, comma separated" class="min-h-12 flex-1 rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+            <button id="addKeywordCategoryButton" type="button" class="inline-flex min-h-12 items-center justify-center rounded-full border border-sand-300 bg-white px-5 py-3 text-sm font-bold text-sand-800 transition hover:bg-sand-100">Add Category</button>
+          </div>
+          <p class="mt-2 text-xs font-bold leading-5 text-sand-600">Blog items use Google Trends when available, then category fallback keywords. Saved brand names are filtered out.</p>
+        </div>
+        <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Create Plan</button>
+      </form>
+
+      <div class="mt-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">
+        Planner uses the Pages Main and Trust Page lists from <a href="/settings" class="underline decoration-sand-400 underline-offset-4">Settings</a>. Blogs are keyword targets referenced against Google Trends, not brand keywords.
+      </div>
+    </section>
+
+    {% if plan %}
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Website Plan</p>
+            <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ plan.summary.total }} total item(s)</h2>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold text-sand-700">
+            <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ plan.summary.main_pages }} Pages</div>
+            <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ plan.summary.trust_pages }} Trust</div>
+            <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ plan.summary.blogs }} Blogs</div>
+          </div>
+        </div>
+
+        <div class="mt-6 grid gap-6 xl:grid-cols-3">
+          {% for title, rows in [
+            ("Main Pages", plan.main_pages),
+            ("Trust Pages", plan.trust_pages),
+            ("Blog Keywords", plan.blogs)
+          ] %}
+            <div class="rounded-[24px] border border-sand-200 bg-white/85 p-5">
+              <h3 class="font-display text-2xl font-bold text-sand-950">{{ title }}</h3>
+              {% if rows %}
+                <ol class="mt-4 grid gap-2">
+                  {% for item in rows %}
+                    <li class="rounded-2xl bg-sand-50 px-4 py-3 text-sm font-bold leading-6 text-sand-800">
+                      <span class="text-sand-500">{{ item.index }}.</span> {{ item.name }}
+                      {% if item.trend_url %}
+                        <a href="{{ item.trend_url }}" target="_blank" rel="noopener noreferrer" class="ml-2 text-xs uppercase tracking-[0.08em] text-sand-600 underline decoration-sand-300 underline-offset-4">Google Trends</a>
+                      {% endif %}
+                      {% if item.source %}
+                        <span class="mt-1 block text-xs font-semibold uppercase tracking-[0.08em] text-sand-500">{{ item.source }}</span>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ol>
+              {% else %}
+                <div class="mt-4 rounded-2xl border-2 border-dashed border-sand-200 px-4 py-6 text-center text-sm leading-6 text-sand-600">No items requested.</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (() => {
+      const select = document.getElementById("keyword_categories");
+      const input = document.getElementById("custom_keyword_categories");
+      const button = document.getElementById("addKeywordCategoryButton");
+      if (!select || !input || !button) {
+        return;
+      }
+
+      const addCategories = () => {
+        const values = input.value.split(",").map((value) => value.trim()).filter(Boolean);
+        values.forEach((value) => {
+          const existing = Array.from(select.options).find((option) => option.value.toLowerCase() === value.toLowerCase());
+          const option = existing || new Option(value, value);
+          option.selected = true;
+          if (!existing) {
+            select.add(option);
+          }
+        });
+      };
+
+      button.addEventListener("click", addCategories);
+      input.form && input.form.addEventListener("submit", addCategories);
+    })();
+  </script>
+{% endblock %}

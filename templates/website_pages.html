@@ -46,6 +46,9 @@
       {% if result and result.pages %}
         <textarea name="discovered_urls" class="hidden">{% for page in result.pages %}{{ page }}
 {% endfor %}</textarea>
+        {% for page in result.page_items %}
+          <input type="hidden" name="page_keyword_records" value="{{ page.url }}|||{{ page.keywords|join(', ') }}" />
+        {% endfor %}
       {% endif %}
 
       {% if error %}
@@ -115,6 +118,7 @@
             <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
               <tr>
                 <th class="px-4 py-3">URL</th>
+                <th class="px-4 py-3">Keywords</th>
                 <th class="px-4 py-3">Google</th>
                 <th class="px-4 py-3">Bing</th>
                 <th class="px-4 py-3">Yahoo</th>
@@ -127,6 +131,19 @@
               {% for item in selected_domain_page_urls %}
                 <tr>
                   <td class="max-w-xl break-words px-4 py-3 font-semibold text-sand-900">{{ item.url }}</td>
+                  <td class="min-w-[220px] px-4 py-3 text-sand-700">
+                    {% if item.page_keywords %}
+                      <div class="flex flex-wrap gap-1.5">
+                        {% for keyword in item.page_keywords.split(",")[:8] %}
+                          {% if keyword.strip() %}
+                            <span class="rounded-full bg-sand-100 px-2.5 py-1 text-xs font-bold text-sand-700">{{ keyword.strip() }}</span>
+                          {% endif %}
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      n/a
+                    {% endif %}
+                  </td>
                   <td class="px-4 py-3">
                     {% if item.google_status == "indexed" %}
                       <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-green-700">Indexed</span>
@@ -241,21 +258,36 @@
             <input type="hidden" name="limit" value="{{ limit }}" />
             <textarea name="discovered_urls" class="hidden">{% for page in result.pages %}{{ page }}
 {% endfor %}</textarea>
+            {% for page in result.page_items %}
+              <input type="hidden" name="page_keyword_records" value="{{ page.url }}|||{{ page.keywords|join(', ') }}" />
+            {% endfor %}
             <div class="max-h-[620px] overflow-y-auto rounded-2xl border border-sand-200 bg-white">
               <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
                 <thead class="sticky top-0 bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
                   <tr>
                     <th class="w-16 px-4 py-3">Save</th>
                     <th class="px-4 py-3">URL</th>
+                    <th class="px-4 py-3">Keywords</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-sand-100">
-                  {% for page in result.pages %}
+                  {% for page in result.page_items %}
                     <tr>
                       <td class="px-4 py-3 align-top">
-                        <input type="checkbox" name="selected_urls" value="{{ page }}" checked class="h-5 w-5 rounded border-sand-300 text-sand-700 focus:ring-sand-400" data-page-checkbox />
+                        <input type="checkbox" name="selected_urls" value="{{ page.url }}" checked class="h-5 w-5 rounded border-sand-300 text-sand-700 focus:ring-sand-400" data-page-checkbox />
                       </td>
-                      <td class="break-words px-4 py-3 font-semibold text-sand-900">{{ page }}</td>
+                      <td class="break-words px-4 py-3 font-semibold text-sand-900">{{ page.url }}</td>
+                      <td class="min-w-[220px] px-4 py-3 text-sand-700">
+                        {% if page.keywords %}
+                          <div class="flex flex-wrap gap-1.5">
+                            {% for keyword in page.keywords[:8] %}
+                              <span class="rounded-full bg-sand-100 px-2.5 py-1 text-xs font-bold text-sand-700">{{ keyword }}</span>
+                            {% endfor %}
+                          </div>
+                        {% else %}
+                          n/a
+                        {% endif %}
+                      </td>
                     </tr>
                   {% endfor %}
                 </tbody>

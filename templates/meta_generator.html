@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% set active_page = "meta-generator" %}
+
+{% block title %}Meta Generator{% endblock %}
+{% block eyebrow %}SEO Tools{% endblock %}
+{% block hero_title %}Meta Title & Description Generator{% endblock %}
+{% block hero_text %}Generate simple meta title and meta description options from a page type. Category and author templates use %name% for dynamic names.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="post" data-loading-message="Generating meta options..." data-inline-loading data-inline-status-target="#metaGeneratorStatus" data-inline-error-target="#metaGeneratorError" data-background-submit class="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_220px_160px_auto] lg:items-end">
+      <div>
+        <label for="page_type" class="mb-2 block text-sm font-bold text-sand-900">Page Type</label>
+        <select id="page_type" name="page_type" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for item in page_types %}
+            <option value="{{ item }}" {% if page_type == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+        <select id="language" name="language" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for option in languages %}
+            <option value="{{ option }}" {% if language == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="count" class="mb-2 block text-sm font-bold text-sand-900">Options</label>
+        <input id="count" name="count" type="number" min="1" max="10" value="{{ count }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+      </div>
+      <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate</button>
+    </form>
+
+    <p id="metaGeneratorStatus" class="mt-4 hidden text-sm font-bold leading-6 text-moss-700"></p>
+    <p id="metaGeneratorError" class="mt-3 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+    <p class="mt-4 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Meta description target: {{ meta_description_min_chars }}-{{ meta_description_max_chars }} characters.</p>
+    <p class="mt-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Keyword is based on the selected page type. Category Page and Author Page outputs must include %name%.</p>
+
+    {% if error %}
+      <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+    {% endif %}
+  </section>
+
+  {% if result %}
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">{{ result.page_type }}</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ result.options|length }} meta options for {{ result.keyword }}</h2>
+        </div>
+        <button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black" data-copy-target="metaCsvOutput" data-copy-message="Meta CSV copied.">Copy CSV</button>
+      </div>
+
+      <div class="mt-6 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+        <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+          <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+            <tr>
+              <th class="px-4 py-3">Meta Title</th>
+              <th class="px-4 py-3">Title Chars</th>
+              <th class="px-4 py-3">Meta Description</th>
+              <th class="px-4 py-3">Desc Chars <span class="block text-[10px] normal-case tracking-normal">Target: {{ meta_description_min_chars }}-{{ meta_description_max_chars }}</span></th>
+              <th class="px-4 py-3">Warnings</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-sand-100">
+            {% for item in result.options %}
+              <tr>
+                <td class="min-w-[260px] px-4 py-3 font-bold text-sand-950">{{ item.title }}</td>
+                <td class="px-4 py-3">
+                  <span class="rounded-full {% if 45 <= item.title_character_count <= 60 %}bg-green-100 text-green-700{% else %}bg-amber-100 text-amber-700{% endif %} px-3 py-1 text-xs font-bold">{{ item.title_character_count }}</span>
+                </td>
+                <td class="min-w-[420px] px-4 py-3 leading-6 text-sand-700">{{ item.description }}</td>
+                <td class="px-4 py-3">
+                  <span class="rounded-full {% if meta_description_min_chars <= item.description_character_count <= meta_description_max_chars %}bg-green-100 text-green-700{% else %}bg-amber-100 text-amber-700{% endif %} px-3 py-1 text-xs font-bold">{{ item.description_character_count }}</span>
+                </td>
+                <td class="min-w-[180px] px-4 py-3 text-sand-700">
+                  {% if item.banned_terms %}
+                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">{{ item.banned_terms|join(', ') }}</span>
+                  {% else %}
+                    <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold text-moss-700">Clean</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <textarea id="metaCsvOutput" readonly class="sr-copy-field">keyword,page_type,title,title_character_count,description,description_character_count,banned_terms
+{% for item in result.options -%}
+"{{ result.keyword|replace('"', '""') }}","{{ result.page_type|replace('"', '""') }}","{{ item.title|replace('"', '""') }}","{{ item.title_character_count }}","{{ item.description|replace('"', '""') }}","{{ item.description_character_count }}","{{ item.banned_terms|join('; ')|replace('"', '""') }}"
+{% endfor %}</textarea>
+    </section>
+  {% endif %}
+{% endblock %}

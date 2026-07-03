@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from io import BytesIO
 from queue import Queue
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -18,7 +19,7 @@ TERMINAL_STATUSES = {"complete", "failed", "cancelled"}
 _JOBS: dict[str, "BackgroundJob"] = {}
 _SYSTEM_JOBS: dict[str, "BackgroundJob"] = {}
 _PENDING_IDS: list[str] = []
-_JOB_QUEUE: Queue[tuple[str, str, dict[str, list[str]]]] = Queue()
+_JOB_QUEUE: Queue[tuple[str, str, dict[str, list[str]], dict[str, list[dict]]]] = Queue()
 _LOCK = RLock()
 _WORKERS_STARTED = False
 _WORKER_APP: Flask | None = None
@@ -55,7 +56,12 @@ class BackgroundJob:
         return payload
 
 
-def start_background_post(app: Flask, path: str, form_data: dict[str, list[str]]) -> BackgroundJob:
+def start_background_post(
+    app: Flask,
+    path: str,
+    form_data: dict[str, list[str]],
+    file_data: dict[str, list[dict]] | None = None,
+) -> BackgroundJob:
     cleanup_background_jobs()
     _ensure_workers(app)
     job = BackgroundJob(id=uuid4().hex, path=path)
@@ -65,7 +71,7 @@ def start_background_post(app: Flask, path: str, form_data: dict[str, list[str]]
         token = _generation_token_from_form(form_data)
         if token:
             _TOKEN_JOB_IDS[token] = job.id
-    _JOB_QUEUE.put((job.id, path, form_data))
+    _JOB_QUEUE.put((job.id, path, form_data, file_data or {}))
     return job
 
 
@@ -205,18 +211,24 @@ def _ensure_workers(app: Flask) -> None:
 
 def _worker_loop() -> None:
     while True:
-        job_id, path, form_data = _JOB_QUEUE.get()
+        job_id, path, form_data, file_data = _JOB_QUEUE.get()
         try:
             app = _WORKER_APP
             if app is None:
                 _update_job(job_id, status="failed", message="Generation failed.", error="Worker app is not ready.", status_code=500)
                 continue
-            _run_background_post(app, job_id, path, form_data)
+            _run_background_post(app, job_id, path, form_data, file_data)
         finally:
             _JOB_QUEUE.task_done()
 
 
-def _run_background_post(app: Flask, job_id: str, path: str, form_data: dict[str, list[str]]) -> None:
+def _run_background_post(
+    app: Flask,
+    job_id: str,
+    path: str,
+    form_data: dict[str, list[str]],
+    file_data: dict[str, list[dict]] | None = None,
+) -> None:
     generation_token = _generation_token_from_form(form_data)
     with _LOCK:
         if job_id in _PENDING_IDS:
@@ -224,7 +236,7 @@ def _run_background_post(app: Flask, job_id: str, path: str, form_data: dict[str
     _update_job(job_id, status="running", message=_initial_background_message(path))
     try:
         with app.test_client() as client:
-            response = client.post(path, data=form_data)
+            response = client.post(path, data=_background_post_data(form_data, file_data or {}))
             html = response.get_data(as_text=True)
             _update_job(
                 job_id,
@@ -266,6 +278,24 @@ def _update_job(job_id: str, **changes) -> None:
         for key, value in changes.items():
             setattr(job, key, value)
         job.updated_at = datetime.utcnow()
+
+
+def _background_post_data(form_data: dict[str, list[str]], file_data: dict[str, list[dict]]) -> dict:
+    data = {key: values for key, values in form_data.items()}
+    for field_name, files in (file_data or {}).items():
+        prepared_files = []
+        for file_info in files:
+            prepared_files.append(
+                (
+                    BytesIO(file_info.get("content", b"")),
+                    file_info.get("filename", ""),
+                    file_info.get("content_type", "application/octet-stream"),
+                )
+            )
+        if not prepared_files:
+            continue
+        data[field_name] = prepared_files[0] if len(prepared_files) == 1 else prepared_files
+    return data
 
 
 def _queue_position(job_id: str) -> int:

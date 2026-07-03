@@ -1,3 +1,5 @@
+from io import BytesIO
+
 from app import create_app
 from app.events.generation_events import publish_generation_status
 from app.services.background_job_service import (
@@ -7,6 +9,20 @@ from app.services.background_job_service import (
     _TOKEN_JOB_IDS,
     _repeat_reason_from_message,
 )
+
+
+class DummyStartedJob:
+    def to_dict(self):
+        return {
+            "id": "queued-job",
+            "path": "/gsc-planner",
+            "status": "queued",
+            "message": "Queued.",
+            "status_code": 0,
+            "error": "",
+            "repeat_reason": "",
+            "queue_position": 1,
+        }
 
 
 def test_repeat_reason_from_retry_message():
@@ -36,6 +52,58 @@ def test_generation_status_updates_background_job_message_and_repeat_reason():
         with _LOCK:
             _JOBS.pop(job.id, None)
             _TOKEN_JOB_IDS.pop(token, None)
+
+
+def test_background_job_preserves_uploaded_files(monkeypatch):
+    from app.controllers import background_job_controller
+
+    captured = {}
+
+    def fake_start_background_post(app, path, form_data, file_data=None):
+        captured["path"] = path
+        captured["form_data"] = form_data
+        captured["file_data"] = file_data or {}
+        return DummyStartedJob()
+
+    monkeypatch.setattr(background_job_controller, "start_background_post", fake_start_background_post)
+
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post(
+        "/background-jobs",
+        data={
+            "_background_path": "/gsc-planner",
+            "action": "generate_report",
+            "brand": "Example Brand",
+            "gsc_screenshot": (BytesIO(b"fake image bytes"), "gsc.png", "image/png"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 202
+    assert captured["path"] == "/gsc-planner"
+    assert captured["form_data"]["brand"] == ["Example Brand"]
+    assert captured["file_data"]["gsc_screenshot"][0]["filename"] == "gsc.png"
+    assert captured["file_data"]["gsc_screenshot"][0]["content_type"] == "image/png"
+    assert captured["file_data"]["gsc_screenshot"][0]["content"] == b"fake image bytes"
+
+
+def test_background_job_returns_json_for_large_form_payload():
+    app = create_app()
+    app.testing = True
+    app.config["MAX_FORM_MEMORY_SIZE"] = 128
+
+    response = app.test_client().post(
+        "/background-jobs",
+        data={
+            "_background_path": "/gsc-planner",
+            "captured_screenshot_data": "x" * 512,
+        },
+        headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 413
+    assert "upload is too large" in response.get_json()["error"]
 
 
 def test_base_layout_includes_floating_background_jobs_widget_on_main_pages():

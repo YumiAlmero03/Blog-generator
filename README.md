@@ -23,6 +23,12 @@ pip install -r requirements.txt
 python ui.py
 ```
 
+For browser-rendered link fetching, install the Playwright browser and Linux dependencies once:
+
+```bash
+python -m playwright install --with-deps chromium
+```
+
 Then open:
 
 ```text
@@ -95,3 +101,12 @@ docker compose up --build
 ```
 
 Then open `http://localhost:3444`.
+
+## Reset Docker
+
+If theres additional packages
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Request Error{% endblock %}
+{% block eyebrow %}Request Error{% endblock %}
+{% block hero_title %}Request Error{% endblock %}
+{% block hero_text %}The app could not process that request.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-red-200 bg-red-50 p-6 shadow-soft sm:p-8">
+    <p class="text-sm font-bold leading-6 text-red-700">{{ error }}</p>
+  </section>
+{% endblock %}

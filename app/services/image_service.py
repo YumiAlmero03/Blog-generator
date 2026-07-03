@@ -8,9 +8,10 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 UPLOAD_ROOT = BASE_DIR / "data" / "uploads"
 BRAND_LOGO_DIR = UPLOAD_ROOT / "brand_logos"
 IMAGE_TOOL_DIR = UPLOAD_ROOT / "image_tools"
+GSC_PLANNER_DIR = UPLOAD_ROOT / "gsc_planner"
 ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".avif"}
 
-for directory in (BRAND_LOGO_DIR, IMAGE_TOOL_DIR):
+for directory in (BRAND_LOGO_DIR, IMAGE_TOOL_DIR, GSC_PLANNER_DIR):
     directory.mkdir(parents=True, exist_ok=True)
 
 

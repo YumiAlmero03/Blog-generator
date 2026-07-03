@@ -76,16 +76,6 @@
           class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
         />
 
-        <label for="google_search_console_property" class="mb-2 mt-4 block text-sm font-bold text-sand-900">Google Search Console property</label>
-        <input
-          id="google_search_console_property"
-          name="google_search_console_property"
-          type="text"
-          value="{{ google_search_console_property }}"
-          placeholder="https://www.example.com/ or sc-domain:example.com"
-          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
-        />
-
         <label for="google_service_account_json" class="mb-2 mt-4 block text-sm font-bold text-sand-900">Google service account JSON</label>
         <textarea
           id="google_service_account_json"
@@ -104,6 +94,33 @@
           placeholder="Optional; service account JSON is preferred"
           class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
         />
+      </div>
+
+      <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <h2 class="text-base font-bold text-sand-950">Website Planner Pages</h2>
+          <p class="mt-1 text-sm leading-6 text-sand-600">One page name per line. Website Planner randomly picks from these lists when building a site plan.</p>
+        </div>
+        <div>
+          <label for="website_planner_main_pages" class="mb-2 block text-sm font-bold text-sand-900">Pages Main</label>
+          <textarea
+            id="website_planner_main_pages"
+            name="website_planner_main_pages"
+            rows="7"
+            placeholder="Home&#10;About Us&#10;Services&#10;Contact Us"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          >{{ website_planner_main_pages }}</textarea>
+        </div>
+        <div>
+          <label for="website_planner_trust_pages" class="mb-2 block text-sm font-bold text-sand-900">Trust Page</label>
+          <textarea
+            id="website_planner_trust_pages"
+            name="website_planner_trust_pages"
+            rows="7"
+            placeholder="Privacy Policy&#10;Terms and Conditions&#10;Disclaimer"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          >{{ website_planner_trust_pages }}</textarea>
+        </div>
       </div>
 
       <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">

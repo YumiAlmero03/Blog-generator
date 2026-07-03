@@ -18,7 +18,7 @@
 
 {% block eyebrow %}Blog Workflow{% endblock %}
 {% block hero_title %}Blog Rework Generator{% endblock %}
-{% block hero_text %}Paste one blog link and generate a reworked title, meta description, keywords, visual image ideas, tags, and article content in one run.{% endblock %}
+{% block hero_text %}Paste one blog link or paste source content, then generate a reworked title, meta description, keywords, visual image ideas, tags, and article content in one run.{% endblock %}
 
 {% block content %}
   <div class="grid gap-6">
@@ -30,18 +30,43 @@
         <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
       {% endif %}
 
-      <form method="post" data-loading-message="Reworking source blog..." data-background-submit class="grid gap-5">
+      <form method="post" id="blogReworkSourceForm" data-loading-message="Reworking source blog..." data-background-submit class="grid gap-5">
         <input type="hidden" name="action" value="generate_rework" />
+        <input type="hidden" id="sourceContentHtmlInput" name="source_content_html" value="{{ source_content | e }}" />
 
         <div>
-          <label for="source_url" class="mb-2 block text-sm font-bold text-sand-900">Blog Link <span class="text-red-600">*</span></label>
-          <input id="source_url" name="source_url" type="url" value="{{ source_url }}" required placeholder="https://example.com/blog/article" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          <label for="source_url" class="mb-2 block text-sm font-bold text-sand-900">Blog Link</label>
+          <input id="source_url" name="source_url" type="url" value="{{ source_url }}" placeholder="https://example.com/blog/article" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-3">
+        <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
+          <label for="sourceContentEditor" class="mb-2 block text-sm font-bold text-sand-900">Source Content</label>
+          <p class="mb-3 text-sm leading-6 text-sand-700">Optional when Blog Link is filled. Required when Blog Link is empty.</p>
+          <div id="sourceContentEditor" class="quill-editor min-h-[220px] rounded-b-2xl">{{ source_content | safe }}</div>
+        </div>
+
+        <div>
+          <label for="manual_supporting_keywords" class="mb-2 block text-sm font-bold text-sand-900">Supporting Keywords</label>
+          <textarea id="manual_supporting_keywords" name="manual_supporting_keywords" rows="3" placeholder="Optional: add a few keywords separated by commas or new lines" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ manual_supporting_keywords }}</textarea>
+          <p class="mt-2 text-xs font-bold leading-5 text-sand-600">Each keyword will be used only once or twice in the generated content.</p>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-5">
           <div>
-            <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
-            <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Optional brand" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+            <label for="rework_content_type" class="mb-2 block text-sm font-bold text-sand-900">Content Type</label>
+            <select id="rework_content_type" name="rework_content_type" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="blog" {% if rework_content_type == 'blog' %}selected{% endif %}>Blog</option>
+              <option value="page" {% if rework_content_type == 'page' %}selected{% endif %}>Page</option>
+            </select>
+            <p class="mt-2 text-xs font-bold leading-5 text-sand-600">Uses the matching word limit from Settings.</p>
+          </div>
+          <div>
+            <label for="old_brand" class="mb-2 block text-sm font-bold text-sand-900">Old Brand</label>
+            <input id="old_brand" name="old_brand" type="text" value="{{ old_brand }}" placeholder="Brand to replace" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+          <div>
+            <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">New Brand</label>
+            <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="Selected brand" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
           </div>
           <div>
             <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Tone</label>
@@ -70,7 +95,11 @@
         <form method="post" id="contentForm" class="grid gap-6">
           <input type="hidden" id="contentActionInput" name="action" value="save_blog_rework" />
           <input type="hidden" name="source_url" value="{{ source_url }}" />
+          <input type="hidden" name="source_content_html" value="{{ source_content | e }}" />
+          <input type="hidden" name="rework_content_type" value="{{ rework_content_type }}" />
+          <input type="hidden" name="manual_supporting_keywords" value="{{ manual_supporting_keywords }}" />
           <input type="hidden" name="source_title" value="{{ source_title }}" />
+          <input type="hidden" name="old_brand" value="{{ old_brand }}" />
           <input type="hidden" name="brand" value="{{ brand }}" />
           <input type="hidden" name="language" value="{{ language }}" />
           <input type="hidden" name="tone" value="{{ tone }}" />

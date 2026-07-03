@@ -213,6 +213,7 @@ def generate_simple_page_title(
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
                 "- Your previous title was missing or used banned words.\n"
+                f"- The title must start with this exact page title: {page_title}.\n"
                 "- Return one fresh title in valid JSON only.\n"
             )
         full_prompt = prompt + retry_instruction
@@ -224,6 +225,13 @@ def generate_simple_page_title(
             if not title:
                 _publish_progress(progress_callback, f"Simple page title attempt {attempt}: no title returned. Retrying...")
                 wait_before_retry(attempt, progress_callback, "empty title")
+                continue
+            if not _starts_with_page_title(title, page_title):
+                _publish_progress(
+                    progress_callback,
+                    f"Simple page title attempt {attempt}: title must start with '{page_title}'. Retrying...",
+                )
+                wait_before_retry(attempt, progress_callback, "simple page title prefix miss")
                 continue
             banned_terms = find_banned_terms_in_text(title)
             if banned_terms:
@@ -239,6 +247,12 @@ def generate_simple_page_title(
             raise ValueError("Could not parse JSON from model output.") from exc
 
     raise ValueError("Generated simple page title could not satisfy the rules.")
+
+
+def _starts_with_page_title(title: str, page_title: str) -> bool:
+    cleaned_title = (title or "").strip()
+    cleaned_page_title = (page_title or "").strip()
+    return bool(cleaned_page_title and cleaned_title.startswith(cleaned_page_title))
 
 
 def generate_simple_page_meta_descriptions(

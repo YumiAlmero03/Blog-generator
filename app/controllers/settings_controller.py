@@ -26,6 +26,12 @@ from app.services.word_limit_settings import (
     get_page_word_limits,
     normalize_word_limits,
 )
+from app.services.website_planner_service import (
+    WEBSITE_PLANNER_MAIN_PAGES_KEY,
+    WEBSITE_PLANNER_TRUST_PAGES_KEY,
+    get_main_pages_setting,
+    get_trust_pages_setting,
+)
 
 
 def settings():
@@ -34,7 +40,6 @@ def settings():
     state = {
         "money_site": get_setting("money_site", ""),
         "indexnow_key": get_setting("indexnow_key", ""),
-        "google_search_console_property": get_setting("google_search_console_property", ""),
         "google_service_account_json": get_setting("google_service_account_json", ""),
         "google_oauth_access_token": get_setting("google_oauth_access_token", ""),
         "default_country_target": get_default_country_target(),
@@ -45,6 +50,8 @@ def settings():
         "blog_max_words": blog_max_words,
         "page_min_words": page_min_words,
         "page_max_words": page_max_words,
+        "website_planner_main_pages": get_main_pages_setting(),
+        "website_planner_trust_pages": get_trust_pages_setting(),
         "success": None,
         "error": None,
     }
@@ -52,9 +59,10 @@ def settings():
     if request.method == "POST":
         state["money_site"] = request.form.get("money_site", "").strip()
         state["indexnow_key"] = request.form.get("indexnow_key", "").strip()
-        state["google_search_console_property"] = request.form.get("google_search_console_property", "").strip()
         state["google_service_account_json"] = request.form.get("google_service_account_json", "").strip()
         state["google_oauth_access_token"] = request.form.get("google_oauth_access_token", "").strip()
+        state["website_planner_main_pages"] = request.form.get("website_planner_main_pages", "").strip()
+        state["website_planner_trust_pages"] = request.form.get("website_planner_trust_pages", "").strip()
         state["default_country_target"] = normalize_country_target(request.form.get("default_country_target", "Worldwide"))
         state["default_language"] = normalize_language(request.form.get("default_language", "English"))
         state["country_options"] = country_options(state["default_country_target"])
@@ -73,7 +81,6 @@ def settings():
         )
         set_setting("money_site", state["money_site"])
         set_setting("indexnow_key", state["indexnow_key"])
-        set_setting("google_search_console_property", state["google_search_console_property"])
         set_setting("google_service_account_json", state["google_service_account_json"])
         set_setting("google_oauth_access_token", state["google_oauth_access_token"])
         set_setting(DEFAULT_COUNTRY_TARGET_KEY, state["default_country_target"])
@@ -82,6 +89,8 @@ def settings():
         set_setting(BLOG_MAX_WORDS_KEY, str(state["blog_max_words"]))
         set_setting(PAGE_MIN_WORDS_KEY, str(state["page_min_words"]))
         set_setting(PAGE_MAX_WORDS_KEY, str(state["page_max_words"]))
+        set_setting(WEBSITE_PLANNER_MAIN_PAGES_KEY, state["website_planner_main_pages"])
+        set_setting(WEBSITE_PLANNER_TRUST_PAGES_KEY, state["website_planner_trust_pages"])
         state["success"] = "Settings saved."
 
     return render_template("settings.html", **base_template_context(), **state)

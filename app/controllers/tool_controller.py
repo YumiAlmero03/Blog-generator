@@ -1,8 +1,11 @@
 import csv
 import io
+import json
 import re
+import time
+from datetime import date, timedelta
 
-from flask import Response, render_template, request
+from flask import Response, redirect, render_template, request, url_for
 from urllib.parse import urlparse
 
 from app.controllers.helpers import base_template_context
@@ -12,10 +15,11 @@ from app.services.indexnow_service import (
     GOOGLE_INDEXING_ENDPOINT,
     build_sitemap_xml,
     extract_urls,
-    inspect_google_index_status,
+    inspect_google_index_status_by_url_domain,
     submit_google_indexing_urls,
     submit_indexnow_urls,
 )
+from app.services.gsc_planner_service import answer_gsc_planner_chat, fetch_gsc_performance_data, generate_gsc_seo_report
 from app.services.keyword_suggestion_service import generate_keyword_suggestions
 from app.services.locale_settings import (
     country_options,
@@ -25,21 +29,82 @@ from app.services.locale_settings import (
     normalize_country_target,
     normalize_language,
 )
+from app.services.meta_generator_service import (
+    DEFAULT_META_OPTION_COUNT,
+    META_DESCRIPTION_MAX_CHARS,
+    META_DESCRIPTION_MIN_CHARS,
+    generate_meta_titles_and_descriptions,
+    keyword_from_page_type,
+)
 from app.services.provider_service import generation_error_message, get_provider
+from app.services.reference_link_service import fetch_url_html, fetch_url_rendered_html
 from app.services.seo_checker_service import run_seo_audit
 from app.services.generation_status_service import publish_generation_prompt, publish_generation_status
 from app.services.website_page_discovery_service import discover_website_pages
-from database import get_setting, list_backlinks, list_brand_names, set_setting
-from database import list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
+from app.services.website_index_scheduler import trigger_website_index_batch
+from app.services.website_planner_service import DEFAULT_KEYWORD_CATEGORIES, build_website_plan, get_main_pages_setting, get_trust_pages_setting, parse_keyword_categories
+from database import get_brand_context, get_brand_record, get_setting, list_backlinks, list_brand_names, list_brand_records, set_setting
+from database import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 from logger import logger
 
 
-WEBSITE_INDEX_CHECK_LIMIT = 10
+WEBSITE_INDEX_CHECK_LIMIT = 50
 WEBSITE_PAGES_PER_PAGE = 50
 
 
 def text_tools():
     return render_template("text_tools.html", **base_template_context())
+
+
+def test_page():
+    state = {
+        "url": "",
+        "wait_minutes": "0",
+        "fetch_mode": "browser",
+        "result": None,
+        "error": None,
+    }
+    if request.method == "POST":
+        state["url"] = request.form.get("url", "").strip()
+        state["wait_minutes"] = request.form.get("wait_minutes", "0").strip() or "0"
+        state["fetch_mode"] = request.form.get("fetch_mode", "browser").strip() or "browser"
+        if not state["url"]:
+            state["error"] = "Enter a link to test."
+        else:
+            try:
+                wait_seconds = _test_page_wait_seconds(state["wait_minutes"])
+                if state["fetch_mode"] == "browser":
+                    fetched = fetch_url_rendered_html(state["url"], wait_seconds=wait_seconds)
+                else:
+                    if wait_seconds:
+                        time.sleep(wait_seconds)
+                    fetched = fetch_url_html(state["url"])
+                state["result"] = {
+                    "content_type": fetched.get("content_type", ""),
+                    "html": fetched.get("html", ""),
+                    "byte_count": fetched.get("byte_count", 0),
+                    "character_count": fetched.get("character_count", 0),
+                    "final_url": fetched.get("final_url", state["url"]),
+                    "wait_seconds": wait_seconds,
+                    "fetch_mode": state["fetch_mode"],
+                    "rendered": bool(fetched.get("rendered")),
+                }
+            except Exception as exc:
+                logger.exception("test page link fetch failed")
+                state["error"] = str(exc) or "Could not fetch that link."
+    return render_template("test_page.html", **base_template_context(), **state)
+
+
+def _test_page_wait_seconds(value: str) -> float:
+    try:
+        minutes = float(value)
+    except (TypeError, ValueError):
+        raise ValueError("Wait time must be a number.")
+    if minutes < 0:
+        raise ValueError("Wait time cannot be negative.")
+    if minutes > 5:
+        raise ValueError("Wait time can be 5 minutes maximum.")
+    return minutes * 60
 
 
 def context_planner():
@@ -72,6 +137,45 @@ def context_planner():
     state["target_countries"] = country_options(state["target_country"])
     state["languages"] = language_options(state["language"])
     return render_template("context_planner.html", **base_template_context(), **state)
+
+
+def website_planner():
+    default_keyword_categories = list(DEFAULT_KEYWORD_CATEGORIES)
+    state = {
+        "page_count": 5,
+        "trust_page_count": 3,
+        "blog_count": 10,
+        "keyword_categories": default_keyword_categories,
+        "selected_keyword_categories": default_keyword_categories[:3],
+        "custom_keyword_categories": "",
+        "main_pages_text": get_main_pages_setting(),
+        "trust_pages_text": get_trust_pages_setting(),
+        "plan": None,
+        "error": None,
+    }
+    if request.method == "POST":
+        state["page_count"] = _planner_count(request.form.get("page_count", "5"), 5)
+        state["trust_page_count"] = _planner_count(request.form.get("trust_page_count", "3"), 3)
+        state["blog_count"] = _planner_count(request.form.get("blog_count", "10"), 10)
+        state["custom_keyword_categories"] = request.form.get("custom_keyword_categories", "").strip()
+        selected_categories = parse_keyword_categories(request.form.getlist("keyword_categories"))
+        custom_categories = parse_keyword_categories(state["custom_keyword_categories"])
+        state["selected_keyword_categories"] = _merge_planner_categories(selected_categories, custom_categories)
+        state["keyword_categories"] = _merge_planner_categories(default_keyword_categories, custom_categories)
+        try:
+            state["plan"] = build_website_plan(
+                state["main_pages_text"],
+                state["trust_pages_text"],
+                page_count=state["page_count"],
+                trust_page_count=state["trust_page_count"],
+                blog_count=state["blog_count"],
+                keyword_categories_text=state["selected_keyword_categories"],
+                brand_names=list_brand_names(),
+            )
+        except Exception as exc:
+            logger.exception("website planner failed")
+            state["error"] = str(exc) or "Could not create the website plan."
+    return render_template("website_planner.html", **base_template_context(), **state)
 
 
 def keyword_suggestions():
@@ -110,6 +214,281 @@ def keyword_suggestions():
             )
     state["target_countries"] = country_options(state["target_country"])
     return render_template("keyword_suggestions.html", **base_template_context(), **state)
+
+
+def meta_generator():
+    state = _default_meta_generator_state()
+    if request.method == "POST":
+        state["page_type"] = request.form.get("page_type", "Blog").strip() or "Blog"
+        state["keyword"] = keyword_from_page_type(state["page_type"])
+        state["language"] = normalize_language(request.form.get("language", get_default_language()))
+        try:
+            state["count"] = max(1, min(10, int(request.form.get("count", str(DEFAULT_META_OPTION_COUNT)))))
+        except ValueError:
+            state["count"] = DEFAULT_META_OPTION_COUNT
+
+        try:
+            provider = get_provider()
+            progress = _meta_generator_progress_callback(request.form.get("generation_status_token", ""))
+            state["result"] = generate_meta_titles_and_descriptions(
+                provider,
+                keyword=state["keyword"],
+                page_type=state["page_type"],
+                count=state["count"],
+                language=state["language"],
+                progress_callback=progress,
+            )
+            publish_generation_status(request.form.get("generation_status_token", ""), "Meta Generator: Generation complete.")
+        except Exception as exc:
+            logger.exception("meta generator action failed")
+            state["error"] = generation_error_message(
+                "Could not generate meta titles and descriptions. Check logs/app.log for details.",
+                exc,
+            )
+
+    state["languages"] = language_options(state["language"])
+    return render_template("meta_generator.html", **base_template_context(), **state)
+
+
+def gsc_planner():
+    state = _default_gsc_planner_state()
+    if request.method == "POST":
+        action = request.form.get("action", "generate_report").strip()
+        _apply_gsc_planner_form(state)
+        if action == "chat":
+            _handle_gsc_planner_chat(state)
+        else:
+            _handle_gsc_planner_report(state)
+
+    state["languages"] = language_options(state["language"])
+    state["brand_names"] = list_brand_names()
+    state["brand_websites"] = _brand_website_map()
+    return render_template("gsc_planner.html", **base_template_context(), **state)
+
+
+def _default_meta_generator_state() -> dict:
+    return {
+        "keyword": "",
+        "page_type": "Blog",
+        "page_types": _meta_page_types(),
+        "count": DEFAULT_META_OPTION_COUNT,
+        "language": get_default_language(),
+        "languages": language_options(get_default_language()),
+        "meta_description_min_chars": META_DESCRIPTION_MIN_CHARS,
+        "meta_description_max_chars": META_DESCRIPTION_MAX_CHARS,
+        "result": None,
+        "error": None,
+    }
+
+
+def _default_gsc_planner_state() -> dict:
+    today = date.today()
+    default_end = today - timedelta(days=2)
+    default_start = default_end - timedelta(days=27)
+    return {
+        "brand": "",
+        "target_url": "",
+        "gsc_property": "",
+        "gsc_notes": "",
+        "gsc_start_date": default_start.isoformat(),
+        "gsc_end_date": default_end.isoformat(),
+        "gsc_row_limit": 25,
+        "gsc_api_summary": "",
+        "gsc_api_notice": "",
+        "gsc_api_rows": [],
+        "gsc_api_rows_json": "[]",
+        "gsc_api_daily_rows": [],
+        "gsc_api_daily_rows_json": "[]",
+        "language": get_default_language(),
+        "languages": language_options(get_default_language()),
+        "brand_names": list_brand_names(),
+        "brand_websites": _brand_website_map(),
+        "report": None,
+        "report_json": "",
+        "chat_history": [],
+        "chat_history_json": "[]",
+        "chat_question": "",
+        "error": None,
+        "chat_error": None,
+    }
+
+
+def _brand_website_map() -> dict:
+    websites = {}
+    for brand in list_brand_records():
+        name = (brand.get("name") or "").strip()
+        website = (brand.get("website") or "").strip()
+        if name and website:
+            websites[name] = website
+    return websites
+
+
+def _apply_gsc_planner_form(state: dict) -> None:
+    state["brand"] = request.form.get("brand", "").strip()
+    state["target_url"] = request.form.get("target_url", "").strip()
+    state["gsc_property"] = request.form.get("gsc_property", "").strip()
+    state["gsc_notes"] = request.form.get("gsc_notes", "").strip()
+    state["gsc_start_date"] = request.form.get("gsc_start_date", state["gsc_start_date"]).strip()
+    state["gsc_end_date"] = request.form.get("gsc_end_date", state["gsc_end_date"]).strip()
+    state["gsc_row_limit"] = _int_between(request.form.get("gsc_row_limit", state["gsc_row_limit"]), 5, 100, 25)
+    state["gsc_api_summary"] = request.form.get("gsc_api_summary", "").strip()
+    state["gsc_api_notice"] = request.form.get("gsc_api_notice", "").strip()
+    state["gsc_api_rows"] = _json_list_of_dicts(request.form.get("gsc_api_rows_json", ""))
+    state["gsc_api_rows_json"] = json.dumps(state["gsc_api_rows"], ensure_ascii=True)
+    state["gsc_api_daily_rows"] = _json_list_of_dicts(request.form.get("gsc_api_daily_rows_json", ""))
+    state["gsc_api_daily_rows_json"] = json.dumps(state["gsc_api_daily_rows"], ensure_ascii=True)
+    state["language"] = normalize_language(request.form.get("language", get_default_language()))
+    state["report"] = _json_dict(request.form.get("report_json", ""))
+    state["report_json"] = json.dumps(state["report"], ensure_ascii=True) if state["report"] else ""
+    state["chat_history"] = _json_list_of_dicts(request.form.get("chat_history_json", ""))
+    state["chat_history_json"] = json.dumps(state["chat_history"], ensure_ascii=True)
+
+
+def _handle_gsc_planner_report(state: dict) -> None:
+    if not state["target_url"] and state["brand"]:
+        brand_record = get_brand_record(state["brand"]) or {}
+        state["target_url"] = (brand_record.get("website") or "").strip()
+
+    try:
+        gsc_performance = fetch_gsc_performance_data(
+            target_url=state["target_url"],
+            start_date=state["gsc_start_date"],
+            end_date=state["gsc_end_date"],
+            site_url=state["gsc_property"],
+            row_limit=state["gsc_row_limit"],
+            access_token=get_setting("google_oauth_access_token", ""),
+            service_account_json=get_setting("google_service_account_json", ""),
+        )
+        state["gsc_api_summary"] = gsc_performance.summary
+        state["gsc_api_rows"] = gsc_performance.rows
+        state["gsc_api_rows_json"] = json.dumps(state["gsc_api_rows"], ensure_ascii=True)
+        state["gsc_api_daily_rows"] = gsc_performance.daily_rows
+        state["gsc_api_daily_rows_json"] = json.dumps(state["gsc_api_daily_rows"], ensure_ascii=True)
+        state["gsc_api_notice"] = (
+            f"Fetched {len(gsc_performance.rows)} query row(s) and {len(gsc_performance.daily_rows)} daily row(s) from "
+            f"{gsc_performance.start_date} to {gsc_performance.end_date} using {gsc_performance.site_url}."
+        )
+        provider = get_provider()
+        progress = _gsc_planner_progress_callback(request.form.get("generation_status_token", ""))
+        state["report"] = generate_gsc_seo_report(
+            provider,
+            brand=state["brand"],
+            target_url=state["target_url"],
+            gsc_notes=state["gsc_notes"],
+            brand_context=get_brand_context(state["brand"]),
+            gsc_api_summary=state["gsc_api_summary"],
+            language=state["language"],
+            progress_callback=progress,
+        )
+        state["report_json"] = json.dumps(state["report"], ensure_ascii=True)
+        state["chat_history"] = [
+            {
+                "role": "assistant",
+                "content": "I have the GSC SEO report ready. Ask me what to do first, how to rewrite metadata, what content to add, or how to prioritize the fixes.",
+            }
+        ]
+        state["chat_history_json"] = json.dumps(state["chat_history"], ensure_ascii=True)
+        publish_generation_status(request.form.get("generation_status_token", ""), "GSC Planner: Report complete.")
+    except Exception as exc:
+        logger.exception("gsc planner report action failed")
+        state["error"] = generation_error_message(
+            "Could not generate the GSC SEO report. Check logs/app.log for details.",
+            exc,
+        )
+
+
+def _handle_gsc_planner_chat(state: dict) -> None:
+    state["chat_question"] = request.form.get("chat_question", "").strip()
+    if not state["report"]:
+        state["chat_error"] = "Generate a GSC SEO report before using the chat assistant."
+        return
+    try:
+        provider = get_provider()
+        answer = answer_gsc_planner_chat(
+            provider,
+            question=state["chat_question"],
+            report=state["report"],
+            brand=state["brand"],
+            target_url=state["target_url"],
+            gsc_notes=state["gsc_notes"],
+            brand_context=get_brand_context(state["brand"]),
+            language=state["language"],
+            chat_history=state["chat_history"],
+            progress_callback=_gsc_planner_progress_callback(request.form.get("generation_status_token", "")),
+        )
+        state["chat_history"].append({"role": "user", "content": state["chat_question"]})
+        state["chat_history"].append({"role": "assistant", "content": answer})
+        state["chat_history_json"] = json.dumps(state["chat_history"], ensure_ascii=True)
+        state["chat_question"] = ""
+    except Exception as exc:
+        logger.exception("gsc planner chat action failed")
+        state["chat_error"] = generation_error_message(
+            "Could not answer the GSC planner chat question. Check logs/app.log for details.",
+            exc,
+        )
+
+
+def _gsc_planner_progress_callback(token: str):
+    cleaned_token = (token or "").strip()
+
+    def progress(message: str, kind: str = "status") -> None:
+        if not cleaned_token:
+            return
+        if kind == "prompt":
+            publish_generation_prompt(cleaned_token, message)
+            publish_generation_status(cleaned_token, "GSC Planner: Analyzing Search Console evidence...")
+            return
+        publish_generation_status(cleaned_token, f"GSC Planner: {message}")
+
+    return progress
+
+
+def _meta_page_types() -> list[str]:
+    return [
+        "Blog",
+        "Homepage",
+        "Blog Page",
+        "Service Page",
+        "Product Page",
+        "Category Page",
+        "Author Page",
+        "Landing Page",
+        "About Page",
+        "Contact Page",
+    ]
+
+
+def _meta_generator_progress_callback(token: str):
+    cleaned_token = (token or "").strip()
+
+    def progress(message: str, kind: str = "status") -> None:
+        if not cleaned_token:
+            return
+        if kind == "prompt":
+            publish_generation_prompt(cleaned_token, message)
+            publish_generation_status(cleaned_token, "Meta Generator: Creating metadata options...")
+            return
+        publish_generation_status(cleaned_token, f"Meta Generator: {message}")
+
+    return progress
+
+
+def _json_dict(raw: str) -> dict:
+    try:
+        parsed = json.loads(raw) if raw else {}
+        return parsed if isinstance(parsed, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def _json_list_of_dicts(raw: str) -> list[dict]:
+    try:
+        parsed = json.loads(raw) if raw else []
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [item for item in parsed if isinstance(item, dict)]
 
 
 def _keyword_suggestions_progress_callback(token: str):
@@ -153,6 +532,33 @@ def _default_context_planner_state() -> dict:
         "target_countries": country_options(get_default_country_target()),
         "languages": language_options(get_default_language()),
     }
+
+
+def _planner_count(value: str, default: int) -> int:
+    try:
+        return max(0, min(500, int(value or default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _int_between(value, minimum: int, maximum: int, default: int) -> int:
+    try:
+        return max(minimum, min(maximum, int(value or default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _merge_planner_categories(*groups) -> list[str]:
+    categories = []
+    seen = set()
+    for group in groups:
+        for item in group or []:
+            cleaned = " ".join(str(item or "").split()).strip()
+            normalized = cleaned.casefold()
+            if cleaned and normalized not in seen:
+                seen.add(normalized)
+                categories.append(cleaned)
+    return categories
 
 
 def _build_context_brief(state: dict) -> str:
@@ -217,6 +623,7 @@ def seo_checker():
     state = {
         "url": "",
         "ignore_ssl_errors": False,
+        "limit": 10,
         "result": None,
         "error": None,
     }
@@ -225,7 +632,18 @@ def seo_checker():
         state["url"] = request.form.get("url", "").strip()
         state["ignore_ssl_errors"] = request.form.get("ignore_ssl_errors") == "1"
         try:
-            state["result"] = run_seo_audit(state["url"], verify_ssl=not state["ignore_ssl_errors"])
+            state["limit"] = max(1, min(100, int(request.form.get("limit", "10"))))
+        except ValueError:
+            state["limit"] = 10
+        try:
+            progress = _seo_checker_progress_callback(request.form.get("generation_status_token", ""))
+            state["result"] = _run_site_seo_checks(
+                state["url"],
+                limit=state["limit"],
+                verify_ssl=not state["ignore_ssl_errors"],
+                progress_callback=progress,
+            )
+            publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker: Check complete.")
         except Exception as exc:
             logger.exception("seo_checker action failed")
             state["error"] = str(exc) or "Could not complete the SEO check."
@@ -233,13 +651,167 @@ def seo_checker():
     return render_template("seo_checker.html", **base_template_context(), **state)
 
 
+def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True, progress_callback=None) -> dict:
+    _publish_seo_progress(progress_callback, "Listing pages...")
+    discovery = discover_website_pages(raw_url, limit=limit)
+    page_urls = discovery.pages[:limit] or [discovery.base_url]
+    page_results = []
+    checked_pages = []
+    total_pages = len(page_urls)
+
+    _publish_seo_progress(progress_callback, f"Found {total_pages} page(s). Starting page checks...")
+
+    for index, page_url in enumerate(page_urls, start=1):
+        _publish_seo_progress(progress_callback, f"Checking page {index}/{total_pages}: {page_url}")
+        try:
+            audit = run_seo_audit(page_url, verify_ssl=verify_ssl)
+            page_results.append(
+                {
+                    "index": index,
+                    "url": page_url,
+                    "status": "checked",
+                    "result": audit,
+                    "error": "",
+                }
+            )
+            checked_pages.append(
+                {
+                    "index": index,
+                    "url": page_url,
+                    "status": "checked",
+                    "score": audit.get("score", 0),
+                    "grade": audit.get("grade", ""),
+                    "error": "",
+                }
+            )
+            _publish_seo_progress(progress_callback, f"Checked page {index}/{total_pages}: {page_url}")
+        except Exception as exc:
+            logger.exception("seo_checker page audit failed: url=%s", page_url)
+            page_results.append(
+                {
+                    "index": index,
+                    "url": page_url,
+                    "status": "error",
+                    "result": None,
+                    "error": str(exc) or "Could not complete this page check.",
+                }
+            )
+            checked_pages.append(
+                {
+                    "index": index,
+                    "url": page_url,
+                    "status": "error",
+                    "score": None,
+                    "grade": "",
+                    "error": str(exc) or "Could not complete this page check.",
+                }
+            )
+            _publish_seo_progress(progress_callback, f"Page {index}/{total_pages} failed: {page_url}")
+
+    checked_results = [item["result"] for item in page_results if item.get("result")]
+    average_score = round(sum(item["score"] for item in checked_results) / len(checked_results)) if checked_results else 0
+    issue_count = sum(
+        1
+        for item in checked_results
+        for check in item.get("checks", [])
+        if check.get("status") in {"fail", "warn"}
+    )
+    return {
+        "mode": "site",
+        "source_url": raw_url,
+        "base_url": discovery.base_url,
+        "limit": limit,
+        "discovered_pages": page_urls,
+        "discovery_errors": discovery.errors,
+        "sitemaps": discovery.sitemaps,
+        "pages": page_results,
+        "checked_pages": checked_pages,
+        "summary": {
+            "discovered_count": len(page_urls),
+            "checked_count": len(checked_results),
+            "error_count": len(page_results) - len(checked_results),
+            "average_score": average_score,
+            "average_grade": _seo_grade(average_score),
+            "issue_count": issue_count,
+        },
+    }
+
+
+def _seo_grade(score: int) -> str:
+    if score >= 90:
+        return "A"
+    if score >= 80:
+        return "B"
+    if score >= 70:
+        return "C"
+    if score >= 60:
+        return "D"
+    return "F"
+
+
+def _seo_checker_progress_callback(token: str):
+    cleaned_token = (token or "").strip()
+
+    def progress(message: str) -> None:
+        if not cleaned_token:
+            return
+        publish_generation_status(cleaned_token, f"Website SEO Checker: {message}")
+
+    return progress
+
+
+def _publish_seo_progress(progress_callback, message: str) -> None:
+    if not progress_callback:
+        return
+    try:
+        progress_callback(message)
+    except Exception:
+        logger.exception("SEO checker progress callback failed")
+
+
 def website_index_dashboard():
+    success = request.args.get("success", "").strip()
+    error = request.args.get("error", "").strip()
+
+    if request.method == "POST":
+        action = request.form.get("action", "").strip()
+        if action == "delete_domain":
+            domain = request.form.get("domain", "").strip().lower()
+            try:
+                deleted_count = delete_website_index_urls_by_domain(domain)
+                logger.info("Website Index dashboard deleted domain group: domain=%s deleted=%d", domain, deleted_count)
+                if deleted_count:
+                    return redirect(url_for("web.website_index_dashboard", success=f"Deleted {deleted_count} URL(s) for {domain}."))
+                return redirect(url_for("web.website_index_dashboard", error=f"No saved URLs found for {domain or 'that domain'}."))
+            except Exception as exc:
+                logger.exception("Website Index dashboard domain delete failed: domain=%s", domain)
+                return redirect(url_for("web.website_index_dashboard", error=str(exc) or "Could not delete that domain group."))
+        if action == "delete_url":
+            url = request.form.get("url", "").strip()
+            try:
+                deleted_count = delete_website_index_url(url)
+                logger.info("Website Index dashboard deleted URL: url=%s deleted=%d", url, deleted_count)
+                if deleted_count:
+                    return redirect(url_for("web.website_index_dashboard", success="Removed that URL from Website Index."))
+                return redirect(url_for("web.website_index_dashboard", error="That URL was not found in Website Index."))
+            except Exception as exc:
+                logger.exception("Website Index dashboard URL delete failed: url=%s", url)
+                return redirect(url_for("web.website_index_dashboard", error=str(exc) or "Could not delete that URL."))
+        if action == "trigger_due_job":
+            try:
+                trigger_website_index_batch()
+                return redirect(url_for("web.website_index_dashboard", success="Website Index job triggered. Watch Background Jobs or app logs for progress."))
+            except Exception as exc:
+                logger.exception("Website Index dashboard manual trigger failed")
+                return redirect(url_for("web.website_index_dashboard", error=str(exc) or "Could not trigger the Website Index job."))
+
     urls = list_website_index_urls()
     due_urls = list_due_website_index_urls()
     due_lookup = {item["url"] for item in due_urls}
     for item in urls:
         item["is_due"] = item["url"] in due_lookup
         item["domain"] = _url_domain(item["url"])
+    urls = sorted(urls, key=_website_index_dashboard_sort_key)
     domain_stats = _website_index_domain_stats(urls)
     return render_template(
         "website_index_dashboard.html",
@@ -249,6 +821,8 @@ def website_index_dashboard():
         domain_stats=domain_stats,
         due_count=len(due_urls),
         stats=website_index_stats(),
+        success=success,
+        error=error,
     )
 
 
@@ -266,7 +840,7 @@ def website_pages():
     )
     state = {
         "site_url": "",
-        "limit": 500,
+        "limit": 50,
         "result": None,
         "saved_domains": saved_domains,
         "selected_domain": selected_domain,
@@ -281,16 +855,15 @@ def website_pages():
         action = request.form.get("action", "discover")
         state["site_url"] = request.form.get("site_url", "").strip()
         try:
-            state["limit"] = max(1, min(1000, int(request.form.get("limit", "500"))))
+            state["limit"] = max(1, min(1000, int(request.form.get("limit", "50"))))
         except ValueError:
-            state["limit"] = 500
+            state["limit"] = 50
 
         try:
             if action == "save":
-                urls = request.form.getlist("selected_urls")
-                if not urls:
-                    urls = extract_urls(request.form.get("discovered_urls", ""))
-                state["saved_count"] = upsert_website_index_urls(urls)
+                page_records = _website_page_records_from_form()
+                urls = [item["url"] for item in page_records]
+                state["saved_count"] = upsert_website_index_urls(page_records)
                 state["success"] = f"Saved {state['saved_count']} page URL(s)."
                 saved_urls = list_website_index_urls()
                 for item in saved_urls:
@@ -331,6 +904,7 @@ def download_website_pages_csv():
         "domain",
         "check_status",
         "google_status",
+        "page_keywords",
         "google_coverage_state",
         "google_indexing_state",
         "google_last_crawl_time",
@@ -347,6 +921,7 @@ def download_website_pages_csv():
             item.get("domain", ""),
             item.get("check_status", ""),
             item.get("google_status", ""),
+            item.get("page_keywords", ""),
             item.get("google_coverage_state", ""),
             item.get("google_indexing_state", ""),
             item.get("google_last_crawl_time", ""),
@@ -369,6 +944,37 @@ def download_website_pages_csv():
 def _url_domain(url: str) -> str:
     parsed = urlparse(url or "")
     return parsed.netloc.lower()
+
+
+def _website_page_records_from_form() -> list[dict]:
+    selected_urls = request.form.getlist("selected_urls")
+    if not selected_urls:
+        selected_urls = extract_urls(request.form.get("discovered_urls", ""))
+    selected_lookup = set(selected_urls)
+    keyword_map = {}
+    for value in request.form.getlist("page_keyword_records"):
+        url, separator, keywords = (value or "").partition("|||")
+        cleaned_url = url.strip()
+        if separator and cleaned_url:
+            keyword_map[cleaned_url] = keywords.strip()
+    return [
+        {
+            "url": url,
+            "page_keywords": keyword_map.get(url, ""),
+        }
+        for url in selected_urls
+        if url in selected_lookup
+    ]
+
+
+def _website_index_dashboard_sort_key(item: dict) -> tuple:
+    last_checked_at = (item.get("last_checked_at") or "").strip()
+    return (
+        0 if item.get("is_due") else 1,
+        0 if not last_checked_at else 1,
+        last_checked_at,
+        item.get("id") or 0,
+    )
 
 
 def _website_index_domain_stats(urls: list[dict]) -> list[dict]:
@@ -453,7 +1059,6 @@ def indexnow():
         "endpoint": DEFAULT_INDEXNOW_ENDPOINT,
         "google_access_token": get_setting("google_oauth_access_token", ""),
         "google_service_account_json": get_setting("google_service_account_json", ""),
-        "google_site_url": get_setting("google_search_console_property", ""),
         "google_notification_type": "URL_UPDATED",
         "url_list": "",
         "website_index_urls": saved_index_urls,
@@ -474,7 +1079,6 @@ def indexnow():
         state["endpoint"] = request.form.get("endpoint", DEFAULT_INDEXNOW_ENDPOINT).strip() or DEFAULT_INDEXNOW_ENDPOINT
         state["google_access_token"] = request.form.get("google_access_token", "").strip()
         state["google_service_account_json"] = request.form.get("google_service_account_json", "").strip()
-        state["google_site_url"] = request.form.get("google_site_url", "").strip()
         state["google_notification_type"] = request.form.get("google_notification_type", "URL_UPDATED").strip()
         state["url_list"] = request.form.get("url_list", "")
 
@@ -494,9 +1098,9 @@ def indexnow():
             set_setting("indexnow_url_list", saved_url_list)
             upsert_website_index_urls(urls)
             state["url_list"] = ""
-        if state["google_site_url"]:
-            set_setting("google_search_console_property", state["google_site_url"])
         try:
+            action_started_at = time.perf_counter()
+            logger.info("Website Index action started: action=%s parsed_urls=%d", action, len(urls))
             if action == "save_urls":
                 state["success"] = "URL list saved."
             elif action == "google":
@@ -507,39 +1111,54 @@ def indexnow():
                     notification_type=state["google_notification_type"],
                     endpoint=GOOGLE_INDEXING_ENDPOINT,
                 )
+                _log_google_indexing_result(state["google_result"], time.perf_counter() - action_started_at)
             elif action == "google_inspect":
                 urls_to_check = urls[:WEBSITE_INDEX_CHECK_LIMIT]
+                logger.info("Website Index Google inspection started: urls=%d limit=%d", len(urls_to_check), WEBSITE_INDEX_CHECK_LIMIT)
                 mark_website_index_urls_checking(urls_to_check)
-                state["google_inspection_result"] = inspect_google_index_status(
+                state["google_inspection_result"] = inspect_google_index_status_by_url_domain(
                     urls=urls_to_check,
-                    site_url=state["google_site_url"],
                     access_token=state["google_access_token"],
                     service_account_json=state["google_service_account_json"],
                 )
                 for item in state["google_inspection_result"].items:
                     update_website_index_google_result(item)
+                _log_google_inspection_result(state["google_inspection_result"], time.perf_counter() - action_started_at)
                 if len(urls) > WEBSITE_INDEX_CHECK_LIMIT:
                     state["success"] = f"Checked the first {WEBSITE_INDEX_CHECK_LIMIT} URL(s). Run again for the next batch."
             elif action == "weekly_check":
+                logger.info("Website Index due check selecting due URLs.")
                 due_rows = list_due_website_index_urls()
                 due_urls = [item["url"] for item in due_rows[:WEBSITE_INDEX_CHECK_LIMIT]]
+                logger.info(
+                    "Website Index due check selected: due_total=%d batch_urls=%d limit=%d",
+                    len(due_rows),
+                    len(due_urls),
+                    WEBSITE_INDEX_CHECK_LIMIT,
+                )
                 if not due_urls:
                     state["success"] = "No saved URLs are due for a Google index check."
                 else:
+                    phase_started_at = time.perf_counter()
                     mark_website_index_urls_checking(due_urls)
+                    logger.info("Website Index marked %d URL(s) checking in %.2fs.", len(due_urls), time.perf_counter() - phase_started_at)
+                    phase_started_at = time.perf_counter()
                     update_website_index_bing_yahoo_weekly_result(due_urls)
-                    if state["google_site_url"] and (state["google_access_token"] or state["google_service_account_json"]):
-                        state["google_inspection_result"] = inspect_google_index_status(
+                    logger.info("Website Index marked Bing/Yahoo manual for %d URL(s) in %.2fs.", len(due_urls), time.perf_counter() - phase_started_at)
+                    if state["google_access_token"] or state["google_service_account_json"]:
+                        logger.info("Website Index due Google inspection started: urls=%d", len(due_urls))
+                        state["google_inspection_result"] = inspect_google_index_status_by_url_domain(
                             urls=due_urls,
-                            site_url=state["google_site_url"],
                             access_token=state["google_access_token"],
                             service_account_json=state["google_service_account_json"],
                         )
                         for item in state["google_inspection_result"].items:
                             update_website_index_google_result(item)
+                        _log_google_inspection_result(state["google_inspection_result"], time.perf_counter() - action_started_at)
                         state["success"] = f"Due check ran for {len(due_urls)} URL(s). Bing/Yahoo were marked for manual webmaster review."
                     else:
-                        state["success"] = f"Due check marked Bing/Yahoo for {len(due_urls)} URL(s). Add Google settings to include Google URL Inspection."
+                        logger.warning("Website Index due check skipped Google inspection because Google settings are incomplete.")
+                        state["success"] = f"Due check marked Bing/Yahoo for {len(due_urls)} URL(s). Add Google credentials to include Google URL Inspection."
                     if len(due_rows) > WEBSITE_INDEX_CHECK_LIMIT:
                         state["success"] += f" {len(due_rows) - WEBSITE_INDEX_CHECK_LIMIT} URL(s) remain queued for the next run."
             elif action == "sitemap":
@@ -557,13 +1176,61 @@ def indexnow():
                     key_location=state["key_location"],
                     endpoint=state["endpoint"],
                 )
+                logger.info(
+                    "Website Index IndexNow action finished in %.2fs: submitted=%d skipped=%d batches=%d",
+                    time.perf_counter() - action_started_at,
+                    state["indexnow_result"].submitted_count,
+                    len(state["indexnow_result"].skipped),
+                    len(state["indexnow_result"].batches),
+                )
+            logger.info("Website Index action finished: action=%s elapsed=%.2fs", action, time.perf_counter() - action_started_at)
         except Exception as exc:
-            logger.exception("indexing action failed")
+            logger.exception("Website Index action failed: action=%s parsed_urls=%d elapsed=%.2fs", action, len(urls), time.perf_counter() - action_started_at)
             state["error"] = str(exc) or "Could not complete the indexing action."
 
     state["website_index_urls"] = list_website_index_urls()
     state["due_count"] = len(list_due_website_index_urls())
     return render_template("indexnow.html", **base_template_context(), **state)
+
+
+def _log_google_inspection_result(result, elapsed_seconds: float) -> None:
+    error_items = [item for item in result.items if item.status == "error"]
+    logger.info(
+        "Website Index Google inspection finished in %.2fs: inspected=%d skipped=%d errors=%d",
+        elapsed_seconds,
+        result.inspected_count,
+        len(result.skipped),
+        len(error_items),
+    )
+    for item in error_items[:20]:
+        logger.error(
+            "Website Index Google inspection URL error: url=%s status_code=%s detail=%s",
+            item.url,
+            item.status_code,
+            item.detail,
+        )
+    if len(error_items) > 20:
+        logger.error("Website Index Google inspection had %d additional URL error(s).", len(error_items) - 20)
+
+
+def _log_google_indexing_result(result, elapsed_seconds: float) -> None:
+    error_items = [item for item in result.items if item.status == "error"]
+    logger.info(
+        "Website Index Google publish finished in %.2fs: submitted=%d skipped=%d errors=%d",
+        elapsed_seconds,
+        result.submitted_count,
+        len(result.skipped),
+        len(error_items),
+    )
+    for item in error_items[:20]:
+        logger.error(
+            "Website Index Google publish URL error: url=%s status_code=%s detail=%s",
+            item.url,
+            item.status_code,
+            item.detail,
+        )
+    if len(error_items) > 20:
+        logger.error("Website Index Google publish had %d additional URL error(s).", len(error_items) - 20)
 
 
 def preview():

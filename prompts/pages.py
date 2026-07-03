@@ -55,9 +55,12 @@ What to expect in the page:
 Rules:
 - Keep the main keyword exactly as provided. Do not split, rearrange, or alter it. Use it naturally in the title and content.
 - Write for real users, not just search engines.
+- Write as the website owner: use first-person plural language like we, our, and us when referring to the brand, team, service, process, support, or promises.
+- Do not refer to the website, brand, team, or service as they, them, or their. Avoid third-person wording for the page owner.
 - Use the main keyword naturally 3–5 times in total: once in the title, once in the introduction, once in a subheading, and once in the conclusion.
 - Include supporting keywords naturally where they fit.
-- Avoid keyword stuffing and unnatural phrasing.
+- Avoid keyword stuffing, repeated exact-match phrases, and unnatural keyword placement.
+- Follow Yoast-style SEO and readability rules: one clear H1, logical H2/H3 structure, concise paragraphs, transition words, active voice, clear internal intent, and helpful user-first copy.
 
 - Title should be catchy, include the main keyword naturally, and be 45–55 characters when possible.
 - Meta description must be useful for search snippets, natural, and between 120 and 140 characters.
@@ -82,7 +85,7 @@ Rules:
 - Use bullet points and subheadings to break up content.
 
 - Include at least 5 sections after the introduction with relevant subheadings.
-- Follow Yoast SEO guidelines for keyword usage and structure.
+- Follow Yoast SEO guidelines for keyword usage and structure without forcing exact-match keywords.
 - Use the "What to expect in the page" notes as guidance for sections, tone, and key details.
 
 - If helpful, insert image placeholders using:
@@ -139,9 +142,10 @@ What to expect in the page:
 
 Rules:
 - Keep the main keyword exactly as provided. Do not split, rearrange, or alter it.
-- Include the main keyword naturally in the title.
+- Start the title with the exact main keyword as the first words.
+- Format it like: "{keyword} generated title".
 - Make the title catchy, clear, and useful for real users.
-- Aim for 45-55 characters when possible.
+- The title must be between 50 and 60 characters.
 - Do not use banned words.
 - Do not add explanations before or after the JSON.
 - Start your response with '{{' and end with '}}'
@@ -250,15 +254,18 @@ What to expect in the page:
 Rules:
 - Keep the main keyword exactly as provided. Do not split, rearrange, or alter it.
 - Write for real users, not just search engines.
+- Write as the website owner: use first-person plural language like we, our, and us when referring to the brand, team, service, process, support, or promises.
+- Do not refer to the website, brand, team, or service as they, them, or their. Avoid third-person wording for the page owner.
 - Use the main keyword naturally 3-5 times in total: once in the introduction, once in a subheading, and once in the conclusion when natural.
 - Include supporting keywords naturally where they fit.
-- Avoid keyword stuffing and unnatural phrasing.
+- Avoid keyword stuffing, repeated exact-match phrases, and unnatural keyword placement.
+- Follow Yoast-style SEO and readability rules: one clear H1, logical H2/H3 structure, concise paragraphs, transition words, active voice, clear internal intent, and helpful user-first copy.
 - Introduction should be 60-80 words, engaging, and include the main keyword naturally once.
 - Content must be more than {min_word_count} words, structured with clear sections and subheadings. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.
 - Do not finish at exactly {min_word_count} words; the content must exceed that minimum.
 - Paragraphs should be short and easy to read.
 - Include at least 5 or more sections after the introduction with relevant subheadings.
-- Follow Yoast SEO guidelines for keyword usage and structure.
+- Follow Yoast SEO guidelines for keyword usage and structure without forcing exact-match keywords.
 - Use the "What to expect in the page" notes as guidance for sections, tone, and key details.
 - If a brand is provided, match the brand’s voice, positioning, and audience naturally.
 - When brand database context is provided, avoid duplicating existing pages too closely.
@@ -395,6 +402,8 @@ What to include:
 {expectations}
 
 Rules:
+- Start the title with the exact page title as the first words.
+- Format it like: "{page_title} generated title".
 - Keep the title clear, professional, and suitable for the selected page type.
 - If a brand is provided, use it naturally only when it fits the page.
 - Do not use banned words.

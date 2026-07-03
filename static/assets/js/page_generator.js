@@ -8,6 +8,7 @@
   const savePageMeta = document.getElementById("savePageMeta");
   const savePageContent = document.getElementById("savePageContent");
   const titleOutput = document.getElementById("titleOutput");
+  const pageTitleCharacterCount = document.getElementById("pageTitleCharacterCount");
   const pageGeneratedHeading = document.getElementById("pageGeneratedHeading");
   const metaOutput = document.getElementById("metaOutput");
   const metaOutputFull = document.getElementById("metaOutputFull");
@@ -21,18 +22,97 @@
   const liveHtmlOutput = document.getElementById("pageLiveHtmlOutput");
   const generatorForm = document.getElementById("pageGeneratorForm");
   const saveForm = document.getElementById("savePageForm");
+  const generationLogBox = document.getElementById("pageGenerationLogBox");
+  const generationLogJson = document.getElementById("pageGenerationLogJson");
+  const saveGenerationLogJson = document.getElementById("savePageGenerationLogJson");
+  const clearGenerationLog = document.getElementById("clearPageGenerationLog");
+  let generationLogEntries = readInitialGenerationLog();
 
   function syncSaveContext() {
     if (!generatorForm || !saveForm) {
       return;
     }
-    ["history_id", "brand", "language", "keyword", "supporting_keywords", "page_type", "expectations", "image_count"].forEach(function (name) {
+    ["history_id", "brand", "language", "keyword", "supporting_keywords", "expectations", "image_count"].forEach(function (name) {
       const source = generatorForm.querySelector("[name='" + name + "']");
       const target = saveForm.querySelector("[name='" + name + "']");
       if (source && target) {
         target.value = source.value;
       }
     });
+    const keyword = generatorForm.querySelector("[name='keyword']");
+    const pageType = saveForm.querySelector("[name='page_type']");
+    if (keyword && pageType) {
+      pageType.value = keyword.value;
+    }
+    syncGenerationLogFields();
+  }
+
+  function readInitialGenerationLog() {
+    if (!generationLogBox || !generationLogBox.dataset.generationLog) {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(generationLogBox.dataset.generationLog);
+      return Array.isArray(parsed) ? parsed.filter(function (item) {
+        return item && typeof item === "object" && item.message;
+      }) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function syncGenerationLogFields() {
+    const value = JSON.stringify(generationLogEntries.slice(-80));
+    if (generationLogJson) {
+      generationLogJson.value = value;
+    }
+    if (saveGenerationLogJson) {
+      saveGenerationLogJson.value = value;
+    }
+  }
+
+  function appendGenerationLog(kind, message) {
+    const cleanedMessage = String(message || "").trim();
+    if (!cleanedMessage) {
+      return;
+    }
+    const cleanedKind = String(kind || "status").trim() || "status";
+    const previous = generationLogEntries[generationLogEntries.length - 1];
+    if (previous && previous.kind === cleanedKind && previous.message === cleanedMessage) {
+      return;
+    }
+    generationLogEntries.push({ kind: cleanedKind, message: cleanedMessage });
+    generationLogEntries = generationLogEntries.slice(-80);
+    renderGenerationLog();
+    syncGenerationLogFields();
+  }
+
+  function renderGenerationLog() {
+    if (!generationLogBox) {
+      return;
+    }
+    generationLogBox.innerHTML = "";
+    if (!generationLogEntries.length) {
+      const empty = document.createElement("p");
+      empty.className = "text-sm font-semibold leading-6 text-sand-500";
+      empty.textContent = "No generation log yet.";
+      generationLogBox.appendChild(empty);
+      return;
+    }
+    generationLogEntries.forEach(function (item) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "mb-3 rounded-xl bg-sand-50 px-3 py-2";
+      const label = document.createElement("div");
+      label.className = "mb-1 font-bold uppercase tracking-[0.08em] text-sand-500";
+      label.textContent = item.kind || "status";
+      const body = document.createElement("pre");
+      body.className = "whitespace-pre-wrap font-sans text-xs leading-5 text-sand-800";
+      body.textContent = item.message || "";
+      wrapper.appendChild(label);
+      wrapper.appendChild(body);
+      generationLogBox.appendChild(wrapper);
+    });
+    generationLogBox.scrollTop = generationLogBox.scrollHeight;
   }
 
   function syncTitle() {
@@ -44,6 +124,14 @@
     });
     if (pageGeneratedHeading) {
       pageGeneratedHeading.textContent = value || "Generated Page";
+    }
+    if (pageTitleCharacterCount) {
+      const length = value.length;
+      const isTarget = length >= 50 && length <= 60;
+      pageTitleCharacterCount.textContent = "Title length: " + length + " characters. Target: 50-60.";
+      pageTitleCharacterCount.classList.toggle("text-moss-700", isTarget);
+      pageTitleCharacterCount.classList.toggle("text-amber-700", Boolean(value) && !isTarget);
+      pageTitleCharacterCount.classList.toggle("text-sand-600", !value);
     }
   }
 
@@ -113,12 +201,26 @@
     }
     setContent(html, { live: true });
   });
+  document.addEventListener("app:generation-status", function (event) {
+    appendGenerationLog("status", event.detail && event.detail.message);
+  });
+  document.addEventListener("app:generation-prompt", function (event) {
+    appendGenerationLog("prompt", event.detail && event.detail.prompt);
+  });
+  if (clearGenerationLog) {
+    clearGenerationLog.addEventListener("click", function () {
+      generationLogEntries = [];
+      renderGenerationLog();
+      syncGenerationLogFields();
+    });
+  }
 
   document.addEventListener("submit", function (event) {
     if (event.target && event.target.id === "savePageForm") {
       syncSaveContext();
       syncTitle();
       syncMeta();
+      syncGenerationLogFields();
       if (htmlOutput) {
         setContent(htmlOutput.value, { live: false });
       } else if (liveHtmlOutput) {
@@ -129,4 +231,5 @@
 
   syncTitle();
   syncMeta();
+  syncGenerationLogFields();
 })();

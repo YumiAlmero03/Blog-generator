@@ -34,6 +34,8 @@ def page_generator():
         "meta_description": "",
         "page_content": "",
         "history_id": "",
+        "generation_log": [],
+        "generation_log_json": "[]",
         "quality_report": None,
         "regenerate_scope": "full",
         "image_count": 0,
@@ -54,7 +56,7 @@ def page_generator():
         state["brand"] = request.form.get("brand", "").strip()
         state["language"] = _language_from_request()
         state["supporting_keywords"] = request.form.get("supporting_keywords", "").strip()
-        state["page_type"] = request.form.get("page_type", "").strip()
+        state["page_type"] = state["keyword"]
         state["expectations"] = request.form.get("expectations", "").strip()
         state["change_request"] = request.form.get("change_request", "").strip()
         state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
@@ -62,6 +64,8 @@ def page_generator():
         state["meta_description"] = request.form.get("meta_description", "").strip()
         state["page_content"] = request.form.get("page_content", "").strip()
         state["history_id"] = request.form.get("history_id", "").strip()
+        state["generation_log"] = _parse_generation_log(request.form.get("generation_log_json", ""))
+        state["generation_log_json"] = json.dumps(state["generation_log"], ensure_ascii=True)
         state["image_count"] = _int_or_zero(request.form.get("image_count", "0"))
 
         if action == "save_generated_blog":
@@ -76,7 +80,8 @@ def page_generator():
                 if state["brand"]:
                     upsert_brand(state["brand"])
                 brand_context = get_brand_context(state["brand"])
-                progress = _progress_callback("Page", generation_token)
+                progress = _progress_callback("Page", generation_token, state["generation_log"])
+                progress("Generation started.")
                 is_minor_revision = bool(state["page_content"] and state["change_request"])
                 if is_minor_revision:
                     progress("Applying minor page changes...")
@@ -92,6 +97,7 @@ def page_generator():
                         language=state["language"],
                         progress_callback=progress,
                     )
+                    progress("Generation complete.")
                     _record_completed_page(state, min_words, max_words)
                 elif action == "generate_page_all":
                     progress("Generating page title...")
@@ -140,6 +146,7 @@ def page_generator():
                     )
                     state["page_content"] = result.get("content", "")
                     state["image_count"] = result.get("image_count", 0)
+                    progress("Generation complete.")
                     _record_completed_page(state, min_words, max_words)
                 elif action == "generate_page_meta" and not state["page_title"]:
                     state["error"] = "Please generate the page title first."
@@ -194,6 +201,7 @@ def page_generator():
                     )
                     state["page_content"] = result.get("content", "")
                     state["image_count"] = result.get("image_count", 0)
+                    progress("Generation complete.")
                     _record_completed_page(state, min_words, max_words)
                 clear_generation_status(generation_token)
             except GenerationCancelled:
@@ -201,6 +209,7 @@ def page_generator():
                     draft_html = get_generation_status(generation_token).get("draft_html", "")
                     if draft_html:
                         state["page_content"], state["image_count"] = inject_image_placeholders(draft_html)
+                        progress("Generation skipped. Last draft loaded.")
                         _record_completed_page(state, min_words, max_words)
                         state["success"] = "Generation skipped. The last generated draft is loaded below."
                     else:
@@ -210,12 +219,14 @@ def page_generator():
                     raise
             except Exception as exc:
                 logger.exception("page_generator action failed")
+                _append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
                 state["error"] = generation_error_message(
                     "An error occurred while generating the page. Check logs/app.log for details.",
                     exc,
                 )
 
     state["language_options"] = language_options(state["language"])
+    state["generation_log_json"] = json.dumps(state.get("generation_log", []), ensure_ascii=True)
     return render_template("page_generator.html", **base_template_context(), **state)
 
 
@@ -249,7 +260,7 @@ def simple_page_generator():
         state["brand"] = request.form.get("brand", "").strip()
         state["language"] = _language_from_request()
         state["page_title"] = request.form.get("page_title", "").strip()
-        state["page_type"] = request.form.get("page_type", "").strip()
+        state["page_type"] = state["page_title"]
         state["expectations"] = request.form.get("expectations", "").strip()
         state["change_request"] = request.form.get("change_request", "").strip()
         state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
@@ -437,6 +448,7 @@ def _record_completed_page(state: dict, min_words: int, max_words: int):
             "image_count": state["image_count"],
             "regenerate_scope": state["regenerate_scope"],
             "change_request": state["change_request"],
+            "generation_log": state.get("generation_log", []),
         },
         content=state["page_content"],
         quality_report=state["quality_report"],
@@ -523,6 +535,7 @@ def _save_page_generation(state: dict):
             "expectations": state["expectations"],
             "image_count": state["image_count"],
             "manual_save": True,
+            "generation_log": state.get("generation_log", []),
         },
         content=state["page_content"],
         quality_report=state["quality_report"],
@@ -604,6 +617,8 @@ def _load_page_history_item(state: dict, history_id: int):
     state["meta_description"] = item.get("meta_description", "") or ""
     state["page_content"] = item.get("content", "") or ""
     state["image_count"] = _int_or_zero(prompt_inputs.get("image_count", 0))
+    state["generation_log"] = _parse_generation_log(prompt_inputs.get("generation_log", []))
+    state["generation_log_json"] = json.dumps(state["generation_log"], ensure_ascii=True)
     state["quality_report"] = _loads(item.get("quality_report", "{}"))
 
 
@@ -652,6 +667,41 @@ def _loads(raw: str) -> dict:
         return {}
 
 
+def _parse_generation_log(raw) -> list[dict]:
+    if isinstance(raw, list):
+        items = raw
+    else:
+        try:
+            items = json.loads(raw or "[]")
+        except (TypeError, json.JSONDecodeError):
+            items = []
+    if not isinstance(items, list):
+        return []
+
+    log_entries = []
+    for item in items[-80:]:
+        if not isinstance(item, dict):
+            continue
+        kind = _clean_generation_log_text(item.get("kind", "status")) or "status"
+        message = _clean_generation_log_text(item.get("message", ""))
+        if message:
+            log_entries.append({"kind": kind, "message": message})
+    return log_entries
+
+
+def _append_generation_log(log_entries: list[dict], kind: str, message: str) -> None:
+    cleaned_message = _clean_generation_log_text(message)
+    if not cleaned_message:
+        return
+    cleaned_kind = _clean_generation_log_text(kind) or "status"
+    log_entries.append({"kind": cleaned_kind, "message": cleaned_message})
+    del log_entries[:-80]
+
+
+def _clean_generation_log_text(value: str) -> str:
+    return str(value or "").replace("\x00", "").strip()
+
+
 def _language_from_request() -> str:
     return normalize_language(request.form.get("language", get_default_language()))
 
@@ -671,10 +721,12 @@ def _scoped_change_request(change_request: str, scope: str) -> str:
     return f"{prefix}\n{cleaned}".strip()
 
 
-def _progress_callback(label: str, token: str):
+def _progress_callback(label: str, token: str, log_entries: list[dict] | None = None):
     cleaned_label = (label or "Generation").strip()
 
     def publish(message: str, kind: str = "status"):
+        if log_entries is not None:
+            _append_generation_log(log_entries, kind, message)
         if kind == "prompt":
             publish_generation_prompt(token, message)
             return

@@ -9,7 +9,9 @@ from app.services.indexnow_service import (
     filter_host_urls,
     google_access_token_from_service_account_json,
     inspect_google_index_status,
+    inspect_google_index_status_by_url_domain,
     normalize_host,
+    search_console_property_for_url,
     submit_google_indexing_urls,
     submit_indexnow_urls,
     validate_key,
@@ -254,6 +256,41 @@ def test_inspect_google_index_status_uses_webmasters_scope(monkeypatch):
     assert result.items[0].status == "not-indexed"
     assert captured["authorization"] == "Bearer service-token"
     assert captured["scopes"] == ["https://www.googleapis.com/auth/webmasters.readonly"]
+
+
+def test_search_console_property_for_url_uses_url_domain():
+    assert search_console_property_for_url("https://www.example.com/page") == "https://www.example.com/"
+    assert search_console_property_for_url("http://example.com/page") == "https://example.com/"
+    assert search_console_property_for_url("not-a-url") == ""
+
+
+def test_inspect_google_index_status_by_url_domain_groups_by_derived_property(monkeypatch):
+    calls = []
+
+    def fake_inspect(**kwargs):
+        calls.append(kwargs)
+        return indexnow_service.GoogleInspectionResult(
+            inspected_count=len(kwargs["urls"]),
+            skipped=[],
+            items=[],
+        )
+
+    monkeypatch.setattr(indexnow_service, "inspect_google_index_status", fake_inspect)
+
+    result = inspect_google_index_status_by_url_domain(
+        urls=[
+            "https://www.example.com/a",
+            "https://www.example.com/b",
+            "https://other.example.com/c",
+        ],
+        access_token="token",
+    )
+
+    assert result.inspected_count == 3
+    assert [(call["site_url"], call["urls"]) for call in calls] == [
+        ("https://www.example.com/", ["https://www.example.com/a", "https://www.example.com/b"]),
+        ("https://other.example.com/", ["https://other.example.com/c"]),
+    ]
 
 
 def test_google_access_token_from_service_account_json_rejects_invalid_json():

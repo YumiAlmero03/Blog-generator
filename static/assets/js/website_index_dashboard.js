@@ -43,6 +43,23 @@
       }
     });
 
+    matchedRows.sort(function (first, second) {
+      const firstPriority = Number(first.dataset.priority || "1");
+      const secondPriority = Number(second.dataset.priority || "1");
+      if (firstPriority !== secondPriority) {
+        return firstPriority - secondPriority;
+      }
+      const firstChecked = first.dataset.lastChecked || "";
+      const secondChecked = second.dataset.lastChecked || "";
+      if (!firstChecked && secondChecked) {
+        return -1;
+      }
+      if (firstChecked && !secondChecked) {
+        return 1;
+      }
+      return firstChecked.localeCompare(secondChecked);
+    });
+
     const totalPages = Math.max(1, Math.ceil(matchedRows.length / pageSize));
     currentPage = Math.min(Math.max(1, currentPage), totalPages);
     const start = (currentPage - 1) * pageSize;

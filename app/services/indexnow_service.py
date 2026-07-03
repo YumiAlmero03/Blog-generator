@@ -1,11 +1,14 @@
 import json
 import re
+import time
 from dataclasses import dataclass
 from typing import Iterable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from xml.sax.saxutils import escape
+
+from logger import logger
 
 
 INDEXNOW_BATCH_LIMIT = 10000
@@ -311,8 +314,11 @@ def inspect_google_index_status(
     if not valid_urls:
         raise ValueError("No valid URLs were found.")
 
+    started_at = time.perf_counter()
+    logger.info("Google URL Inspection request batch started: urls=%d site_url=%s", len(valid_urls), cleaned_site_url)
     items = []
-    for url in valid_urls:
+    for index, url in enumerate(valid_urls, start=1):
+        url_started_at = time.perf_counter()
         payload = {
             "inspectionUrl": url,
             "siteUrl": cleaned_site_url,
@@ -338,6 +344,15 @@ def inspect_google_index_status(
                 coverage_state = index_status.get("coverageState", "")
                 status = "indexed" if verdict == "PASS" else "not-indexed" if verdict else "check"
                 detail = coverage_state or "Google returned URL inspection data."
+                logger.info(
+                    "Google URL Inspection item finished: index=%d/%d url=%s status=%s status_code=%s elapsed=%.2fs",
+                    index,
+                    len(valid_urls),
+                    url,
+                    status,
+                    status_code,
+                    time.perf_counter() - url_started_at,
+                )
                 items.append(
                     GoogleInspectionItemResult(
                         url=url,
@@ -352,18 +367,103 @@ def inspect_google_index_status(
                     )
                 )
         except HTTPError as exc:
+            logger.error(
+                "Google URL Inspection HTTP error: index=%d/%d url=%s status_code=%s detail=%s elapsed=%.2fs",
+                index,
+                len(valid_urls),
+                url,
+                exc.code,
+                _google_inspection_status_detail(exc.code),
+                time.perf_counter() - url_started_at,
+            )
             items.append(_google_inspection_error(url, exc.code, _google_inspection_status_detail(exc.code)))
         except URLError as exc:
             detail = str(exc.reason) if getattr(exc, "reason", None) else "Could not reach Google URL Inspection API."
+            logger.error(
+                "Google URL Inspection URL error: index=%d/%d url=%s detail=%s elapsed=%.2fs",
+                index,
+                len(valid_urls),
+                url,
+                detail,
+                time.perf_counter() - url_started_at,
+            )
             items.append(_google_inspection_error(url, None, detail))
         except json.JSONDecodeError:
+            logger.error(
+                "Google URL Inspection JSON decode error: index=%d/%d url=%s elapsed=%.2fs",
+                index,
+                len(valid_urls),
+                url,
+                time.perf_counter() - url_started_at,
+            )
             items.append(_google_inspection_error(url, None, "Google returned an unreadable URL inspection response."))
 
+    logger.info("Google URL Inspection request batch finished: urls=%d elapsed=%.2fs", len(valid_urls), time.perf_counter() - started_at)
     return GoogleInspectionResult(
         inspected_count=len(valid_urls),
         skipped=skipped,
         items=items,
     )
+
+
+def inspect_google_index_status_by_url_domain(
+    urls: list[str],
+    access_token: str = "",
+    service_account_json: str = "",
+    language_code: str = "en-US",
+    endpoint: str = GOOGLE_URL_INSPECTION_ENDPOINT,
+    timeout: int = 30,
+) -> GoogleInspectionResult:
+    grouped_urls: dict[str, list[str]] = {}
+    skipped = []
+    seen = set()
+
+    for url in urls:
+        if url in seen:
+            continue
+        seen.add(url)
+        property_url = search_console_property_for_url(url)
+        if not property_url:
+            skipped.append(f"{url} - not a valid http or https URL")
+            continue
+        grouped_urls.setdefault(property_url, []).append(url)
+
+    if not grouped_urls:
+        raise ValueError("No valid URLs were found.")
+
+    all_items = []
+    inspected_count = 0
+    for property_url, property_urls in grouped_urls.items():
+        logger.info(
+            "Google URL Inspection derived Search Console property: site_url=%s urls=%d",
+            property_url,
+            len(property_urls),
+        )
+        result = inspect_google_index_status(
+            urls=property_urls,
+            site_url=property_url,
+            access_token=access_token,
+            service_account_json=service_account_json,
+            language_code=language_code,
+            endpoint=endpoint,
+            timeout=timeout,
+        )
+        inspected_count += result.inspected_count
+        skipped.extend(result.skipped)
+        all_items.extend(result.items)
+
+    return GoogleInspectionResult(
+        inspected_count=inspected_count,
+        skipped=skipped,
+        items=all_items,
+    )
+
+
+def search_console_property_for_url(url: str) -> str:
+    parsed = urlparse(url or "")
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return f"https://{parsed.netloc.lower()}/"
 
 
 def google_access_token_from_service_account_json(service_account_json: str, scopes: list[str] | None = None) -> str:

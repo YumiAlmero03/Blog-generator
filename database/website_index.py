@@ -1,29 +1,61 @@
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 from database.common import get_connection, row_to_dict
 
 
-def upsert_website_index_urls(urls: list[str]) -> int:
-    cleaned_urls = []
+def upsert_website_index_urls(urls: list) -> int:
+    cleaned_items = []
     seen = set()
-    for url in urls:
-        cleaned = (url or "").strip()
+    for item in urls:
+        cleaned = (item.get("url") if isinstance(item, dict) else item or "").strip()
         if not cleaned or cleaned in seen:
             continue
         seen.add(cleaned)
-        cleaned_urls.append(cleaned)
+        keywords = ""
+        if isinstance(item, dict):
+            keywords = _clean_page_keywords(item.get("page_keywords", ""))
+        cleaned_items.append({"url": cleaned, "page_keywords": keywords})
 
+    inserted_count = 0
     with get_connection() as connection:
-        for url in cleaned_urls:
+        for item in cleaned_items:
+            existing = connection.execute(
+                "SELECT id FROM website_index_urls WHERE url = ?",
+                (item["url"],),
+            ).fetchone()
+            if existing:
+                if item["page_keywords"]:
+                    connection.execute(
+                        "UPDATE website_index_urls SET page_keywords = ? WHERE url = ?",
+                        (item["page_keywords"], item["url"]),
+                    )
+                continue
             connection.execute(
                 """
-                INSERT INTO website_index_urls (url)
-                VALUES (?)
-                ON CONFLICT(url) DO NOTHING
+                INSERT INTO website_index_urls (url, page_keywords)
+                VALUES (?, ?)
                 """,
-                (url,),
+                (item["url"], item["page_keywords"]),
             )
-    return len(cleaned_urls)
+            inserted_count += 1
+    return inserted_count
+
+
+def _clean_page_keywords(value) -> str:
+    if isinstance(value, list):
+        raw_items = value
+    else:
+        raw_items = str(value or "").replace("\n", ",").split(",")
+    keywords = []
+    seen = set()
+    for item in raw_items:
+        cleaned = " ".join(str(item or "").split()).strip()
+        normalized = cleaned.casefold()
+        if cleaned and normalized not in seen:
+            seen.add(normalized)
+            keywords.append(cleaned)
+    return ", ".join(keywords[:20])
 
 
 def list_website_index_urls() -> list[dict]:
@@ -36,6 +68,68 @@ def list_website_index_urls() -> list[dict]:
             """
         ).fetchall()
         return [row_to_dict(row) for row in rows]
+
+
+def list_website_index_site_roots() -> list[dict]:
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT url
+            FROM website_index_urls
+            ORDER BY id
+            """
+        ).fetchall()
+
+    roots_by_domain = {}
+    for row in rows:
+        parsed = urlparse(row["url"] or "")
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            continue
+        domain = parsed.netloc.lower()
+        roots_by_domain.setdefault(
+            domain,
+            {
+                "domain": domain,
+                "base_url": f"{parsed.scheme}://{parsed.netloc}",
+            },
+        )
+    return sorted(roots_by_domain.values(), key=lambda item: item["domain"])
+
+
+def delete_website_index_urls_by_domain(domain: str) -> int:
+    cleaned_domain = (domain or "").strip().lower()
+    if not cleaned_domain:
+        return 0
+
+    with get_connection() as connection:
+        rows = connection.execute("SELECT id, url FROM website_index_urls").fetchall()
+        matching_ids = [
+            row["id"]
+            for row in rows
+            if urlparse(row["url"] or "").netloc.lower() == cleaned_domain
+        ]
+        if not matching_ids:
+            return 0
+
+        placeholders = ",".join("?" for _item in matching_ids)
+        connection.execute(
+            f"DELETE FROM website_index_urls WHERE id IN ({placeholders})",
+            tuple(matching_ids),
+        )
+        return len(matching_ids)
+
+
+def delete_website_index_url(url: str) -> int:
+    cleaned_url = (url or "").strip()
+    if not cleaned_url:
+        return 0
+
+    with get_connection() as connection:
+        cursor = connection.execute(
+            "DELETE FROM website_index_urls WHERE url = ?",
+            (cleaned_url,),
+        )
+        return max(0, cursor.rowcount)
 
 
 def website_index_stats() -> dict:
@@ -65,7 +159,7 @@ def website_index_stats() -> dict:
     }
 
 
-def list_due_website_index_urls(hours: float = 0.5) -> list[dict]:
+def list_due_website_index_urls(hours: float = 10 / 60) -> list[dict]:
     cutoff = datetime.now(timezone.utc) - timedelta(hours=max(0.1, hours))
     cutoff_text = cutoff.isoformat(timespec="seconds")
     with get_connection() as connection:
@@ -78,7 +172,10 @@ def list_due_website_index_urls(hours: float = 0.5) -> list[dict]:
                 TRIM(COALESCE(last_checked_at, '')) = ''
                 OR last_checked_at <= ?
               )
-            ORDER BY id
+            ORDER BY
+                CASE WHEN TRIM(COALESCE(last_checked_at, '')) = '' THEN 0 ELSE 1 END,
+                last_checked_at,
+                id
             """,
             (cutoff_text,),
         ).fetchall()

@@ -165,6 +165,7 @@ def news_generator():
 
     state["language_options"] = language_options(state["language"])
     state["target_countries"] = country_options(state["target_country"])
+    state["reference_fetch_summary"] = _reference_fetch_summary(state.get("reference_fetches", []))
     return render_template("news_generator.html", **base_template_context(), **state)
 
 
@@ -189,6 +190,7 @@ def _initial_state() -> dict:
         "visual": "",
         "links": [],
         "reference_fetches": [],
+        "reference_fetch_summary": None,
         "quality_report": None,
         "tag_suggestions": [],
         "error": None,
@@ -698,9 +700,14 @@ def _reference_context_for_state(state: dict, progress) -> str:
     state["reference_fetches"] = fetched
     fetched_count = len([item for item in fetched if item.get("status") == "fetched"])
     if fetched_count == 0:
-        progress("Reference links were not readable, continuing without source context.")
+        state["error"] = "Reference links could not be read, so News Generator stopped instead of writing from unsupported context."
+        progress("Reference links were not readable. Generation stopped.")
         return ""
-    progress(f"Using {fetched_count} fetched reference link(s) as the only source context.")
+    failed_count = len([item for item in fetched if item.get("status") != "fetched"])
+    if failed_count:
+        progress(f"Using {fetched_count} fetched reference link(s); {failed_count} reference link(s) could not be read.")
+    else:
+        progress(f"Using {fetched_count} fetched reference link(s) as the only source context.")
     return reference_context
 
 
@@ -724,6 +731,17 @@ def _reference_context_from_cached_fetches(links: list[dict], fetched: list[dict
             f"Reference {index}: {source_label}\nURL: {item.get('url')}\nExtracted content:\n{item.get('excerpt')}"
         )
     return "\n\n---\n\n".join(context_parts).strip()
+
+
+def _reference_fetch_summary(fetched: list[dict]) -> dict | None:
+    if not fetched:
+        return None
+    fetched_count = len([item for item in fetched if item.get("status") == "fetched"])
+    return {
+        "fetched": fetched_count,
+        "failed": len(fetched) - fetched_count,
+        "total": len(fetched),
+    }
 
 
 def _loads(raw: str) -> dict:

@@ -4,11 +4,11 @@
 {% block title %}Website SEO Checker{% endblock %}
 {% block eyebrow %}SEO Audit{% endblock %}
 {% block hero_title %}Website SEO Checker{% endblock %}
-{% block hero_text %}Check a page for missing alt text, meta title, meta description, content depth, headings, canonical tags, robots.txt, and sitemap availability. The score does not include Google Search Console or index status.{% endblock %}
+{% block hero_text %}List a website's pages first, then check each page for missing alt text, meta title, meta description, content depth, headings, canonical tags, robots.txt, and sitemap availability. The score does not include Google Search Console or index status.{% endblock %}
 
 {% block content %}
   <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-    <form method="post" data-loading-message="Running website SEO check..." data-inline-loading data-inline-status-target="#seoCheckerStatus" data-inline-error-target="#seoCheckerError" data-background-submit class="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+    <form method="post" data-loading-message="Listing pages and running SEO checks..." data-inline-loading data-inline-status-target="#seoCheckerStatus" data-inline-error-target="#seoCheckerError" data-background-submit class="grid gap-4 lg:grid-cols-[1fr_160px_auto] lg:items-end">
       <div>
         <label for="url" class="mb-2 block text-sm font-bold text-sand-900">Website URL <span class="text-red-600">*</span></label>
         <input
@@ -20,7 +20,21 @@
           required
           class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
         />
-        <label class="mt-3 flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800">
+      </div>
+      <div>
+        <label for="limit" class="mb-2 block text-sm font-bold text-sand-900">Page Limit</label>
+        <input
+          id="limit"
+          name="limit"
+          type="number"
+          min="1"
+          max="100"
+          value="{{ limit }}"
+          class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+      </div>
+      <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">List & Check</button>
+      <label class="flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800 lg:col-span-3">
           <input
             type="checkbox"
             name="ignore_ssl_errors"
@@ -29,9 +43,7 @@
             class="mt-1 h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500"
           />
           <span>Ignore SSL certificate errors for this check</span>
-        </label>
-      </div>
-      <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Run Check</button>
+      </label>
     </form>
     <p id="seoCheckerStatus" class="mt-4 hidden text-sm font-bold leading-6 text-moss-700"></p>
     <p id="seoCheckerError" class="mt-3 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
@@ -41,7 +53,139 @@
     {% endif %}
   </section>
 
-  {% if result %}
+  {% if result and result.mode == "site" %}
+    <section class="mt-6 grid gap-5 xl:grid-cols-[280px_1fr_1fr]">
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Site SEO Rating</p>
+        <div class="mt-4 flex items-end gap-3">
+          <span class="font-display text-7xl font-bold leading-none text-sand-950">{{ result.summary.average_grade }}</span>
+          <span class="pb-2 text-2xl font-bold text-sand-700">{{ result.summary.average_score }}/100</span>
+        </div>
+        <p class="mt-4 break-words text-sm leading-6 text-sand-700">{{ result.base_url }}</p>
+        <div class="mt-5 grid gap-2 text-sm font-bold text-sand-800">
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.discovered_count }} page{% if result.summary.discovered_count != 1 %}s{% endif %} listed</div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.checked_count }} page{% if result.summary.checked_count != 1 %}s{% endif %} checked</div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.issue_count }} warning/fix item{% if result.summary.issue_count != 1 %}s{% endif %}</div>
+          {% if result.summary.error_count %}
+            <div class="rounded-2xl bg-red-50 px-4 py-3 text-red-700">{{ result.summary.error_count }} page check error{% if result.summary.error_count != 1 %}s{% endif %}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Step 1</p>
+            <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Listed Pages</h2>
+          </div>
+          <span class="rounded-full bg-moss-100 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-moss-700">Then checked one by one</span>
+        </div>
+        <ol class="mt-5 grid max-h-[420px] list-decimal gap-2 overflow-y-auto pl-5 text-sm leading-6 text-sand-700">
+          {% for page_url in result.discovered_pages %}
+            <li class="break-words rounded-2xl bg-sand-100 px-4 py-3">{{ page_url }}</li>
+          {% endfor %}
+        </ol>
+        {% if result.discovery_errors %}
+          <div class="mt-5 grid gap-2">
+            {% for item in result.discovery_errors[:5] %}
+              <p class="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">{{ item }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Progress</p>
+            <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Checked Pages</h2>
+          </div>
+          <span class="rounded-full bg-sand-100 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ result.summary.checked_count }}/{{ result.summary.discovered_count }}</span>
+        </div>
+        <div class="mt-5 grid max-h-[420px] gap-2 overflow-y-auto pr-1">
+          {% for page in result.checked_pages %}
+            <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
+              <div class="flex flex-wrap items-center gap-2">
+                {% if page.status == "checked" %}
+                  <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Checked</span>
+                  <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold text-sand-700">{{ page.grade }} · {{ page.score }}/100</span>
+                {% else %}
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Error</span>
+                {% endif %}
+              </div>
+              <p class="mt-2 break-words text-sm leading-6 text-sand-700">{{ page.url }}</p>
+              {% if page.error %}
+                <p class="mt-2 text-sm font-bold leading-6 text-red-700">{{ page.error }}</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="mb-5">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Step 2</p>
+        <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Page Checks</h2>
+      </div>
+      <div class="grid gap-4">
+        {% for page in result.pages %}
+          <article class="rounded-[24px] border border-sand-200 bg-white p-5">
+            <div class="grid gap-4 lg:grid-cols-[140px_1fr]">
+              <div>
+                {% if page.status == "checked" %}
+                  <div class="flex items-end gap-2">
+                    <span class="font-display text-5xl font-bold leading-none text-sand-950">{{ page.result.grade }}</span>
+                    <span class="pb-1 text-lg font-bold text-sand-700">{{ page.result.score }}/100</span>
+                  </div>
+                  <span class="mt-3 inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Checked</span>
+                {% else %}
+                  <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Error</span>
+                {% endif %}
+              </div>
+              <div>
+                <h3 class="break-words text-lg font-bold text-sand-950">{{ page.url }}</h3>
+                {% if page.status == "checked" %}
+                  <p class="mt-2 text-sm leading-6 text-sand-700">{{ page.result.stats.title or "Missing title" }}</p>
+                  <div class="mt-4 grid gap-2 md:grid-cols-3">
+                    <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">Words:</strong> {{ page.result.stats.word_count }}</div>
+                    <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">H1:</strong> {{ page.result.stats.h1_count }}</div>
+                    <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">Missing alt:</strong> {{ page.result.stats.missing_alt_count }}</div>
+                  </div>
+                  <details class="mt-4 rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
+                    <summary class="cursor-pointer text-sm font-bold text-sand-900">Show checks and AI notes</summary>
+                    <p class="mt-4 text-sm leading-6 text-sand-700">{{ page.result.ai_summary.summary }}</p>
+                    <div class="mt-4 grid gap-2">
+                      {% for check in page.result.checks %}
+                        <div class="grid gap-2 rounded-2xl bg-white px-4 py-3 md:grid-cols-[110px_1fr]">
+                          <div>
+                            {% if check.status == "pass" %}
+                              <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Pass</span>
+                            {% elif check.status == "warn" %}
+                              <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">Warning</span>
+                            {% else %}
+                              <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Fix</span>
+                            {% endif %}
+                          </div>
+                          <div>
+                            <h4 class="text-sm font-bold text-sand-950">{{ check.name }}</h4>
+                            <p class="mt-1 text-sm leading-6 text-sand-700">{{ check.detail }}</p>
+                            <p class="mt-1 text-sm font-bold leading-6 text-sand-800">{{ check.recommendation }}</p>
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </details>
+                {% else %}
+                  <p class="mt-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700">{{ page.error }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% elif result %}
     <section class="mt-6 grid gap-5 lg:grid-cols-[260px_1fr]">
       <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
         <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">SEO Rating</p>
@@ -146,7 +290,7 @@
               <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
                 <div class="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-600">{{ level|upper }}</div>
                 <ul class="grid gap-1 text-sm leading-6 text-sand-700">
-                  {% for heading in headings[:6] %}
+                  {% for heading in headings %}
                     <li>{{ heading }}</li>
                   {% endfor %}
                 </ul>
@@ -177,6 +321,82 @@
           {% else %}
             <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No crawlable links were found on the page.</p>
           {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="font-display text-3xl font-bold text-sand-950">Scraped Page Inventory</h2>
+          <p class="mt-2 text-sm leading-6 text-sand-700">These page facts are collected before the AI generates suggestions.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">
+          <span class="rounded-full bg-sand-100 px-3 py-1.5">{{ result.stats.scrape_report.heading_total }} headings</span>
+          <span class="rounded-full bg-sand-100 px-3 py-1.5">{{ result.stats.scrape_report.image_total }} images</span>
+          <span class="rounded-full bg-sand-100 px-3 py-1.5">{{ result.stats.scrape_report.link_total }} links</span>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-5 xl:grid-cols-3">
+        <div class="rounded-[24px] border border-sand-200 bg-white p-5">
+          <h3 class="font-display text-2xl font-bold text-sand-950">All Headings</h3>
+          <div class="mt-4 grid gap-3">
+            {% if result.stats.scrape_report.heading_total == 0 %}
+              <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No headings were found.</p>
+            {% else %}
+              {% for heading in result.stats.scrape_report.heading_sequence %}
+                <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
+                  <div class="mb-1 text-xs font-bold uppercase tracking-[0.12em] text-sand-600">{{ heading.level|upper }}</div>
+                  <p class="text-sm leading-6 text-sand-800">{{ heading.text }}</p>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="rounded-[24px] border border-sand-200 bg-white p-5">
+          <h3 class="font-display text-2xl font-bold text-sand-950">Images & Alt Text</h3>
+          <p class="mt-2 text-sm leading-6 text-sand-700">{{ result.stats.scrape_report.images_with_alt }} with alt text, {{ result.stats.scrape_report.images_missing_alt }} missing alt text.</p>
+          <div class="mt-4 grid max-h-[520px] gap-3 overflow-y-auto pr-1">
+            {% for image in result.stats.scrape_report.images %}
+              <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  {% if image.has_alt %}
+                    <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Alt</span>
+                  {% else %}
+                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Missing alt</span>
+                  {% endif %}
+                </div>
+                <p class="mt-2 break-words text-xs leading-5 text-sand-600">{{ image.src or "No src" }}</p>
+                {% if image.alt %}
+                  <p class="mt-2 text-sm font-bold leading-6 text-sand-900">{{ image.alt }}</p>
+                {% endif %}
+              </div>
+            {% else %}
+              <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No images were found.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="rounded-[24px] border border-sand-200 bg-white p-5">
+          <h3 class="font-display text-2xl font-bold text-sand-950">Links</h3>
+          <p class="mt-2 text-sm leading-6 text-sand-700">{{ result.stats.scrape_report.internal_link_total }} internal, {{ result.stats.scrape_report.external_link_total }} external.</p>
+          <div class="mt-4 grid max-h-[520px] gap-3 overflow-y-auto pr-1">
+            {% for link in result.stats.scrape_report.links %}
+              <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="rounded-full bg-sand-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ link.type }}</span>
+                  {% if link.text %}
+                    <span class="text-xs font-bold text-sand-600">{{ link.text }}</span>
+                  {% endif %}
+                </div>
+                <p class="mt-2 break-words text-xs leading-5 text-sand-700">{{ link.url }}</p>
+              </div>
+            {% else %}
+              <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No crawlable links were found.</p>
+            {% endfor %}
+          </div>
         </div>
       </div>
     </section>

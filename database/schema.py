@@ -176,6 +176,7 @@ def init_db():
                 yahoo_status TEXT NOT NULL DEFAULT '',
                 yahoo_last_checked_at TEXT NOT NULL DEFAULT '',
                 yahoo_detail TEXT NOT NULL DEFAULT '',
+                page_keywords TEXT NOT NULL DEFAULT '',
                 last_error TEXT NOT NULL DEFAULT ''
             );
             """
@@ -227,6 +228,7 @@ def init_db():
         _ensure_column(connection, "website_index_urls", "yahoo_status", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "website_index_urls", "yahoo_last_checked_at", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "website_index_urls", "yahoo_detail", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "website_index_urls", "page_keywords", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "website_index_urls", "last_error", "TEXT NOT NULL DEFAULT ''")
         connection.execute(
             """

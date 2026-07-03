@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% set active_page = "test-page" %}
+
+{% block title %}Test Page{% endblock %}
+{% block eyebrow %}Hidden Test Tool{% endblock %}
+{% block hero_title %}Test Page{% endblock %}
+{% block hero_text %}Paste a link to see the raw HTML response received by the fetcher before any article extraction runs.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" class="grid gap-4">
+        <div>
+          <label for="url" class="mb-2 block text-sm font-bold text-sand-900">Link</label>
+          <input id="url" name="url" type="url" value="{{ url }}" placeholder="https://example.com/article" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="fetch_mode" class="mb-2 block text-sm font-bold text-sand-900">Fetch Mode</label>
+          <select id="fetch_mode" name="fetch_mode" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            <option value="browser"{% if fetch_mode == "browser" %} selected{% endif %}>Browser Rendered</option>
+            <option value="http"{% if fetch_mode == "http" %} selected{% endif %}>Raw HTTP</option>
+          </select>
+        </div>
+        <div>
+          <label for="wait_minutes" class="mb-2 block text-sm font-bold text-sand-900">Wait Time (minutes)</label>
+          <input id="wait_minutes" name="wait_minutes" type="number" min="0" max="5" step="0.1" value="{{ wait_minutes }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Fetch Link</button>
+      </form>
+    </section>
+
+    {% if result %}
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        <div class="mb-5 grid gap-3">
+          <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-800">
+            <strong class="text-sand-950">Final URL:</strong> {{ result.final_url or url }}
+          </div>
+          <div class="rounded-2xl bg-moss-100 px-4 py-3 text-sm font-bold leading-6 text-moss-800">
+            {{ "Browser rendered" if result.rendered else "Raw HTTP" }} · {{ result.character_count }} character(s), {{ result.byte_count }} byte(s){% if result.content_type %} · {{ result.content_type }}{% endif %}{% if result.wait_seconds %} · waited {{ "%.1f"|format(result.wait_seconds) }} second(s){% endif %}
+          </div>
+        </div>
+
+        <label for="rawHtml" class="mb-2 block text-sm font-bold text-sand-900">Raw HTML</label>
+        <textarea id="rawHtml" readonly class="min-h-[520px] w-full rounded-[22px] border border-stone-900 bg-stone-950 px-4 py-4 font-mono text-sm leading-6 text-stone-50 outline-none">{{ result.html }}</textarea>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}

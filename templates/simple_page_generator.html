@@ -25,7 +25,7 @@
         <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
       {% endif %}
 
-      <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for straightforward pages that do not need the full SEO landing-page structure.</p>
+      <p class="mb-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">Use this for straightforward pages that do not need the full SEO landing-page structure. The page title is used as the page type.</p>
 
       <form method="post" id="simplePageGeneratorForm" data-loading-message="Generating simple page title..." data-inline-loading data-inline-status-target="#simplePageGenerationStatus" data-inline-error-target="#simplePageGenerationError" data-inline-actions-target="#simplePageGenerationActions" data-background-submit class="grid gap-1">
         <input type="hidden" name="history_id" value="{{ history_id }}" />
@@ -44,20 +44,6 @@
 
         <label for="page_title" class="mb-2 block text-sm font-bold text-sand-900">Page title <span class="text-red-600">*</span></label>
         <input id="page_title" name="page_title" type="text" value="{{ page_title }}" placeholder="e.g. Privacy Policy" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
-
-        <label for="page_type" class="mb-2 block text-sm font-bold text-sand-900">Page type</label>
-        <select id="page_type" name="page_type" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
-          <option value="" {% if not page_type %}selected{% endif %}>Select page type</option>
-          <option value="Privacy Policy" {% if page_type == 'Privacy Policy' %}selected{% endif %}>Privacy Policy</option>
-          <option value="Terms and Conditions" {% if page_type == 'Terms and Conditions' %}selected{% endif %}>Terms and Conditions</option>
-          <option value="Disclaimer" {% if page_type == 'Disclaimer' %}selected{% endif %}>Disclaimer</option>
-          <option value="About Us" {% if page_type == 'About Us' %}selected{% endif %}>About Us</option>
-          <option value="Contact Us" {% if page_type == 'Contact Us' %}selected{% endif %}>Contact Us</option>
-          <option value="Refund Policy" {% if page_type == 'Refund Policy' %}selected{% endif %}>Refund Policy</option>
-          <option value="Shipping Policy" {% if page_type == 'Shipping Policy' %}selected{% endif %}>Shipping Policy</option>
-          <option value="Cookie Policy" {% if page_type == 'Cookie Policy' %}selected{% endif %}>Cookie Policy</option>
-          <option value="Responsible Gaming" {% if page_type == 'Responsible Gaming' %}selected{% endif %}>Responsible Gaming</option>
-        </select>
 
         <label for="expectations" class="mb-2 block text-sm font-bold text-sand-900">What to include</label>
         <textarea id="expectations" name="expectations" placeholder="e.g. include data collection details, contact email, refund timeframe, governing law, or other notes" class="mb-5 min-h-[130px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ expectations }}</textarea>
@@ -171,7 +157,7 @@
           <input type="hidden" name="brand" value="{{ brand }}" />
           <input type="hidden" name="language" value="{{ language }}" />
           <input type="hidden" name="page_title" value="{{ page_title }}" />
-          <input type="hidden" name="page_type" value="{{ page_type }}" />
+          <input type="hidden" name="page_type" value="{{ page_title }}" />
           <input type="hidden" name="expectations" value="{{ expectations }}" />
           <input type="hidden" name="generated_title" value="{{ generated_title }}" />
           <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
@@ -184,7 +170,7 @@
           {% elif generated_title %}
             Title is ready. Generate the meta descriptions next.
           {% else %}
-            Enter a page title and choose a simple page type to generate the title first.
+            Enter a page title to generate the title first.
           {% endif %}
         </div>
       {% endif %}

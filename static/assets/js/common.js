@@ -80,6 +80,80 @@
   let activeLoadingForm = null;
   const generationStatusPollDelay = 1500;
   let latestLoadingPrompt = "";
+  let generationLogEntries = readInitialGenerationLog();
+
+  function generationLogBoxes() {
+    return Array.prototype.slice.call(document.querySelectorAll("[data-generation-log]"));
+  }
+
+  function generationLogFields() {
+    return Array.prototype.slice.call(document.querySelectorAll("textarea[name='generation_log_json'], input[name='generation_log_json']"));
+  }
+
+  function readInitialGenerationLog() {
+    const box = document.querySelector("[data-generation-log]");
+    if (!box || !box.dataset.generationLog) {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(box.dataset.generationLog);
+      return Array.isArray(parsed) ? parsed.filter(function (item) {
+        return item && typeof item === "object" && item.message;
+      }).slice(-80) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function syncGenerationLogFields() {
+    const value = JSON.stringify(generationLogEntries.slice(-80));
+    generationLogFields().forEach(function (field) {
+      field.value = value;
+    });
+  }
+
+  function renderGenerationLog() {
+    generationLogBoxes().forEach(function (box) {
+      box.innerHTML = "";
+      if (!generationLogEntries.length) {
+        const empty = document.createElement("p");
+        empty.className = "text-sm font-semibold leading-6 text-sand-500";
+        empty.textContent = "No generation log yet.";
+        box.appendChild(empty);
+        return;
+      }
+      generationLogEntries.forEach(function (item) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "mb-3 rounded-xl bg-sand-50 px-3 py-2";
+        const label = document.createElement("div");
+        label.className = "mb-1 font-bold uppercase tracking-[0.08em] text-sand-500";
+        label.textContent = item.kind || "status";
+        const body = document.createElement("pre");
+        body.className = "whitespace-pre-wrap font-sans text-xs leading-5 text-sand-800";
+        body.textContent = item.message || "";
+        wrapper.appendChild(label);
+        wrapper.appendChild(body);
+        box.appendChild(wrapper);
+      });
+      box.scrollTop = box.scrollHeight;
+    });
+  }
+
+  function appendGenerationLog(kind, message) {
+    const cleanedMessage = String(message || "").trim();
+    if (!cleanedMessage || !generationLogBoxes().length) {
+      return;
+    }
+    const cleanedKind = String(kind || "status").trim() || "status";
+    const previous = generationLogEntries[generationLogEntries.length - 1];
+    if (previous && previous.kind === cleanedKind && previous.message === cleanedMessage) {
+      return;
+    }
+    generationLogEntries.push({ kind: cleanedKind, message: cleanedMessage });
+    generationLogEntries = generationLogEntries.slice(-80);
+    renderGenerationLog();
+    syncGenerationLogFields();
+  }
 
   function usesInlineLoading() {
     return activeLoadingForm && activeLoadingForm.hasAttribute("data-inline-loading");
@@ -98,6 +172,10 @@
 
   function setLoadingStatus(message) {
     const cleanedMessage = String(message || "");
+    if (cleanedMessage) {
+      document.dispatchEvent(new CustomEvent("app:generation-status", { detail: { message: cleanedMessage } }));
+      appendGenerationLog("status", cleanedMessage);
+    }
     if (usesInlineLoading() && ["Queued in background...", "Generating..."].includes(cleanedMessage)) {
       return;
     }
@@ -134,6 +212,10 @@
 
   function setLoadingPrompt(prompt) {
     latestLoadingPrompt = prompt || "";
+    if (latestLoadingPrompt) {
+      document.dispatchEvent(new CustomEvent("app:generation-prompt", { detail: { prompt: latestLoadingPrompt } }));
+      appendGenerationLog("prompt", latestLoadingPrompt);
+    }
     const panel = getOverlayPrompt();
     const promptText = panel ? panel.querySelector("[data-loading-prompt-text]") : null;
     const promptToggle = panel ? panel.querySelector("[data-loading-prompt-toggle]") : null;
@@ -518,11 +600,18 @@
     })
       .then(function (response) {
         if (!response.ok) {
-          throw new Error("Could not start background job.");
+          return response.json().catch(function () {
+            return {};
+          }).then(function (payload) {
+            throw new Error(payload.error || "Could not start background job.");
+          });
         }
         return response.json();
       })
       .then(function (payload) {
+        if (!payload || !payload.id) {
+          throw new Error(payload && payload.error ? payload.error : "Background job did not return an id.");
+        }
         pollBackgroundJob(payload.id);
       })
       .catch(function (error) {
@@ -778,6 +867,15 @@
   });
 
   document.addEventListener("click", function (event) {
+    const clearLogButton = event.target.closest("[data-generation-log-clear]");
+    if (clearLogButton) {
+      event.preventDefault();
+      generationLogEntries = [];
+      renderGenerationLog();
+      syncGenerationLogFields();
+      return;
+    }
+
     const stopButton = event.target.closest("[data-loading-stop]");
     if (stopButton) {
       event.preventDefault();

@@ -37,7 +37,7 @@ from database.pages import (
 from database.schema import init_db
 from database.settings import get_setting, list_settings, set_setting
 from database.social_media import delete_social_profile, get_social_profile, list_social_profiles, save_social_profile
-from database.website_index import list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
+from database.website_index import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_urls, list_website_index_site_roots, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 
 
 init_db()

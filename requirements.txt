@@ -1,9 +1,11 @@
 flask
 certifi
+google-auth
 google-genai
 ollama
 openai
 pillow
+playwright
 python-docx
 pytest
 websockets

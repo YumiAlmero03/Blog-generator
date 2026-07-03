@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% set active_page = "gsc-planner" %}
+
+{% block title %}GSC Planner{% endblock %}
+{% block eyebrow %}SEO Planning{% endblock %}
+{% block hero_title %}GSC Planner{% endblock %}
+{% block hero_text %}Fetch Google Search Console performance data for a page, then generate a practical SEO report with next-step AI support.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="post" data-loading-message="Generating GSC SEO report..." data-inline-loading data-inline-status-target="#gscPlannerStatus" data-inline-error-target="#gscPlannerError" data-background-submit class="grid gap-5">
+      <input type="hidden" name="action" value="generate_report" />
+      <input type="hidden" name="gsc_api_summary" value="{{ gsc_api_summary }}" />
+      <input type="hidden" name="gsc_api_notice" value="{{ gsc_api_notice }}" />
+      <input type="hidden" name="gsc_api_rows_json" value='{{ gsc_api_rows_json }}' />
+      <input type="hidden" name="gsc_api_daily_rows_json" value='{{ gsc_api_daily_rows_json }}' />
+
+      <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Search Console API data will be fetched from the saved Google credentials in Settings.</p>
+
+      <div class="grid gap-4 lg:grid-cols-[1fr_1fr_220px]">
+        <div>
+          <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand <span class="text-red-600">*</span></label>
+          <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" required placeholder="Select saved brand" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="target_url" class="mb-2 block text-sm font-bold text-sand-900">GSC URL / Page Link</label>
+          <input id="target_url" name="target_url" type="url" value="{{ target_url }}" placeholder="https://example.com/page" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+          <select id="language" name="language" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            {% for option in languages %}
+              <option value="{{ option }}" {% if language == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="gsc_property" class="mb-2 block text-sm font-bold text-sand-900">Search Console Property</label>
+        <input id="gsc_property" name="gsc_property" type="text" value="{{ gsc_property }}" placeholder="Auto URL-prefix, or sc-domain:example.com" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        <p class="mt-2 text-xs font-bold leading-5 text-sand-600">Leave blank for URL-prefix properties like https://example.com/. Use sc-domain:example.com for Domain properties.</p>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-[180px_180px_140px_1fr]">
+        <div>
+          <label for="gsc_start_date" class="mb-2 block text-sm font-bold text-sand-900">Start Date</label>
+          <input id="gsc_start_date" name="gsc_start_date" type="date" value="{{ gsc_start_date }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="gsc_end_date" class="mb-2 block text-sm font-bold text-sand-900">End Date</label>
+          <input id="gsc_end_date" name="gsc_end_date" type="date" value="{{ gsc_end_date }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="gsc_row_limit" class="mb-2 block text-sm font-bold text-sand-900">Rows</label>
+          <input id="gsc_row_limit" name="gsc_row_limit" type="number" min="5" max="100" step="5" value="{{ gsc_row_limit }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="gsc_notes" class="mb-2 block text-sm font-bold text-sand-900">Extra Notes</label>
+          <textarea id="gsc_notes" name="gsc_notes" rows="4" placeholder="Optional: add context about recent changes, target country, known issues, or goals." class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ gsc_notes }}</textarea>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Generate SEO Report</button>
+        <p class="text-sm leading-6 text-sand-600">Uses Google credentials saved in Settings. The page URL must belong to a verified Search Console property.</p>
+      </div>
+    </form>
+
+    <p id="gscPlannerStatus" class="mt-4 hidden text-sm font-bold leading-6 text-moss-700"></p>
+    <p id="gscPlannerError" class="mt-3 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+
+    {% if error %}
+      <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+    {% endif %}
+
+    {% if gsc_api_notice %}
+      <div class="mt-5 rounded-2xl border border-moss-200 bg-moss-50 px-4 py-3 text-sm font-bold text-moss-800">{{ gsc_api_notice }}</div>
+    {% endif %}
+
+    {% if gsc_api_summary %}
+      <div class="mt-5 rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
+        <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-500">Search Console API Data Sent To Prompt</p>
+        <pre class="mt-3 max-h-[360px] overflow-auto whitespace-pre-wrap text-xs leading-5 text-sand-800">{{ gsc_api_summary }}</pre>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if report %}
+    <section class="mt-6 grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+      <aside class="order-2 h-fit rounded-[30px] border border-sand-200/70 bg-white/90 p-5 shadow-soft backdrop-blur-md xl:sticky xl:top-6 xl:order-1">
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">AI Next Steps</p>
+          <h3 class="mt-1 font-display text-2xl font-bold text-sand-950">GSC Chat</h3>
+        </div>
+
+        <div class="mt-5 grid max-h-[520px] gap-3 overflow-y-auto rounded-2xl border border-sand-200 bg-sand-50 p-3 xl:max-h-[calc(100vh-280px)]">
+          {% for message in chat_history %}
+            <div class="rounded-2xl {% if message.role == 'user' %}bg-sand-600 text-sand-50{% else %}bg-white text-sand-800{% endif %} px-4 py-3 text-sm leading-6">
+              <div class="mb-1 text-xs font-extrabold uppercase tracking-[0.12em] {% if message.role == 'user' %}text-sand-100{% else %}text-sand-500{% endif %}">{{ message.role }}</div>
+              <div class="whitespace-pre-wrap">{{ message.content }}</div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if chat_error %}
+          <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ chat_error }}</div>
+        {% endif %}
+
+        <form method="post" data-loading-message="Asking GSC assistant..." data-background-submit class="mt-4 grid gap-3">
+          <input type="hidden" name="action" value="chat" />
+          <input type="hidden" name="brand" value="{{ brand }}" />
+          <input type="hidden" name="target_url" value="{{ target_url }}" />
+          <input type="hidden" name="gsc_property" value="{{ gsc_property }}" />
+          <input type="hidden" name="language" value="{{ language }}" />
+          <input type="hidden" name="gsc_notes" value="{{ gsc_notes }}" />
+          <input type="hidden" name="gsc_start_date" value="{{ gsc_start_date }}" />
+          <input type="hidden" name="gsc_end_date" value="{{ gsc_end_date }}" />
+          <input type="hidden" name="gsc_row_limit" value="{{ gsc_row_limit }}" />
+          <input type="hidden" name="gsc_api_summary" value="{{ gsc_api_summary }}" />
+          <input type="hidden" name="gsc_api_notice" value="{{ gsc_api_notice }}" />
+          <input type="hidden" name="gsc_api_rows_json" value='{{ gsc_api_rows_json }}' />
+          <input type="hidden" name="gsc_api_daily_rows_json" value='{{ gsc_api_daily_rows_json }}' />
+          <input type="hidden" name="report_json" value='{{ report_json }}' />
+          <input type="hidden" name="chat_history_json" value='{{ chat_history_json }}' />
+          <label for="chat_question" class="sr-only">Ask next-step question</label>
+          <textarea id="chat_question" name="chat_question" rows="4" required placeholder="Ask what to fix first, how to rewrite title/meta, what content to add, or how to monitor results." class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ chat_question }}</textarea>
+          <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-black">Ask AI</button>
+        </form>
+      </aside>
+
+      <div class="order-1 grid gap-6 xl:order-2">
+        <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">{{ brand }}{% if target_url %} / {{ target_url }}{% endif %}</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">SEO Report</h2>
+          <p class="mt-4 text-base leading-7 text-sand-800">{{ report.executive_summary }}</p>
+        </div>
+
+        {% if gsc_api_daily_rows %}
+          <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Performance Trend</p>
+                <h3 class="mt-2 font-display text-2xl font-bold text-sand-950">Clicks and Impressions</h3>
+              </div>
+              <div class="flex flex-wrap gap-3 text-xs font-bold text-sand-700">
+                <span class="inline-flex items-center gap-2"><span class="h-2.5 w-5 rounded-full bg-moss-600"></span>Clicks</span>
+                <span class="inline-flex items-center gap-2"><span class="h-2.5 w-5 rounded-full bg-sand-600"></span>Impressions</span>
+              </div>
+            </div>
+            <div
+              id="gscTrendChart"
+              class="mt-5 min-h-[340px] rounded-2xl border border-sand-200 bg-white p-4"
+              data-gsc-daily='{{ gsc_api_daily_rows_json }}'
+            ></div>
+          </div>
+        {% endif %}
+
+        {% set sections = [
+          ("GSC Diagnosis", report.gsc_diagnosis, ["finding", "evidence", "meaning"]),
+          ("Opportunities", report.opportunities, ["opportunity", "reason", "recommended_action"]),
+          ("Recommendations", report.recommendations, ["priority", "area", "recommendation", "impact", "effort"]),
+          ("Content Plan", report.content_plan, ["section_or_asset", "target_query", "notes"]),
+          ("Technical Checks", report.technical_checks, ["check", "why", "how"]),
+          ("Monitoring Plan", report.monitoring_plan, ["metric", "target", "timing"]),
+          ("Next Steps", report.next_steps, ["step", "priority", "effort"])
+        ] %}
+
+        {% for title, rows, keys in sections %}
+          {% if rows %}
+            <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+              <h3 class="font-display text-2xl font-bold text-sand-950">{{ title }}</h3>
+              <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+                <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+                  <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+                    <tr>
+                      {% for key in keys %}
+                        <th class="px-4 py-3">{{ key|replace('_', ' ')|title }}</th>
+                      {% endfor %}
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-sand-100">
+                    {% for row in rows %}
+                      <tr>
+                        {% for key in keys %}
+                          <td class="min-w-[220px] px-4 py-3 leading-6 text-sand-800">{{ row.get(key, "") }}</td>
+                        {% endfor %}
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <datalist id="brandSuggestions">
+    {% for item in brand_names %}
+      <option value="{{ item }}"></option>
+    {% endfor %}
+  </datalist>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (() => {
+      const chart = document.getElementById("gscTrendChart");
+      if (!chart) {
+        return;
+      }
+
+      let rows = [];
+      try {
+        rows = JSON.parse(chart.dataset.gscDaily || "[]");
+      } catch (error) {
+        rows = [];
+      }
+      rows = rows.filter((row) => row && row.date);
+      if (!rows.length) {
+        chart.innerHTML = '<p class="text-sm font-bold text-sand-600">No daily trend rows returned.</p>';
+        return;
+      }
+
+      const width = 920;
+      const height = 300;
+      const padding = { top: 24, right: 32, bottom: 48, left: 56 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+      const maxClicks = Math.max(...rows.map((row) => Number(row.clicks || 0)), 1);
+      const maxImpressions = Math.max(...rows.map((row) => Number(row.impressions || 0)), 1);
+      const x = (index) => padding.left + (rows.length === 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
+      const y = (value, maxValue) => padding.top + plotHeight - (Number(value || 0) / maxValue) * plotHeight;
+      const points = (key, maxValue) => rows.map((row, index) => `${x(index).toFixed(1)},${y(row[key], maxValue).toFixed(1)}`).join(" ");
+      const firstDate = rows[0].date;
+      const lastDate = rows[rows.length - 1].date;
+      const last = rows[rows.length - 1];
+      const previous = rows[Math.max(0, rows.length - 2)];
+      const clickDelta = Number(last.clicks || 0) - Number(previous.clicks || 0);
+      const impressionDelta = Number(last.impressions || 0) - Number(previous.impressions || 0);
+
+      chart.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="GSC clicks and impressions trend" class="h-auto w-full overflow-visible">
+          <rect x="0" y="0" width="${width}" height="${height}" rx="18" fill="#ffffff"></rect>
+          <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + plotHeight}" stroke="#e7ded1" stroke-width="1"></line>
+          <line x1="${padding.left}" y1="${padding.top + plotHeight}" x2="${padding.left + plotWidth}" y2="${padding.top + plotHeight}" stroke="#e7ded1" stroke-width="1"></line>
+          <text x="${padding.left}" y="${height - 16}" fill="#7c6f64" font-size="12" font-weight="700">${firstDate}</text>
+          <text x="${padding.left + plotWidth}" y="${height - 16}" fill="#7c6f64" font-size="12" font-weight="700" text-anchor="end">${lastDate}</text>
+          <text x="${padding.left}" y="18" fill="#4d7c0f" font-size="12" font-weight="800">Clicks max ${maxClicks.toLocaleString()}</text>
+          <text x="${padding.left + plotWidth}" y="18" fill="#8b6f47" font-size="12" font-weight="800" text-anchor="end">Impressions max ${maxImpressions.toLocaleString()}</text>
+          <polyline points="${points("impressions", maxImpressions)}" fill="none" stroke="#a68657" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <polyline points="${points("clicks", maxClicks)}" fill="none" stroke="#4d7c0f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          ${rows.map((row, index) => `
+            <circle cx="${x(index).toFixed(1)}" cy="${y(row.clicks, maxClicks).toFixed(1)}" r="3.5" fill="#4d7c0f">
+              <title>${row.date}: ${Number(row.clicks || 0).toLocaleString()} clicks</title>
+            </circle>
+            <circle cx="${x(index).toFixed(1)}" cy="${y(row.impressions, maxImpressions).toFixed(1)}" r="3.5" fill="#a68657">
+              <title>${row.date}: ${Number(row.impressions || 0).toLocaleString()} impressions</title>
+            </circle>
+          `).join("")}
+        </svg>
+        <div class="mt-3 grid gap-2 text-sm font-bold text-sand-700 sm:grid-cols-2">
+          <div>Latest clicks: ${Number(last.clicks || 0).toLocaleString()} (${clickDelta >= 0 ? "+" : ""}${clickDelta.toLocaleString()} vs previous day)</div>
+          <div>Latest impressions: ${Number(last.impressions || 0).toLocaleString()} (${impressionDelta >= 0 ? "+" : ""}${impressionDelta.toLocaleString()} vs previous day)</div>
+        </div>
+      `;
+    })();
+
+    (() => {
+      const brandWebsites = {{ brand_websites|tojson }};
+      const brandInput = document.getElementById("brand");
+      const urlInput = document.getElementById("target_url");
+      if (!brandInput || !urlInput) {
+        return;
+      }
+
+      let lastAutofilledUrl = "";
+      const fillUrlFromBrand = () => {
+        const website = brandWebsites[brandInput.value.trim()] || "";
+        if (!website) {
+          return;
+        }
+        if (!urlInput.value.trim() || urlInput.value.trim() === lastAutofilledUrl) {
+          urlInput.value = website;
+          lastAutofilledUrl = website;
+        }
+      };
+
+      brandInput.addEventListener("change", fillUrlFromBrand);
+      brandInput.addEventListener("input", fillUrlFromBrand);
+      fillUrlFromBrand();
+    })();
+  </script>
+{% endblock %}

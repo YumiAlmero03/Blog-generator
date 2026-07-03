@@ -1,4 +1,5 @@
 import json
+import re
 
 from flask import render_template, request
 
@@ -7,7 +8,7 @@ from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
-from app.services.word_limit_settings import get_blog_word_limits
+from app.services.word_limit_settings import get_blog_word_limits, get_page_word_limits
 from database import get_brand_context, list_brand_names, record_blog, record_generation, upsert_brand
 from generators.blog_rework_generator import generate_blog_rework
 from generators.content_generator import count_html_words, suggest_content_tags
@@ -30,13 +31,17 @@ def blog_rework_generator():
 def _default_state() -> dict:
     return {
         "source_url": "",
+        "source_content": "",
+        "rework_content_type": "blog",
         "source_title": "",
+        "old_brand": "",
         "brand": "",
         "language": get_default_language(),
         "tone": "natural",
         "selected_title": "",
         "keyword": "",
         "supporting_keyword": "",
+        "manual_supporting_keywords": "",
         "meta_descriptions": [],
         "meta_description": "",
         "visual": "",
@@ -53,11 +58,15 @@ def _default_state() -> dict:
 
 def _handle_generate_blog_rework(state: dict) -> None:
     state["source_url"] = request.form.get("source_url", "").strip()
+    state["source_content"] = request.form.get("source_content_html", "").strip()
+    state["rework_content_type"] = _rework_content_type_from_request()
+    state["manual_supporting_keywords"] = request.form.get("manual_supporting_keywords", "").strip()
+    state["old_brand"] = request.form.get("old_brand", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
-    if not state["source_url"]:
-        state["error"] = "Please enter the blog link to rework."
+    if not state["source_url"] and not _has_readable_source_content(state["source_content"]):
+        state["error"] = "Please enter a blog link or paste the source content to rework."
         return
 
     if state["brand"]:
@@ -65,12 +74,16 @@ def _handle_generate_blog_rework(state: dict) -> None:
 
     try:
         provider = get_provider()
-        min_words, max_words = get_blog_word_limits()
+        min_words, max_words = _rework_word_limits(state["rework_content_type"])
         progress = _progress_callback("Blog Rework", request.form.get("generation_status_token", ""))
         progress("Starting blog rework...")
         result = generate_blog_rework(
             provider,
             source_url=state["source_url"],
+            source_content=state["source_content"],
+            content_type=state["rework_content_type"],
+            manual_supporting_keywords=state["manual_supporting_keywords"],
+            old_brand=state["old_brand"],
             brand=state["brand"],
             tone=state["tone"],
             language=state["language"],
@@ -101,7 +114,11 @@ def _handle_generate_blog_rework(state: dict) -> None:
 
 def _handle_save_blog_rework(state: dict) -> None:
     state["source_url"] = request.form.get("source_url", "").strip()
+    state["source_content"] = request.form.get("source_content_html", "").strip()
     state["source_title"] = request.form.get("source_title", "").strip()
+    state["rework_content_type"] = _rework_content_type_from_request()
+    state["manual_supporting_keywords"] = request.form.get("manual_supporting_keywords", "").strip()
+    state["old_brand"] = request.form.get("old_brand", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
@@ -119,7 +136,7 @@ def _handle_save_blog_rework(state: dict) -> None:
         state["error"] = "There is no generated rework to save."
         return
 
-    min_words, max_words = get_blog_word_limits()
+    min_words, max_words = _rework_word_limits(state["rework_content_type"])
     if not state["tag_suggestions"]:
         state["tag_suggestions"] = suggest_content_tags(
             title=state["selected_title"],
@@ -143,10 +160,13 @@ def _handle_save_blog_rework(state: dict) -> None:
 
 def _apply_result(state: dict, result: dict) -> None:
     state["source_url"] = result.get("source_url", state["source_url"])
+    state["source_content"] = result.get("source_content", state.get("source_content", ""))
+    state["rework_content_type"] = result.get("content_type", state.get("rework_content_type", "blog"))
     state["source_title"] = result.get("source_title", "")
     state["selected_title"] = result.get("title", "")
     state["keyword"] = result.get("keyword", "")
     state["supporting_keyword"] = result.get("supporting_keyword", "")
+    state["manual_supporting_keywords"] = result.get("manual_supporting_keywords", state.get("manual_supporting_keywords", ""))
     state["meta_descriptions"] = result.get("meta_descriptions", [])
     state["meta_description"] = result.get("meta_description", "")
     state["visual"] = result.get("visual", "")
@@ -165,8 +185,13 @@ def _record_blog_rework(state: dict, min_words: int, max_words: int) -> None:
         tags=state["tag_suggestions"],
         prompt_inputs={
             "source_url": state["source_url"],
+            "source_type": "url" if state["source_url"] else "pasted_content",
+            "rework_content_type": state.get("rework_content_type", "blog"),
+            "source_content_character_count": len(_readable_source_content(state.get("source_content", ""))),
             "source_title": state["source_title"],
+            "old_brand": state["old_brand"],
             "supporting_keyword": state["supporting_keyword"],
+            "manual_supporting_keywords": state.get("manual_supporting_keywords", ""),
             "language": state["language"],
             "tone": state["tone"],
             "visual": state["visual"],
@@ -187,6 +212,17 @@ def _record_blog_rework(state: dict, min_words: int, max_words: int) -> None:
 
 def _language_from_request() -> str:
     return normalize_language(request.form.get("language", get_default_language()))
+
+
+def _rework_content_type_from_request() -> str:
+    value = request.form.get("rework_content_type", "blog").strip().lower()
+    return value if value in {"blog", "page"} else "blog"
+
+
+def _rework_word_limits(content_type: str) -> tuple[int, int]:
+    if content_type == "page":
+        return get_page_word_limits()
+    return get_blog_word_limits()
 
 
 def _json_list(raw: str) -> list:
@@ -220,3 +256,12 @@ def _progress_callback(label: str, token: str):
 
     publish.generation_token = token
     return publish
+
+
+def _readable_source_content(value: str) -> str:
+    without_tags = re.sub(r"<[^>]+>", " ", str(value or ""))
+    return " ".join(without_tags.split()).strip()
+
+
+def _has_readable_source_content(value: str) -> bool:
+    return bool(_readable_source_content(value))

@@ -17,6 +17,8 @@ from content_repetition import repeated_content_issue
 
 MIN_PAGE_WORDS = 1000
 MAX_PAGE_WORDS = 19000
+MIN_PAGE_TITLE_CHARACTERS = 50
+MAX_PAGE_TITLE_CHARACTERS = 60
 MIN_META_DESCRIPTION_CHARACTERS = 120
 MAX_META_DESCRIPTION_CHARACTERS = 140
 
@@ -297,6 +299,8 @@ def generate_page_title(
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
                 "- Your previous title was missing, used banned words, or did not follow the page title rules.\n"
+                f"- The title must start with this exact keyword: {keyword}.\n"
+                f"- The title must be between {MIN_PAGE_TITLE_CHARACTERS} and {MAX_PAGE_TITLE_CHARACTERS} characters.\n"
                 "- Return one fresh title in valid JSON only.\n"
             )
 
@@ -311,6 +315,38 @@ def generate_page_title(
             if not title:
                 _publish_progress(progress_callback, f"Page title attempt {attempt}: no title returned. Retrying...")
                 wait_before_retry(attempt, progress_callback, "empty title")
+                continue
+            if not _starts_with_keyword(title, keyword):
+                _publish_progress(
+                    progress_callback,
+                    f"Page title attempt {attempt}: title must start with '{keyword}'. Retrying...",
+                )
+                logger.warning(
+                    "Page title does not start with keyword '%s' for title '%s' on attempt %d",
+                    keyword,
+                    title,
+                    attempt,
+                )
+                wait_before_retry(attempt, progress_callback, "page title keyword prefix miss")
+                continue
+            title_length = len(title)
+            if not MIN_PAGE_TITLE_CHARACTERS <= title_length <= MAX_PAGE_TITLE_CHARACTERS:
+                _publish_progress(
+                    progress_callback,
+                    (
+                        f"Page title attempt {attempt}: title is {title_length} characters, "
+                        f"target is {MIN_PAGE_TITLE_CHARACTERS}-{MAX_PAGE_TITLE_CHARACTERS}. Retrying..."
+                    ),
+                )
+                logger.warning(
+                    "Page title is %d characters (target: %d-%d) for keyword '%s' on attempt %d",
+                    title_length,
+                    MIN_PAGE_TITLE_CHARACTERS,
+                    MAX_PAGE_TITLE_CHARACTERS,
+                    keyword,
+                    attempt,
+                )
+                wait_before_retry(attempt, progress_callback, "page title length miss")
                 continue
             banned_terms = find_banned_terms_in_text(title)
             if banned_terms:
@@ -332,6 +368,12 @@ def generate_page_title(
             raise ValueError("Could not parse JSON from model output.") from exc
 
     raise ValueError("Generated page title could not satisfy the rules.")
+
+
+def _starts_with_keyword(title: str, keyword: str) -> bool:
+    cleaned_title = (title or "").strip()
+    cleaned_keyword = (keyword or "").strip()
+    return bool(cleaned_keyword and cleaned_title.startswith(cleaned_keyword))
 
 
 def generate_page_meta_description(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from urllib.parse import urldefrag, urljoin, urlparse
@@ -11,12 +12,27 @@ from app.services.seo_checker_service import fetch_url
 COMMON_SITEMAP_PATHS = ("/sitemap.xml", "/sitemap_index.xml", "/sitemap-index.xml", "/wp-sitemap.xml")
 MAX_SITEMAPS = 30
 MAX_PAGE_URLS = 1000
+IMAGE_EXTENSIONS = {
+    ".apng",
+    ".avif",
+    ".bmp",
+    ".gif",
+    ".ico",
+    ".jpeg",
+    ".jpg",
+    ".png",
+    ".svg",
+    ".tif",
+    ".tiff",
+    ".webp",
+}
 
 
 @dataclass
 class WebsitePageDiscoveryResult:
     base_url: str
     pages: list[str] = field(default_factory=list)
+    page_items: list[dict] = field(default_factory=list)
     sitemaps: list[dict] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
@@ -35,9 +51,58 @@ class HomepageLinkParser(HTMLParser):
             self.links.append(href)
 
 
-def discover_website_pages(raw_url: str, limit: int = 500) -> WebsitePageDiscoveryResult:
+class PageKeywordParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self._title_depth = 0
+        self._heading_depth = 0
+        self._skip_depth = 0
+        self.title_parts: list[str] = []
+        self.heading_parts: list[str] = []
+        self.meta_keywords: list[str] = []
+        self.meta_descriptions: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        cleaned_tag = (tag or "").lower()
+        attrs_dict = {name.lower(): value or "" for name, value in attrs}
+        if cleaned_tag in {"script", "style", "noscript", "svg", "canvas"}:
+            self._skip_depth += 1
+        if cleaned_tag == "title":
+            self._title_depth += 1
+        if cleaned_tag in {"h1", "h2", "h3"}:
+            self._heading_depth += 1
+        if cleaned_tag == "meta":
+            name = (attrs_dict.get("name") or attrs_dict.get("property") or "").strip().lower()
+            content = attrs_dict.get("content", "").strip()
+            if name == "keywords" and content:
+                self.meta_keywords.extend(_split_keyword_text(content))
+            elif name in {"description", "og:description", "twitter:description"} and content:
+                self.meta_descriptions.append(content)
+
+    def handle_endtag(self, tag):
+        cleaned_tag = (tag or "").lower()
+        if cleaned_tag in {"script", "style", "noscript", "svg", "canvas"} and self._skip_depth:
+            self._skip_depth -= 1
+        if cleaned_tag == "title" and self._title_depth:
+            self._title_depth -= 1
+        if cleaned_tag in {"h1", "h2", "h3"} and self._heading_depth:
+            self._heading_depth -= 1
+
+    def handle_data(self, data):
+        if self._skip_depth:
+            return
+        text = _clean_phrase(data)
+        if not text:
+            return
+        if self._title_depth:
+            self.title_parts.append(text)
+        if self._heading_depth:
+            self.heading_parts.append(text)
+
+
+def discover_website_pages(raw_url: str, limit: int = 50) -> WebsitePageDiscoveryResult:
     base_url = _normalize_base_url(raw_url)
-    limit = max(1, min(MAX_PAGE_URLS, int(limit or 500)))
+    limit = max(1, min(MAX_PAGE_URLS, int(limit or 50)))
     result = WebsitePageDiscoveryResult(base_url=base_url)
 
     sitemap_urls = _discover_sitemap_urls(base_url, result)
@@ -82,7 +147,45 @@ def discover_website_pages(raw_url: str, limit: int = 500) -> WebsitePageDiscove
         page_urls = _discover_homepage_links(base_url, limit, result)
 
     result.pages = page_urls[:limit]
+    result.page_items = _build_page_items(result.pages, result)
     return result
+
+
+def _build_page_items(page_urls: list[str], result: WebsitePageDiscoveryResult) -> list[dict]:
+    page_items = []
+    for page_url in page_urls:
+        page_items.append(
+            {
+                "url": page_url,
+                "keywords": extract_page_keywords(page_url, result),
+            }
+        )
+    return page_items
+
+
+def extract_page_keywords(page_url: str, result: WebsitePageDiscoveryResult | None = None) -> list[str]:
+    fallback_keywords = _keywords_from_url(page_url)
+    try:
+        response = fetch_url(page_url)
+    except Exception as exc:
+        if result is not None:
+            result.errors.append(f"{page_url}: keyword fetch failed: {exc}")
+        return fallback_keywords
+
+    content_type = (getattr(response, "content_type", "") or "").lower()
+    text = getattr(response, "text", "") or ""
+    if "html" not in content_type and "<html" not in text[:1000].lower():
+        return fallback_keywords
+
+    parser = PageKeywordParser()
+    parser.feed(text)
+    candidates = []
+    candidates.extend(parser.meta_keywords)
+    candidates.extend(_split_phrase_sources(parser.title_parts))
+    candidates.extend(_split_phrase_sources(parser.heading_parts))
+    candidates.extend(_split_phrase_sources(parser.meta_descriptions[:1]))
+    candidates.extend(fallback_keywords)
+    return _dedupe_keywords(candidates)[:10]
 
 
 def _discover_sitemap_urls(base_url: str, result: WebsitePageDiscoveryResult) -> list[str]:
@@ -175,6 +278,8 @@ def _normalize_discovered_url(url: str) -> str:
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         return ""
     path = parsed.path or "/"
+    if _is_image_url_path(path):
+        return ""
     return parsed._replace(path=path).geturl()
 
 
@@ -193,5 +298,96 @@ def _unique_urls(urls: list[str]) -> list[str]:
     return unique_urls
 
 
+def _is_image_url_path(path: str) -> bool:
+    cleaned_path = (path or "").lower()
+    return any(cleaned_path.endswith(extension) for extension in IMAGE_EXTENSIONS)
+
+
 def _local_name(tag: str) -> str:
     return tag.rsplit("}", 1)[-1].lower()
+
+
+STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "our",
+    "page",
+    "the",
+    "to",
+    "with",
+    "your",
+}
+
+
+def _split_keyword_text(value: str) -> list[str]:
+    return [_clean_phrase(item) for item in re.split(r"[,;|]+", value or "") if _clean_phrase(item)]
+
+
+def _split_phrase_sources(values: list[str]) -> list[str]:
+    keywords = []
+    for value in values:
+        cleaned = _clean_phrase(value)
+        if not cleaned:
+            continue
+        keywords.append(cleaned)
+        words = [word for word in cleaned.split() if word.casefold() not in STOP_WORDS]
+        if 2 <= len(words) <= 6:
+            keywords.append(" ".join(words))
+    return keywords
+
+
+def _keywords_from_url(url: str) -> list[str]:
+    parsed = urlparse(url or "")
+    path = parsed.path.strip("/")
+    if not path:
+        return []
+    segments = [segment for segment in path.split("/") if segment]
+    candidates = []
+    for segment in segments[-2:]:
+        cleaned = _clean_phrase(re.sub(r"[-_]+", " ", segment))
+        if cleaned:
+            candidates.append(cleaned)
+    return _dedupe_keywords(candidates)
+
+
+def _dedupe_keywords(values: list[str]) -> list[str]:
+    keywords = []
+    seen = set()
+    for value in values:
+        cleaned = _clean_phrase(value)
+        if not cleaned:
+            continue
+        normalized = cleaned.casefold()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        keywords.append(cleaned)
+    return keywords
+
+
+def _clean_phrase(value: str) -> str:
+    text = re.sub(r"\s+", " ", value or "").strip()
+    text = re.sub(r"\s+[-|:]\s+.*$", "", text).strip()
+    text = re.sub(r"[^\w &'/-]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip(" -/'")
+    if len(text) < 3 or len(text) > 90:
+        return ""
+    words = text.split()
+    if len(words) == 1 and words[0].casefold() in STOP_WORDS:
+        return ""
+    return text
