@@ -8,6 +8,7 @@ def build_social_media_post_prompt(
     social_type: str,
     brand_context: str = "",
     reference_link: str = "",
+    research_context: str = "",
     max_characters: int = 1000,
 ) -> str:
     context_section = build_brand_context_section(brand_context)
@@ -21,6 +22,14 @@ Reference link:
 
 Use this reference link as source context for the post. Include the URL in post_content only if it fits naturally for the platform and stays within the character limit.
 """
+    research_section = ""
+    if (research_context or "").strip():
+        research_section = f"""
+Web research context:
+{research_context}
+
+Use this as supporting context. Do not claim details that are not supported by the web research, reference link, or brand context.
+"""
     focus_section = f"Optional focus word or angle: {focus_word}" if (focus_word or "").strip() else "Optional focus word or angle: auto-generate a random topic."
     return f"""
 You are a neutral content assistant.
@@ -32,6 +41,7 @@ Brand: {brand_name or "None"}
 Medium: {social_type}
 {context_section}
 {reference_link_section}
+{research_section}
 {banned_words_section}
 
 Rules:

@@ -85,6 +85,36 @@ def test_discover_website_pages_extracts_page_keywords(monkeypatch):
     assert "Learn the best slot games for new players" in result.page_items[0]["keywords"]
 
 
+def test_discover_website_pages_prioritizes_first_layer_urls_before_deep_urls(monkeypatch):
+    responses = {
+        "https://example.com/robots.txt": "Sitemap: https://example.com/sitemap.xml",
+        "https://example.com/sitemap.xml": """
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://example.com/blogs/post-one</loc></url>
+              <url><loc>https://example.com/blogs/post-two</loc></url>
+              <url><loc>https://example.com/contact</loc></url>
+              <url><loc>https://example.com/</loc></url>
+              <url><loc>https://example.com/about</loc></url>
+            </urlset>
+        """,
+    }
+
+    def fake_fetch(url, verify_ssl=True):
+        if url not in responses:
+            raise ValueError("not found")
+        return FakeFetchResult(url=url, status_code=200, content_type="application/xml", text=responses[url])
+
+    monkeypatch.setattr(service, "fetch_url", fake_fetch)
+
+    result = service.discover_website_pages("example.com", limit=3)
+
+    assert result.pages == [
+        "https://example.com/",
+        "https://example.com/contact",
+        "https://example.com/about",
+    ]
+
+
 def test_parse_urlset_sitemap_removes_duplicates_and_fragments():
     pages, nested = service._parse_sitemap_xml(
         """

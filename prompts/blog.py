@@ -125,6 +125,7 @@ def build_content_prompt(
     money_site_url: str = "",
     brand: str = "",
     brand_context: str = "",
+    suggested_h2s: str = "",
     change_request: str = "",
     min_words: int | str = MIN_BLOG_WORDS,
     max_words: int | str = MAX_BLOG_WORDS,
@@ -146,6 +147,19 @@ Minor change request from the user:
 {cleaned_change_request}
 
 Apply this request while keeping the article complete, SEO-friendly, and aligned with all rules below.
+"""
+    suggested_h2s_section = ""
+    cleaned_suggested_h2s = (suggested_h2s or "").strip()
+    if cleaned_suggested_h2s:
+        suggested_h2s_section = f"""
+Suggested H2 headings from the user:
+{cleaned_suggested_h2s}
+
+Instructions for suggested H2 headings:
+- Use these as the preferred main ## sections when they fit the article and search intent.
+- Keep the wording close to the user's suggestions unless grammar, clarity, or duplication needs a light edit.
+- Do not add every suggested heading if it would make the article repetitive or unnatural.
+- You may add useful ### subsections under these H2 sections when helpful.
 """
     if links and len(links) > 0:
         links_list = "\n".join([
@@ -201,6 +215,7 @@ Brand: {brand}
 
 {links_section}
 {money_site_section}
+{suggested_h2s_section}
 {change_request_section}
 
 Rules:

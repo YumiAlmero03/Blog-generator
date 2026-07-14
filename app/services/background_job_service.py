@@ -315,7 +315,7 @@ def _job_times(job: BackgroundJob) -> dict:
 
 
 def _worker_count() -> int:
-    raw_value = os.getenv("BACKGROUND_JOB_WORKERS", "3").strip()
+    raw_value = os.getenv("BACKGROUND_JOB_WORKERS", "2").strip()
     try:
         return max(1, min(4, int(raw_value)))
     except ValueError:

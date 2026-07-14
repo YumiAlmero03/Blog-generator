@@ -1,0 +1,98 @@
+{% macro nav_link(href, page_key, label) -%}
+  <a
+    href="{{ href }}"
+    class="flex min-h-10 items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if active_page == page_key %}bg-sand-600 text-sand-50 shadow-lg shadow-sand-600/20{% else %}text-sand-700 hover:bg-sand-100 hover:text-sand-950{% endif %}"
+  >{{ label }}</a>
+{%- endmacro %}
+
+{% macro nav_section(label, items) -%}
+  <div class="grid gap-1">
+    <div class="px-3 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">{{ label }}</div>
+    {% for item in items %}
+      {{ nav_link(item["href"], item["key"], item["label"]) }}
+    {% endfor %}
+  </div>
+{%- endmacro %}
+
+{% set nav_sections = [
+  {
+    "label": "Workspace",
+    "items": [
+      {"href": "/dashboard", "key": "dashboard", "label": "Dashboard"},
+      {"href": "/website-checklist-dashboard", "key": "website-checklist-dashboard", "label": "Website Checklist"},
+      {"href": "/website-index-dashboard", "key": "website-index-dashboard", "label": "Website Index"},
+      {"href": "/website-pages", "key": "website-pages", "label": "Website Pages"},
+      {"href": "/website-planner", "key": "website-planner", "label": "Website Planner"},
+      {"href": "/posting-planner", "key": "posting-planner", "label": "Posting Planner"},
+      {"href": "/social-scheduler", "key": "social-scheduler", "label": "Social Scheduler"},
+      {"href": "/generated-social-post", "key": "generated-social-post", "label": "Generated Social Post"},
+      {"href": "/context-planner", "key": "context-planner", "label": "Context Planner"},
+      {"href": "/brand-medium-table", "key": "brand-medium-table", "label": "Brand over Medium"},
+      {"href": "/generation-history", "key": "history", "label": "History"}
+    ]
+  },
+  {
+    "label": "On Page",
+    "items": [
+      {"href": "/", "key": "blog", "label": "Blog Generator"},
+      {"href": "/blog-rework-generator", "key": "blog-rework", "label": "Blog Rework"},
+      {"href": "/news-generator", "key": "news", "label": "News Generator"},
+      {"href": "/page-generator", "key": "page", "label": "Page Generator"},
+      {"href": "/simple-page-generator", "key": "simple", "label": "Simple Pages"}
+    ]
+  },
+  {
+    "label": "Off Page Blogs",
+    "items": [
+      {"href": "/medium-blog-generator", "key": "backlink-blog", "label": "Medium Blog"},
+      {"href": "/tier-2-blog-generator", "key": "tier2-blog", "label": "Tier 2 Blog"},
+      {"href": "/neutral-blog-generator", "key": "neutral-blog", "label": "Neutral Blog"}
+    ]
+  },
+  {
+    "label": "Tools",
+    "items": [
+      {"href": "/seo-checker", "key": "seo", "label": "SEO Checker"},
+      {"href": "/meta-generator", "key": "meta-generator", "label": "Meta Generator"},
+      {"href": "/gsc-planner", "key": "gsc-planner", "label": "GSC Planner"},
+      {"href": "/keyword-suggestions", "key": "keyword-suggestions", "label": "Keyword Suggestions"},
+      {"href": "/website-pages", "key": "website-pages", "label": "Website Pages"},
+      {"href": "/website-index", "key": "indexnow", "label": "Website Index"},
+      {"href": "/text-tools", "key": "text", "label": "Text Tools"},
+      {"href": "/image-tools", "key": "image", "label": "Image Tools"}
+    ]
+  },
+  {
+    "label": "Settings",
+    "items": [
+      {"href": "/brands", "key": "brands", "label": "Brands"},
+      {"href": "/mediums", "key": "backlinks", "label": "Mediums"},
+      {"href": "/checklists", "key": "checklists", "label": "Checklists"},
+      {"href": "/background-jobs-dashboard", "key": "background-jobs-dashboard", "label": "Background Jobs"},
+      {"href": "/banned-words", "key": "banned-words", "label": "Banned Words"},
+      {"href": "/settings", "key": "settings", "label": "App Settings"}
+    ]
+  }
+] %}
+
+<aside class="border-b border-sand-200/80 bg-white/85 backdrop-blur-md lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r">
+  <div class="mx-auto max-w-6xl px-4 py-4 lg:px-5 lg:py-6">
+    <a href="/dashboard" class="block font-display text-2xl font-bold tracking-[0.03em] text-sand-950">Auto Blog Generator</a>
+    <p class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-sand-500">Content Workspace</p>
+
+    <details class="mt-4 rounded-2xl border border-sand-200 bg-sand-50/80 px-4 py-3 lg:hidden">
+      <summary class="cursor-pointer text-sm font-bold text-sand-900">Open navigation</summary>
+      <nav class="mt-4 grid gap-5" aria-label="Mobile navigation">
+        {% for section in nav_sections %}
+          {{ nav_section(section["label"], section["items"]) }}
+        {% endfor %}
+      </nav>
+    </details>
+
+    <nav class="mt-7 hidden gap-7 lg:grid" aria-label="Main navigation">
+      {% for section in nav_sections %}
+        {{ nav_section(section["label"], section["items"]) }}
+      {% endfor %}
+    </nav>
+  </div>
+</aside>

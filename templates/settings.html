@@ -34,6 +34,72 @@
 
       <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">
         <div class="sm:col-span-2">
+          <h2 class="text-base font-bold text-sand-950">AI Web Search</h2>
+          <p class="mt-1 text-sm leading-6 text-sand-600">Connect Ollama web search so generators can add current web context before writing.</p>
+        </div>
+        <div class="sm:col-span-2">
+          <label for="ollama_api_key" class="mb-2 block text-sm font-bold text-sand-900">Ollama API key</label>
+          <input
+            id="ollama_api_key"
+            name="ollama_api_key"
+            type="password"
+            value="{{ ollama_api_key }}"
+            placeholder="ollama_..."
+            autocomplete="off"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+        <label for="ollama_web_search_enabled" class="flex min-h-12 items-center gap-3 rounded-2xl border border-sand-200 bg-white/80 px-4 py-3 text-sm font-bold text-sand-900">
+          <input
+            id="ollama_web_search_enabled"
+            name="ollama_web_search_enabled"
+            type="checkbox"
+            value="1"
+            {% if ollama_web_search_enabled %}checked{% endif %}
+            class="h-4 w-4 rounded border-sand-300 text-sand-700 focus:ring-sand-400"
+          />
+          Enable web search
+        </label>
+        <div>
+          <label for="ollama_web_search_max_results" class="mb-2 block text-sm font-bold text-sand-900">Max search results</label>
+          <input
+            id="ollama_web_search_max_results"
+            name="ollama_web_search_max_results"
+            type="number"
+            min="1"
+            max="10"
+            value="{{ ollama_web_search_max_results }}"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+      </div>
+
+      <div class="mb-5 rounded-3xl border border-sand-200 bg-sand-50/70 p-5">
+        <h2 class="text-base font-bold text-sand-950">Social Media Settings</h2>
+        <p class="mt-1 text-sm leading-6 text-sand-600">Generated social posts use the selected platform limit and this global maximum, whichever is lower.</p>
+        <label for="social_media_max_characters" class="mb-2 mt-4 block text-sm font-bold text-sand-900">Max post characters</label>
+        <input
+          id="social_media_max_characters"
+          name="social_media_max_characters"
+          type="number"
+          min="80"
+          max="6000"
+          value="{{ social_media_max_characters }}"
+          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+        <label for="facebook_graph_api_version" class="mb-2 mt-4 block text-sm font-bold text-sand-900">Facebook Graph API version</label>
+        <input
+          id="facebook_graph_api_version"
+          name="facebook_graph_api_version"
+          type="text"
+          value="{{ facebook_graph_api_version }}"
+          placeholder="v20.0"
+          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+      </div>
+
+      <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">
+        <div class="sm:col-span-2">
           <h2 class="text-base font-bold text-sand-950">Content Locale</h2>
           <p class="mt-1 text-sm leading-6 text-sand-600">Used as the default country and language on generators and research tools.</p>
         </div>
@@ -73,6 +139,25 @@
           type="text"
           value="{{ indexnow_key }}"
           placeholder="your-indexnow-key"
+          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+
+        <label for="indexnow_key_location" class="mb-2 mt-4 block text-sm font-bold text-sand-900">IndexNow key location</label>
+        <input
+          id="indexnow_key_location"
+          name="indexnow_key_location"
+          type="url"
+          value="{{ indexnow_key_location }}"
+          placeholder="https://www.example.com/your-key.txt"
+          class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+
+        <label for="indexnow_endpoint" class="mb-2 mt-4 block text-sm font-bold text-sand-900">IndexNow endpoint</label>
+        <input
+          id="indexnow_endpoint"
+          name="indexnow_endpoint"
+          type="url"
+          value="{{ indexnow_endpoint }}"
           class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
         />
 

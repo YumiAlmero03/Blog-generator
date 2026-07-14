@@ -16,6 +16,11 @@
 {% endblock %}
 
 {% block content %}
+  {% set floating_keyword_label = "Page Title" %}
+  {% set floating_keyword_selector = "#page_title" %}
+  {% set floating_brand_selector = "#brand" %}
+  {% set floating_language_selector = "#language" %}
+  {% include "_floating_generation_status.html" %}
   <div class="grid gap-6 lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]">
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if error %}
@@ -31,6 +36,7 @@
         <input type="hidden" name="history_id" value="{{ history_id }}" />
         <input type="hidden" name="generated_title" value="{{ generated_title }}" />
         <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
+        <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
         <textarea name="generated_content" class="hidden-form" aria-hidden="true">{{ generated_content }}</textarea>
         <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
         <input id="brand" name="brand" type="text" value="{{ brand }}" list="brandSuggestions" placeholder="e.g. Phoenix Home Services" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
@@ -72,6 +78,7 @@
         <div id="simplePageGenerationActions" class="mt-2 hidden">
           <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100" data-loading-stop>Skip Generating</button>
         </div>
+        {% include "_generation_log.html" %}
       </form>
     </section>
 
@@ -161,6 +168,7 @@
           <input type="hidden" name="expectations" value="{{ expectations }}" />
           <input type="hidden" name="generated_title" value="{{ generated_title }}" />
           <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
+          <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
           <textarea name="generated_content">{{ generated_content }}</textarea>
         </form>
       {% else %}

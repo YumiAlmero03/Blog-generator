@@ -33,6 +33,7 @@ def generate_gsc_seo_report(
     gsc_notes: str,
     brand_context: str = "",
     gsc_api_summary: str = "",
+    backlink_summary: str = "",
     language: str = "English",
     progress_callback=None,
 ) -> dict:
@@ -43,6 +44,7 @@ def generate_gsc_seo_report(
         gsc_notes=cleaned_notes,
         brand_context=brand_context,
         gsc_api_summary=_clean_multiline(gsc_api_summary),
+        backlink_summary=_clean_multiline(backlink_summary),
         language=language,
     )
     _publish_progress(progress_callback, prompt, kind="prompt")
@@ -123,6 +125,7 @@ def _build_report_prompt(
     gsc_notes: str,
     brand_context: str,
     gsc_api_summary: str,
+    backlink_summary: str,
     language: str,
 ) -> str:
     return f"""
@@ -144,13 +147,20 @@ Search Console API performance data:
 {gsc_api_summary or "No Search Console API data was fetched."}
 </gsc_api_data>
 
+Saved backlink / medium snapshot:
+<backlink_data>
+{backlink_summary or "No saved backlink data was available."}
+</backlink_data>
+
 Report requirements:
 - Diagnose likely SEO issues from the GSC data: clicks, impressions, CTR, position, queries, pages, country/device/date context when provided.
 - Prefer Search Console API data over manual notes when API data is available.
+- Consider backlink count and high-authority/low-authority saved backlinks as supporting evidence only. Explain whether backlinks may affect SEO, but do not claim causation without Search Console or backlink-change evidence.
 - If no readable GSC metrics are provided, clearly state that limitation and create a practical SEO planning report from the brand context and URL only.
 - Separate quick wins from deeper content/technical work.
 - Recommend title/meta description changes when CTR looks weak.
 - Recommend content sections, query targeting, internal links, schema, indexing, and cannibalization checks when relevant.
+- Include backlink quality/diversity checks when the backlink snapshot suggests weak authority, missing DP/DA/DR data, or overreliance on low-authority placements.
 - Include an execution plan with priority, effort, expected impact, and owner-friendly next action.
 - Include what to monitor in GSC after changes.
 - Be specific to the brand, URL, page type, and visible GSC data.
@@ -170,6 +180,9 @@ Return JSON only in this format:
   ],
   "recommendations": [
     {{"priority": "High", "area": "Metadata", "recommendation": "Specific recommendation", "impact": "Expected impact", "effort": "Low"}}
+  ],
+  "backlink_analysis": [
+    {{"finding": "Backlink finding", "evidence": "Backlink count or authority observation", "seo_effect": "How backlinks may affect SEO", "recommended_action": "What to check or do next"}}
   ],
   "content_plan": [
     {{"section_or_asset": "Section or asset", "target_query": "Query", "notes": "What to add or improve"}}
@@ -397,6 +410,7 @@ def _normalize_report(data: dict) -> dict:
         "gsc_diagnosis": _normalize_list_of_dicts(data.get("gsc_diagnosis", []), ("finding", "evidence", "meaning")),
         "opportunities": _normalize_list_of_dicts(data.get("opportunities", []), ("opportunity", "reason", "recommended_action")),
         "recommendations": _normalize_list_of_dicts(data.get("recommendations", []), ("priority", "area", "recommendation", "impact", "effort")),
+        "backlink_analysis": _normalize_list_of_dicts(data.get("backlink_analysis", []), ("finding", "evidence", "seo_effect", "recommended_action")),
         "content_plan": _normalize_list_of_dicts(data.get("content_plan", []), ("section_or_asset", "target_query", "notes")),
         "technical_checks": _normalize_list_of_dicts(data.get("technical_checks", []), ("check", "why", "how")),
         "monitoring_plan": _normalize_list_of_dicts(data.get("monitoring_plan", []), ("metric", "target", "timing")),

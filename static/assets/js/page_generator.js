@@ -22,10 +22,10 @@
   const liveHtmlOutput = document.getElementById("pageLiveHtmlOutput");
   const generatorForm = document.getElementById("pageGeneratorForm");
   const saveForm = document.getElementById("savePageForm");
-  const generationLogBox = document.getElementById("pageGenerationLogBox");
+  const generationLogBox = document.querySelector("[data-generation-log]");
   const generationLogJson = document.getElementById("pageGenerationLogJson");
   const saveGenerationLogJson = document.getElementById("savePageGenerationLogJson");
-  const clearGenerationLog = document.getElementById("clearPageGenerationLog");
+  const clearGenerationLog = document.querySelector("[data-generation-log-clear]");
   let generationLogEntries = readInitialGenerationLog();
 
   function syncSaveContext() {

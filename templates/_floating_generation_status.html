@@ -1,0 +1,33 @@
+<aside
+  class="fixed bottom-4 left-4 z-[60] w-[calc(100vw-2rem)] max-w-[360px] rounded-[22px] border border-sand-200 bg-white/95 p-4 shadow-2xl shadow-sand-900/15 backdrop-blur-md"
+  data-floating-generation-status
+  data-keyword-selector="{{ floating_keyword_selector | default('#keyword, [name=&quot;keyword&quot;]') }}"
+  data-brand-selector="{{ floating_brand_selector | default('#brand, [name=&quot;brand&quot;]') }}"
+  data-language-selector="{{ floating_language_selector | default('#language, [name=&quot;language&quot;]') }}"
+  data-keyword-label="{{ floating_keyword_label | default('Keyword') }}"
+  data-initial-status="{{ floating_initial_status | default('Idle') }}"
+>
+  <div class="mb-3 flex items-center justify-between gap-3">
+    <div>
+      <div class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Generation Status</div>
+      <div class="mt-1 text-sm font-extrabold text-sand-950" data-floating-status-value>{{ floating_initial_status | default('Idle') }}</div>
+    </div>
+    <span class="inline-flex h-3 w-3 rounded-full bg-sand-300" data-floating-status-indicator></span>
+  </div>
+  <div class="grid gap-2 text-xs leading-5">
+    <div class="rounded-2xl bg-sand-50 px-3 py-2">
+      <div class="font-bold uppercase tracking-[0.08em] text-sand-500" data-floating-keyword-label>{{ floating_keyword_label | default('Keyword') }}</div>
+      <div class="mt-0.5 truncate font-bold text-sand-900" data-floating-keyword-value>Not set</div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div class="min-w-0 rounded-2xl bg-sand-50 px-3 py-2">
+        <div class="font-bold uppercase tracking-[0.08em] text-sand-500">Brand</div>
+        <div class="mt-0.5 truncate font-bold text-sand-900" data-floating-brand-value>Not set</div>
+      </div>
+      <div class="min-w-0 rounded-2xl bg-sand-50 px-3 py-2">
+        <div class="font-bold uppercase tracking-[0.08em] text-sand-500">Language</div>
+        <div class="mt-0.5 truncate font-bold text-sand-900" data-floating-language-value>Not set</div>
+      </div>
+    </div>
+  </div>
+</aside>

@@ -13,6 +13,26 @@ from app.services.locale_settings import (
     normalize_country_target,
     normalize_language,
 )
+from app.services.indexnow_service import DEFAULT_INDEXNOW_ENDPOINT
+from app.services.ollama_web_search_service import (
+    OLLAMA_API_KEY_SETTING,
+    OLLAMA_WEB_SEARCH_ENABLED_SETTING,
+    OLLAMA_WEB_SEARCH_MAX_RESULTS_SETTING,
+    get_ollama_api_key,
+    get_ollama_web_search_enabled,
+    get_ollama_web_search_max_results,
+)
+from app.services.social_media_settings import (
+    DEFAULT_SOCIAL_MEDIA_MAX_CHARACTERS,
+    SOCIAL_MEDIA_MAX_CHARACTERS_KEY,
+    get_social_media_max_characters,
+    normalize_social_media_max_characters,
+)
+from app.services.social_publish_service import (
+    DEFAULT_FACEBOOK_GRAPH_VERSION,
+    FACEBOOK_GRAPH_VERSION_KEY,
+    get_facebook_graph_api_version,
+)
 from app.services.word_limit_settings import (
     BLOG_MAX_WORDS_KEY,
     BLOG_MIN_WORDS_KEY,
@@ -40,8 +60,15 @@ def settings():
     state = {
         "money_site": get_setting("money_site", ""),
         "indexnow_key": get_setting("indexnow_key", ""),
+        "indexnow_key_location": get_setting("indexnow_key_location", ""),
+        "indexnow_endpoint": get_setting("indexnow_endpoint", DEFAULT_INDEXNOW_ENDPOINT),
         "google_service_account_json": get_setting("google_service_account_json", ""),
         "google_oauth_access_token": get_setting("google_oauth_access_token", ""),
+        "ollama_api_key": get_ollama_api_key(),
+        "ollama_web_search_enabled": get_ollama_web_search_enabled(),
+        "ollama_web_search_max_results": get_ollama_web_search_max_results(),
+        "social_media_max_characters": get_social_media_max_characters(),
+        "facebook_graph_api_version": get_facebook_graph_api_version(),
         "default_country_target": get_default_country_target(),
         "default_language": get_default_language(),
         "country_options": country_options(get_default_country_target()),
@@ -59,8 +86,19 @@ def settings():
     if request.method == "POST":
         state["money_site"] = request.form.get("money_site", "").strip()
         state["indexnow_key"] = request.form.get("indexnow_key", "").strip()
+        state["indexnow_key_location"] = request.form.get("indexnow_key_location", "").strip()
+        state["indexnow_endpoint"] = request.form.get("indexnow_endpoint", DEFAULT_INDEXNOW_ENDPOINT).strip() or DEFAULT_INDEXNOW_ENDPOINT
         state["google_service_account_json"] = request.form.get("google_service_account_json", "").strip()
         state["google_oauth_access_token"] = request.form.get("google_oauth_access_token", "").strip()
+        state["ollama_api_key"] = request.form.get("ollama_api_key", "").strip()
+        state["ollama_web_search_enabled"] = request.form.get("ollama_web_search_enabled") == "1"
+        state["ollama_web_search_max_results"] = _normalize_ollama_max_results(
+            request.form.get("ollama_web_search_max_results", "")
+        )
+        state["social_media_max_characters"] = normalize_social_media_max_characters(
+            request.form.get("social_media_max_characters", DEFAULT_SOCIAL_MEDIA_MAX_CHARACTERS)
+        )
+        state["facebook_graph_api_version"] = request.form.get("facebook_graph_api_version", DEFAULT_FACEBOOK_GRAPH_VERSION).strip() or DEFAULT_FACEBOOK_GRAPH_VERSION
         state["website_planner_main_pages"] = request.form.get("website_planner_main_pages", "").strip()
         state["website_planner_trust_pages"] = request.form.get("website_planner_trust_pages", "").strip()
         state["default_country_target"] = normalize_country_target(request.form.get("default_country_target", "Worldwide"))
@@ -81,8 +119,15 @@ def settings():
         )
         set_setting("money_site", state["money_site"])
         set_setting("indexnow_key", state["indexnow_key"])
+        set_setting("indexnow_key_location", state["indexnow_key_location"])
+        set_setting("indexnow_endpoint", state["indexnow_endpoint"])
         set_setting("google_service_account_json", state["google_service_account_json"])
         set_setting("google_oauth_access_token", state["google_oauth_access_token"])
+        set_setting(OLLAMA_API_KEY_SETTING, state["ollama_api_key"])
+        set_setting(OLLAMA_WEB_SEARCH_ENABLED_SETTING, "true" if state["ollama_web_search_enabled"] else "false")
+        set_setting(OLLAMA_WEB_SEARCH_MAX_RESULTS_SETTING, str(state["ollama_web_search_max_results"]))
+        set_setting(SOCIAL_MEDIA_MAX_CHARACTERS_KEY, str(state["social_media_max_characters"]))
+        set_setting(FACEBOOK_GRAPH_VERSION_KEY, state["facebook_graph_api_version"])
         set_setting(DEFAULT_COUNTRY_TARGET_KEY, state["default_country_target"])
         set_setting(DEFAULT_LANGUAGE_KEY, state["default_language"])
         set_setting(BLOG_MIN_WORDS_KEY, str(state["blog_min_words"]))
@@ -151,3 +196,10 @@ def _write_banned_words_file(raw_terms: list[str]) -> list[str]:
     )
     WORD_BANK_FILE.write_text(file_content.rstrip() + "\n", encoding="utf-8")
     return cleaned_terms
+
+
+def _normalize_ollama_max_results(value: str) -> int:
+    try:
+        return max(1, min(10, int(value)))
+    except (TypeError, ValueError):
+        return get_ollama_web_search_max_results()

@@ -1,5 +1,6 @@
 import json
 import re
+from app.services.ollama_web_search_service import append_web_research_context
 from generation_retry_policy import max_generation_attempts, publish_generation_draft, raise_if_generation_cancelled, wait_before_retry
 from prompts import build_backlink_content_prompt, build_content_prompt, build_scoped_content_revision_prompt
 from utils import extract_json_string
@@ -488,6 +489,7 @@ def generate_content(
     money_site_url: str = "",
     brand: str = "",
     brand_context: str = "",
+    suggested_h2s: str = "",
     change_request: str = "",
     min_words: int = MIN_BLOG_WORDS,
     max_words: int = 1400,
@@ -506,10 +508,16 @@ def generate_content(
         money_site_url=money_site_url,
         brand=brand,
         brand_context=brand_context,
+        suggested_h2s=suggested_h2s,
         change_request=change_request,
         min_words=prompt_min_words,
         max_words=max_words,
         language=language,
+    )
+    prompt = append_web_research_context(
+        prompt,
+        " ".join(part for part in [brand, title, keyword, supporting_keyword] if part).strip(),
+        progress_callback=progress_callback,
     )
     markdown_content = _generate_content_from_prompt(
         provider,

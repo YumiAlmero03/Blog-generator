@@ -1,6 +1,9 @@
 import json
+import zipfile
+from io import BytesIO
 
 from app import create_app
+from app.controllers import tool_controller
 from app.services import gsc_planner_service
 from app.services.gsc_planner_service import answer_gsc_planner_chat, fetch_gsc_performance_data, generate_gsc_seo_report, normalize_search_console_property
 
@@ -116,6 +119,36 @@ def test_generate_gsc_seo_report_wraps_api_summary():
     assert "</gsc_api_data>" in prompt
 
 
+def test_generate_gsc_seo_report_includes_backlink_summary():
+    provider = FakeProvider(
+        {
+            "executive_summary": "Backlinks may support authority but GSC still shows a CTR gap.",
+            "backlink_analysis": [
+                {
+                    "finding": "Mixed backlink authority",
+                    "evidence": "3 saved backlinks; top DP 65 and lowest DP 12",
+                    "seo_effect": "Authority can help ranking but does not explain CTR alone.",
+                    "recommended_action": "Check backlink quality and timing against the GSC drop.",
+                }
+            ],
+        }
+    )
+
+    result = generate_gsc_seo_report(
+        provider,
+        brand="Example Brand",
+        target_url="https://example.com/page",
+        gsc_notes="",
+        backlink_summary="Saved backlinks / publishing mediums: total=3\nTop high-DP/DA/DR saved links:\n- Site A: DP/DA/DR=65",
+    )
+
+    prompt = provider.prompts[0]
+    assert "<backlink_data>" in prompt
+    assert "total=3" in prompt
+    assert "Consider backlink count" in prompt
+    assert result["backlink_analysis"][0]["finding"] == "Mixed backlink authority"
+
+
 def test_fetch_gsc_performance_data_builds_summary(monkeypatch):
     captured = {}
     requests = []
@@ -211,3 +244,77 @@ def test_gsc_planner_page_renders():
     assert "Search Console API" in html
     assert "brandWebsites" in html
     assert "data-background-submit" in html
+
+
+def test_gsc_summary_report_download_returns_docx():
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post(
+        "/gsc-planner/download-summary",
+        data={
+            "brand": "Example Brand",
+            "target_url": "https://example.com/page",
+            "gsc_property": "https://example.com/",
+            "gsc_start_date": "2026-06-01",
+            "gsc_end_date": "2026-06-28",
+            "report_json": json.dumps(
+                {
+                    "executive_summary": "Improve CTR and expand content for visible queries.",
+                    "gsc_diagnosis": [{"finding": "Low CTR", "evidence": "CTR 0.8%", "meaning": "Snippet is weak"}],
+                    "next_steps": [{"step": "Rewrite metadata", "priority": "High", "effort": "Low"}],
+                }
+            ),
+            "gsc_api_rows_json": json.dumps(
+                [
+                    {
+                        "query": "best casino guide",
+                        "page": "https://example.com/page",
+                        "clicks": 10,
+                        "impressions": 1000,
+                        "ctr": 0.01,
+                        "position": 8.5,
+                    }
+                ]
+            ),
+            "gsc_api_daily_rows_json": json.dumps(
+                [
+                    {"date": "2026-06-01", "clicks": 10, "impressions": 1000, "ctr": 0.01, "position": 8.5},
+                    {"date": "2026-06-02", "clicks": 20, "impressions": 1500, "ctr": 0.0133, "position": 7.5},
+                ]
+            ),
+            "backlink_snapshot_json": json.dumps({"total_count": 2, "scored_count": 1, "unscored_count": 1}),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["Content-Type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    assert "GSC_Summary_Report" in response.headers["Content-Disposition"]
+    with zipfile.ZipFile(BytesIO(response.data)) as docx:
+        document_xml = docx.read("word/document.xml").decode("utf-8")
+        media_files = [name for name in docx.namelist() if name.startswith("word/media/")]
+    assert "Improve CTR" in document_xml
+    assert "Performance Trend Graph" in document_xml
+    assert "best casino guide" in document_xml
+    assert media_files
+
+
+def test_gsc_backlink_snapshot_counts_and_sorts_scores(monkeypatch):
+    monkeypatch.setattr(
+        tool_controller,
+        "list_backlinks",
+        lambda: [
+            {"id": 1, "website_name": "Low Site", "blog_url": "https://low.example", "website_type": "blog", "domain_power": 12},
+            {"id": 2, "website_name": "High Site", "blog_url": "https://high.example", "website_type": "news", "domain_power": 75},
+            {"id": 3, "website_name": "Parsed Site", "blog_url": "https://parsed.example", "website_type": "forum", "domain_power": 0, "notes": "DA 44"},
+            {"id": 4, "website_name": "Unknown Site", "blog_url": "https://unknown.example", "website_type": "blog", "domain_power": 0},
+        ],
+    )
+
+    snapshot = tool_controller._gsc_backlink_snapshot()
+
+    assert snapshot["total_count"] == 4
+    assert snapshot["scored_count"] == 3
+    assert snapshot["unscored_count"] == 1
+    assert snapshot["top_high"][0]["name"] == "High Site"
+    assert snapshot["lowest"][0]["name"] == "Low Site"
+    assert "total=4" in snapshot["summary"]

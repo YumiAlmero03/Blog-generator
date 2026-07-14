@@ -125,9 +125,6 @@ You are an expert SEO landing page title writer.
 Create one strong WordPress page title for this primary keyword:
 {keyword}
 
-Supporting keywords:
-{supporting_keywords}
-
 Brand:
 {brand}
 {context_section}
@@ -137,8 +134,6 @@ Brand:
 Page type:
 {page_type}
 
-What to expect in the page:
-{expectations}
 
 Rules:
 - Keep the main keyword exactly as provided. Do not split, rearrange, or alter it.

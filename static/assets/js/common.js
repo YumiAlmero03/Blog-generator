@@ -78,6 +78,9 @@
   let loadingResultHandled = false;
   let loadingUsesBackgroundJob = false;
   let activeLoadingForm = null;
+  const lockedButtons = new WeakSet();
+  let activeGenerationControlLocks = [];
+  const temporaryButtonLockMs = 1200;
   const generationStatusPollDelay = 1500;
   let latestLoadingPrompt = "";
   let generationLogEntries = readInitialGenerationLog();
@@ -153,6 +156,90 @@
     generationLogEntries = generationLogEntries.slice(-80);
     renderGenerationLog();
     syncGenerationLogFields();
+  }
+
+  function floatingStatusPanels() {
+    return Array.prototype.slice.call(document.querySelectorAll("[data-floating-generation-status]"));
+  }
+
+  function valueFromSelector(selector) {
+    if (!selector) {
+      return "";
+    }
+    const fields = Array.prototype.slice.call(document.querySelectorAll(selector));
+    for (let index = 0; index < fields.length; index += 1) {
+      const field = fields[index];
+      if (!field) {
+        continue;
+      }
+      let value = "";
+      if (field.tagName === "SELECT") {
+        const option = field.options[field.selectedIndex];
+        value = option ? option.textContent : field.value;
+      } else if ("value" in field) {
+        value = field.value;
+      } else {
+        value = field.textContent || "";
+      }
+      value = String(value || "").replace(/\s+/g, " ").trim();
+      if (value) {
+        return value;
+      }
+    }
+    return "";
+  }
+
+  function setFloatingStatus(panel, message) {
+    const status = panel.querySelector("[data-floating-status-value]");
+    const indicator = panel.querySelector("[data-floating-status-indicator]");
+    const cleaned = String(message || panel.dataset.initialStatus || "Idle").trim() || "Idle";
+    if (status) {
+      status.textContent = cleaned;
+    }
+    if (indicator) {
+      const normalized = cleaned.toLowerCase();
+      indicator.classList.remove("bg-sand-300", "bg-blue-500", "bg-amber-500", "bg-green-500", "bg-red-500");
+      if (normalized.includes("error") || normalized.includes("failed")) {
+        indicator.classList.add("bg-red-500");
+      } else if (normalized.includes("complete") || normalized.includes("loading generated result")) {
+        indicator.classList.add("bg-green-500");
+      } else if (normalized.includes("queued") || normalized.includes("generating") || normalized.includes("starting") || normalized.includes("running")) {
+        indicator.classList.add("bg-blue-500");
+      } else if (normalized.includes("skip") || normalized.includes("cancel")) {
+        indicator.classList.add("bg-amber-500");
+      } else {
+        indicator.classList.add("bg-sand-300");
+      }
+    }
+  }
+
+  function refreshFloatingGenerationStatus() {
+    floatingStatusPanels().forEach(function (panel) {
+      const keyword = panel.querySelector("[data-floating-keyword-value]");
+      const brand = panel.querySelector("[data-floating-brand-value]");
+      const language = panel.querySelector("[data-floating-language-value]");
+      const keywordLabel = panel.querySelector("[data-floating-keyword-label]");
+      if (keywordLabel && panel.dataset.keywordLabel) {
+        keywordLabel.textContent = panel.dataset.keywordLabel;
+      }
+      if (keyword) {
+        keyword.textContent = valueFromSelector(panel.dataset.keywordSelector) || "Not set";
+      }
+      if (brand) {
+        brand.textContent = valueFromSelector(panel.dataset.brandSelector) || "Not set";
+      }
+      if (language) {
+        language.textContent = valueFromSelector(panel.dataset.languageSelector) || "Not set";
+      }
+      setFloatingStatus(panel, panel.dataset.currentStatus || panel.dataset.initialStatus || "Idle");
+    });
+  }
+
+  function updateFloatingGenerationStatus(message) {
+    floatingStatusPanels().forEach(function (panel) {
+      panel.dataset.currentStatus = String(message || "").trim() || panel.dataset.initialStatus || "Idle";
+      setFloatingStatus(panel, panel.dataset.currentStatus);
+    });
   }
 
   function usesInlineLoading() {
@@ -302,6 +389,8 @@
     currentGenerationToken = "";
     loadingResultHandled = false;
     loadingUsesBackgroundJob = false;
+    unlockGenerationControls();
+    updateFloatingGenerationStatus("Idle");
     setLoadingStatus("");
     activeLoadingForm = null;
     setLoadingPrompt("");
@@ -493,6 +582,180 @@
     return token;
   }
 
+  function isButtonLike(element) {
+    return element && element.matches && element.matches("button, input[type='submit'], input[type='button'], input[type='reset'], a[role='button']");
+  }
+
+  function isSubmitControl(element) {
+    if (!element || !element.matches) {
+      return false;
+    }
+    if (element.matches("input[type='submit']")) {
+      return true;
+    }
+    if (!element.matches("button")) {
+      return false;
+    }
+    const type = (element.getAttribute("type") || "submit").toLowerCase();
+    return type === "submit";
+  }
+
+  function shouldSkipClickLock(element) {
+    if (!element || !element.matches) {
+      return true;
+    }
+    return element.matches([
+      "[data-loading-stop]",
+      "[data-loading-prompt-toggle]",
+      "[data-loading-prompt-copy]",
+      "[data-generation-log-clear]",
+      "[data-copy-target]",
+      "[data-background-jobs-toggle]",
+      "[data-output-view-button]",
+      "[data-keyword-suggestion]",
+      "[data-generate-action]",
+      "#generateContentButton",
+      "#generateMetaDescriptionsButton",
+      "[data-no-click-lock]",
+    ].join(","));
+  }
+
+  function lockButton(button, label, disableControl) {
+    if (!isButtonLike(button) || lockedButtons.has(button)) {
+      return false;
+    }
+    const shouldDisable = disableControl !== false;
+    lockedButtons.add(button);
+    button.dataset.clickLocked = "1";
+    if (label && "textContent" in button && !button.dataset.originalText) {
+      button.dataset.originalText = button.textContent;
+      button.textContent = label;
+    }
+    if (shouldDisable && "disabled" in button) {
+      button.disabled = true;
+    }
+    button.setAttribute("aria-disabled", "true");
+    button.classList.add("pointer-events-none", "cursor-not-allowed", "opacity-60");
+    return true;
+  }
+
+  function unlockButton(button) {
+    if (!isButtonLike(button)) {
+      return;
+    }
+    lockedButtons.delete(button);
+    delete button.dataset.clickLocked;
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
+    if ("disabled" in button) {
+      button.disabled = false;
+    }
+    button.removeAttribute("aria-disabled");
+    button.classList.remove("pointer-events-none", "cursor-not-allowed", "opacity-60");
+  }
+
+  function lockButtonTemporarily(button) {
+    if (!lockButton(button)) {
+      return false;
+    }
+    window.setTimeout(function () {
+      unlockButton(button);
+    }, temporaryButtonLockMs);
+    return true;
+  }
+
+  function generationControlSelector() {
+    return [
+      "form[data-background-submit] button[type='submit']",
+      "form[data-background-submit] input[type='submit']",
+      "form[data-background-submit] button:not([type])",
+      "[data-generate-action]",
+      "#generateContentButton",
+      "#generateMetaDescriptionsButton",
+    ].join(",");
+  }
+
+  function lockGenerationControls(activeForm, activeSubmitter) {
+    unlockGenerationControls();
+    const controls = Array.prototype.slice.call(document.querySelectorAll(generationControlSelector()));
+    const seen = new Set();
+    controls.forEach(function (control) {
+      if (!isButtonLike(control) || seen.has(control)) {
+        return;
+      }
+      if (control.matches("[data-loading-stop], [data-no-generation-lock]")) {
+        return;
+      }
+      seen.add(control);
+      activeGenerationControlLocks.push({
+        control: control,
+        disabled: "disabled" in control ? control.disabled : null,
+        ariaDisabled: control.getAttribute("aria-disabled"),
+        text: control.textContent,
+      });
+      const isActive = control === activeSubmitter || (activeForm && activeForm.contains(control) && isSubmitControl(control));
+      if (isActive && control.textContent && !control.dataset.originalGeneratingText) {
+        control.dataset.originalGeneratingText = control.textContent;
+        control.textContent = "Generating...";
+      }
+      if ("disabled" in control) {
+        control.disabled = true;
+      }
+      control.setAttribute("aria-disabled", "true");
+      control.classList.add("pointer-events-none", "cursor-not-allowed", "opacity-60");
+    });
+  }
+
+  function unlockGenerationControls() {
+    activeGenerationControlLocks.forEach(function (entry) {
+      const control = entry.control;
+      if (!isButtonLike(control)) {
+        return;
+      }
+      if ("disabled" in control && entry.disabled !== null) {
+        control.disabled = entry.disabled;
+      }
+      if (entry.ariaDisabled === null) {
+        control.removeAttribute("aria-disabled");
+      } else {
+        control.setAttribute("aria-disabled", entry.ariaDisabled);
+      }
+      if (control.dataset.originalGeneratingText) {
+        control.textContent = control.dataset.originalGeneratingText;
+        delete control.dataset.originalGeneratingText;
+      } else if (entry.text != null) {
+        control.textContent = entry.text;
+      }
+      control.classList.remove("pointer-events-none", "cursor-not-allowed", "opacity-60");
+    });
+    activeGenerationControlLocks = [];
+  }
+
+  function lockFormSubmit(form, submitter) {
+    if (!form || form.dataset.submitting === "1") {
+      return false;
+    }
+    form.dataset.submitting = "1";
+    const button = isButtonLike(submitter) ? submitter : form.querySelector("button[type='submit'], input[type='submit']");
+    if (button) {
+      lockButton(button, null, false);
+    }
+    return true;
+  }
+
+  function unlockFormSubmit(form, submitter) {
+    if (form) {
+      delete form.dataset.submitting;
+    }
+    if (isButtonLike(submitter)) {
+      unlockButton(submitter);
+    } else if (form) {
+      form.querySelectorAll("button[type='submit'], input[type='submit']").forEach(unlockButton);
+    }
+  }
+
   function setLoadingDraft(html) {
     document.dispatchEvent(new CustomEvent("app:generation-draft", { detail: { html: html } }));
     if (usesInlineLoading()) {
@@ -578,6 +841,7 @@
       : form.dataset.loadingMessage;
     const token = startFormLoading(form, message);
     loadingUsesBackgroundJob = true;
+    lockGenerationControls(form, submitter);
     setLoadingStatus("Queued in background...");
     let formData;
     try {
@@ -590,6 +854,7 @@
     if (submitter && submitter.name && !formData.has(submitter.name)) {
       formData.append(submitter.name, submitter.value || "");
     }
+    lockButton(submitter);
     formData.set("generation_status_token", token);
     formData.set("_background_path", form.getAttribute("action") || window.location.pathname + window.location.search);
 
@@ -616,6 +881,8 @@
       })
       .catch(function (error) {
         setLoadingError(error.message || "Could not start background job.");
+        unlockGenerationControls();
+        unlockFormSubmit(form, submitter);
         if (!usesInlineLoading()) {
           window.setTimeout(hideLoading, 1800);
         }
@@ -625,6 +892,7 @@
   function pollBackgroundJob(jobId) {
     if (!jobId) {
       setLoadingStatus("Background job did not return an id.");
+      unlockGenerationControls();
       window.setTimeout(hideLoading, 1800);
       return;
     }
@@ -650,6 +918,8 @@
           }
           if (payload.status === "failed") {
             setLoadingError(payload.error || "Background generation failed.");
+            unlockGenerationControls();
+            unlockFormSubmit(activeLoadingForm, null);
             if (!usesInlineLoading()) {
               window.setTimeout(hideLoading, 2200);
             }
@@ -657,12 +927,16 @@
           }
           if (payload.status === "cancelled") {
             setLoadingStatus(payload.error || payload.message || "Generation stopped.");
+            unlockGenerationControls();
+            unlockFormSubmit(activeLoadingForm, null);
             return;
           }
           window.setTimeout(poll, 1200);
         })
         .catch(function (error) {
           setLoadingError(error.message || "Background job status failed.");
+          unlockGenerationControls();
+          unlockFormSubmit(activeLoadingForm, null);
           if (!usesInlineLoading()) {
             window.setTimeout(hideLoading, 2200);
           }
@@ -851,13 +1125,22 @@
   }
 
   document.addEventListener("submit", function (event) {
-    const form = event.target.closest("form[data-loading-message]");
+    const form = event.target.closest("form");
     if (!form) {
+      return;
+    }
+    if (form.dataset.submitting === "1") {
+      event.preventDefault();
       return;
     }
     if (form.hasAttribute("data-background-submit")) {
       event.preventDefault();
+      form.dataset.submitting = "1";
       submitFormInBackground(form, event.submitter || null);
+      return;
+    }
+    lockFormSubmit(form, event.submitter || null);
+    if (!form.hasAttribute("data-loading-message")) {
       return;
     }
     const message = event.submitter && event.submitter.dataset && event.submitter.dataset.loadingMessage
@@ -865,6 +1148,30 @@
       : form.dataset.loadingMessage;
     startFormLoading(form, message);
   });
+
+  document.addEventListener("input", refreshFloatingGenerationStatus);
+  document.addEventListener("change", refreshFloatingGenerationStatus);
+  document.addEventListener("app:generation-status", function (event) {
+    updateFloatingGenerationStatus(event.detail && event.detail.message ? event.detail.message : "");
+    refreshFloatingGenerationStatus();
+  });
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", refreshFloatingGenerationStatus);
+  } else {
+    refreshFloatingGenerationStatus();
+  }
+
+  document.addEventListener("click", function (event) {
+    const clickedButton = event.target.closest("button, input[type='button'], input[type='reset'], a[role='button']");
+    if (clickedButton && lockedButtons.has(clickedButton)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (clickedButton && !isSubmitControl(clickedButton) && !shouldSkipClickLock(clickedButton)) {
+      lockButtonTemporarily(clickedButton);
+    }
+  }, true);
 
   document.addEventListener("click", function (event) {
     const clearLogButton = event.target.closest("[data-generation-log-clear]");

@@ -4,7 +4,7 @@
 {% block title %}Website Index Dashboard{% endblock %}
 {% block eyebrow %}Workspace{% endblock %}
 {% block hero_title %}Website Index Dashboard{% endblock %}
-{% block hero_text %}Track saved website URLs separately from blog history and see which ones are due for the 10-minute Google index check.{% endblock %}
+{% block hero_text %}Track saved website URLs separately from blog history and see which ones are due for the 30-minute Google index check.{% endblock %}
 
 {% block content %}
   <div class="grid gap-6">
@@ -83,9 +83,9 @@
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="font-display text-3xl font-bold text-sand-950">10-Minute Check Queue</h2>
-          <p class="mt-2 text-sm leading-6 text-sand-700">URLs are due when they have never been checked or their last check is older than 10 minutes. Each run processes up to 50 URLs.</p>
-          <p class="mt-2 text-sm leading-6 text-sand-700">Google uses the URL Inspection API. Bing and Yahoo are tracked as manual webmaster checks because they do not provide the same public URL inspection endpoint here.</p>
+          <h2 class="font-display text-3xl font-bold text-sand-950">Daily Check Queue</h2>
+          <p class="mt-2 text-sm leading-6 text-sand-700">Unchecked and due URLs are checked in groups of up to 50 every 30 minutes. Not Indexed URLs stay in the check queue and are eligible again after 30 minutes.</p>
+          <p class="mt-2 text-sm leading-6 text-sand-700">Each run submits only 24-hour due Not Indexed URLs through IndexNow when a key is saved, then checks Google with the URL Inspection API. Bing and Yahoo are still tracked as manual webmaster checks because they do not provide the same public URL inspection endpoint here.</p>
         </div>
         <div class="flex flex-wrap gap-3">
           <form method="post">
@@ -146,8 +146,9 @@
               <option value="unchecked">Unchecked</option>
             </select>
           </div>
-          <div class="lg:col-span-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 lg:col-span-6">
             <span id="websiteIndexFilterCount" class="text-sm font-bold text-sand-700"></span>
+            <button type="button" id="websiteIndexDownloadCsv" class="inline-flex min-h-10 items-center justify-center rounded-full bg-moss-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-moss-700/90">Download CSV</button>
           </div>
         </div>
 
@@ -179,6 +180,10 @@
                   data-google="{{ item.google_status or 'unchecked' }}"
                   data-bing="{{ item.bing_status or 'unchecked' }}"
                   data-yahoo="{{ item.yahoo_status or 'unchecked' }}"
+                  data-url="{{ item.url }}"
+                  data-status="{{ item.check_status or 'queued' }}"
+                  data-coverage="{{ item.google_coverage_state or item.last_error or '' }}"
+                  data-last-crawl="{{ item.google_last_crawl_time or '' }}"
                 >
                   <td class="max-w-xl break-words px-4 py-3 font-semibold text-sand-900">
                     <a href="{{ item.url }}" target="_blank" rel="noopener" class="hover:text-sand-600">{{ item.url }}</a>

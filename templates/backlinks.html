@@ -68,6 +68,9 @@
         <label for="max_characters" class="mb-2 block text-sm font-bold text-sand-900">Content Max Words</label>
         <input id="max_characters" name="max_characters" type="number" min="0" value="{{ max_characters }}" placeholder="0 = auto by medium" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
+        <label for="domain_power" class="mb-2 block text-sm font-bold text-sand-900">DP / DA / DR Score</label>
+        <input id="domain_power" name="domain_power" type="number" min="0" max="100" value="{{ domain_power }}" placeholder="0 = unknown" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
         <label for="blog_url" class="mb-2 block text-sm font-bold text-sand-900">Medium URL</label>
         <input id="blog_url" name="blog_url" type="url" value="{{ blog_url }}" placeholder="https://example.com/profile-or-page" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
@@ -164,6 +167,9 @@
               {% if backlink.max_characters %}
                 <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Content max words:</strong> {{ backlink.max_characters }}</div>
               {% endif %}
+              {% if backlink.domain_power %}
+                <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">DP / DA / DR:</strong> {{ backlink.domain_power }}</div>
+              {% endif %}
               <div class="mt-2 text-sm leading-6 text-sand-700"><strong class="text-sand-900">Posts per day:</strong> {{ backlink.posts_per_day or 0 }}</div>
               {% if backlink.blog_url %}
                 <div class="mt-3 break-all text-sm leading-6 text-sand-700">
@@ -214,7 +220,7 @@
         if (!preset) {
           return;
         }
-        ["website_type", "post_type", "title_max_characters", "min_words", "max_characters", "content_guidelines", "brand_topic_mode"].forEach((field) => {
+        ["website_type", "post_type", "title_max_characters", "min_words", "max_characters", "domain_power", "content_guidelines", "brand_topic_mode"].forEach((field) => {
           const input = document.getElementById(field);
           if (!input) {
             return;

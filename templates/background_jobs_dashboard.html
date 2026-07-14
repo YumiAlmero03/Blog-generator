@@ -42,6 +42,52 @@
         </div>
       </div>
 
+      <div class="mb-6 overflow-hidden rounded-[22px] border border-sand-200 bg-white">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-sand-200 bg-sand-50 px-4 py-3">
+          <div>
+            <h2 class="text-sm font-extrabold uppercase tracking-[0.12em] text-sand-700">Auto Jobs</h2>
+            <p class="mt-1 text-xs font-semibold leading-5 text-sand-500">Existing scheduler jobs, trigger rules, and next trigger windows.</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+            <thead class="bg-white text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+              <tr>
+                <th class="px-4 py-3">Auto Job</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">When It Triggers</th>
+                <th class="px-4 py-3">Next Trigger Time</th>
+                <th class="px-4 py-3">Last Trigger</th>
+                <th class="px-4 py-3">Notes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-sand-100 text-sand-800" data-scheduled-jobs-body>
+              {% for job in scheduled_jobs %}
+                <tr>
+                  <td class="px-4 py-3 font-bold text-sand-950">{{ job.name }}</td>
+                  <td class="px-4 py-3">
+                    {% if job.status == "enabled" %}
+                      <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Enabled</span>
+                    {% else %}
+                      <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">Disabled</span>
+                    {% endif %}
+                  </td>
+                  <td class="max-w-md px-4 py-3">{{ job.trigger }}</td>
+                  <td class="whitespace-nowrap px-4 py-3">
+                    <div class="font-bold text-sand-950">{{ job.next_trigger_at }}</div>
+                    {% if job.next_trigger_label %}
+                      <div class="mt-1 text-xs font-semibold leading-5 text-sand-500">{{ job.next_trigger_label }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3">{{ job.last_trigger_at }}</td>
+                  <td class="max-w-md px-4 py-3 text-xs leading-5 text-sand-600">{{ job.notes }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="overflow-hidden rounded-[22px] border border-sand-200 bg-white {% if not jobs %}hidden{% endif %}" data-jobs-table>
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
@@ -97,6 +143,7 @@
       const body = document.querySelector("[data-jobs-body]");
       const table = document.querySelector("[data-jobs-table]");
       const empty = document.querySelector("[data-jobs-empty]");
+      const scheduledJobsBody = document.querySelector("[data-scheduled-jobs-body]");
       const liveStatus = document.querySelector("[data-jobs-live-status]");
       let isLoading = false;
 
@@ -149,6 +196,36 @@
         }).join("");
       };
 
+      const scheduledStatusPill = function (status) {
+        const cleaned = String(status || "disabled");
+        if (cleaned === "enabled") {
+          return '<span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Enabled</span>';
+        }
+        return '<span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">Disabled</span>';
+      };
+
+      const renderScheduledJobs = function (jobs) {
+        if (!scheduledJobsBody) {
+          return;
+        }
+        const items = Array.isArray(jobs) ? jobs : [];
+        scheduledJobsBody.innerHTML = items.map(function (job) {
+          const nextLabel = job.next_trigger_label
+            ? '<div class="mt-1 text-xs font-semibold leading-5 text-sand-500">' + escapeHtml(job.next_trigger_label) + "</div>"
+            : "";
+          return [
+            "<tr>",
+            '<td class="px-4 py-3 font-bold text-sand-950">' + escapeHtml(job.name || "") + "</td>",
+            '<td class="px-4 py-3">' + scheduledStatusPill(job.status) + "</td>",
+            '<td class="max-w-md px-4 py-3">' + escapeHtml(job.trigger || "") + "</td>",
+            '<td class="whitespace-nowrap px-4 py-3"><div class="font-bold text-sand-950">' + escapeHtml(job.next_trigger_at || "-") + "</div>" + nextLabel + "</td>",
+            '<td class="whitespace-nowrap px-4 py-3">' + escapeHtml(job.last_trigger_at || "-") + "</td>",
+            '<td class="max-w-md px-4 py-3 text-xs leading-5 text-sand-600">' + escapeHtml(job.notes || "") + "</td>",
+            "</tr>",
+          ].join("");
+        }).join("");
+      };
+
       const renderStats = function (stats) {
         Object.keys(stats || {}).forEach(function (key) {
           const target = document.querySelector('[data-job-stat="' + key + '"]');
@@ -173,6 +250,7 @@
           .then(function (payload) {
             renderStats(payload.stats || {});
             renderJobs(payload.jobs || []);
+            renderScheduledJobs(payload.scheduled_jobs || []);
             if (liveStatus) {
               liveStatus.textContent = "Live updates on.";
             }

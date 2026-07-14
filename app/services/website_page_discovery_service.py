@@ -111,7 +111,7 @@ def discover_website_pages(raw_url: str, limit: int = 50) -> WebsitePageDiscover
     page_urls: list[str] = []
     seen_pages: set[str] = set()
 
-    while pending_sitemaps and len(seen_sitemaps) < MAX_SITEMAPS and len(page_urls) < limit:
+    while pending_sitemaps and len(seen_sitemaps) < MAX_SITEMAPS and len(page_urls) < MAX_PAGE_URLS:
         sitemap_url = pending_sitemaps.pop(0)
         if sitemap_url in seen_sitemaps:
             continue
@@ -140,13 +140,13 @@ def discover_website_pages(raw_url: str, limit: int = 50) -> WebsitePageDiscover
             if normalized_url and _same_site(base_url, normalized_url) and normalized_url not in seen_pages:
                 seen_pages.add(normalized_url)
                 page_urls.append(normalized_url)
-                if len(page_urls) >= limit:
+                if len(page_urls) >= MAX_PAGE_URLS:
                     break
 
     if not page_urls:
-        page_urls = _discover_homepage_links(base_url, limit, result)
+        page_urls = _discover_homepage_links(base_url, MAX_PAGE_URLS, result)
 
-    result.pages = page_urls[:limit]
+    result.pages = _sort_first_layer_pages(base_url, page_urls)[:limit]
     result.page_items = _build_page_items(result.pages, result)
     return result
 
@@ -285,6 +285,20 @@ def _normalize_discovered_url(url: str) -> str:
 
 def _same_site(base_url: str, url: str) -> bool:
     return urlparse(base_url).netloc.lower() == urlparse(url).netloc.lower()
+
+
+def _sort_first_layer_pages(base_url: str, urls: list[str]) -> list[str]:
+    indexed_urls = list(enumerate(urls))
+    return [url for _index, url in sorted(indexed_urls, key=lambda item: (_url_path_depth(base_url, item[1]), item[0]))]
+
+
+def _url_path_depth(base_url: str, url: str) -> int:
+    parsed_base = urlparse(base_url)
+    parsed_url = urlparse(url)
+    if parsed_base.netloc.lower() != parsed_url.netloc.lower():
+        return 999
+    segments = [segment for segment in (parsed_url.path or "/").split("/") if segment]
+    return len(segments)
 
 
 def _unique_urls(urls: list[str]) -> list[str]:

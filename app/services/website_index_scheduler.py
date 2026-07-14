@@ -4,17 +4,18 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 from app.services.website_page_discovery_service import discover_website_pages
-from app.services.indexnow_service import inspect_google_index_status_by_url_domain
+from app.services.indexnow_service import DEFAULT_INDEXNOW_ENDPOINT, inspect_google_index_status_by_url_domain, submit_google_indexing_urls, submit_indexnow_urls
 from app.services.background_job_service import start_system_background_job, update_system_background_job
 from database import (
     get_setting,
+    list_due_website_index_submission_urls,
     list_website_index_site_roots,
     list_due_website_index_urls,
     mark_website_index_urls_checking,
     set_setting,
-    update_website_index_bing_yahoo_weekly_result,
     update_website_index_google_result,
     upsert_website_index_urls,
 )
@@ -22,7 +23,7 @@ from logger import logger
 
 
 CHECK_LIMIT = 50
-DEFAULT_INTERVAL_SECONDS = 60 * 10
+DEFAULT_INTERVAL_SECONDS = 60 * 30
 DEFAULT_PAGE_DISCOVERY_INTERVAL_SECONDS = 60 * 60 * 24
 DEFAULT_PAGE_DISCOVERY_LIMIT = 1000
 PAGE_DISCOVERY_LAST_RUN_SETTING = "website_pages_daily_discovery_last_run"
@@ -65,27 +66,22 @@ def run_website_index_weekly_batch() -> int:
             logger.info("Website Index scheduler batch complete. No due URLs. elapsed=%.2fs", time.perf_counter() - started_at)
             return 0
 
-        update_system_background_job(job_id, "running", f"Website Index checking {len(due_urls)} URL(s)...")
-        phase_started_at = time.perf_counter()
-        mark_website_index_urls_checking(due_urls)
-        logger.info("Website Index scheduler marked %d URL(s) checking in %.2fs.", len(due_urls), time.perf_counter() - phase_started_at)
-        phase_started_at = time.perf_counter()
-        update_website_index_bing_yahoo_weekly_result(due_urls)
-        logger.info("Website Index scheduler marked Bing/Yahoo manual for %d URL(s) in %.2fs.", len(due_urls), time.perf_counter() - phase_started_at)
-
         access_token = get_setting("google_oauth_access_token", "")
         service_account_json = get_setting("google_service_account_json", "")
         if not (access_token or service_account_json):
-            logger.info("Website Index scheduler marked %d URL(s) for Bing/Yahoo manual review; Google settings are incomplete.", len(due_urls))
             update_system_background_job(
                 job_id,
                 "complete",
-                f"Website Index marked {len(due_urls)} URL(s). Google settings incomplete.",
+                "Website Index scheduled check skipped. Google settings are incomplete.",
                 status_code=200,
             )
-            logger.info("Website Index scheduler batch complete without Google inspection. elapsed=%.2fs", time.perf_counter() - started_at)
-            return len(due_urls)
+            logger.info("Website Index scheduler skipped Google inspection because Google settings are incomplete. elapsed=%.2fs", time.perf_counter() - started_at)
+            return 0
 
+        update_system_background_job(job_id, "running", f"Website Index checking Google indexing for {len(due_urls)} URL(s)...")
+        phase_started_at = time.perf_counter()
+        mark_website_index_urls_checking(due_urls)
+        logger.info("Website Index scheduler marked %d URL(s) checking in %.2fs.", len(due_urls), time.perf_counter() - phase_started_at)
         phase_started_at = time.perf_counter()
         result = inspect_google_index_status_by_url_domain(
             urls=due_urls,
@@ -113,7 +109,12 @@ def run_website_index_weekly_batch() -> int:
             logger.error("Website Index scheduler Google inspection had %d additional URL error(s).", len(error_items) - 20)
 
         logger.info("Website Index scheduler checked %d URL(s) in %.2fs.", len(due_urls), time.perf_counter() - started_at)
-        update_system_background_job(job_id, "complete", f"Website Index checked {len(due_urls)} URL(s).", status_code=200)
+        update_system_background_job(
+            job_id,
+            "complete",
+            f"Website Index checked Google indexing for {len(due_urls)} URL(s).",
+            status_code=200,
+        )
         return len(due_urls)
     except Exception as exc:
         logger.exception("Website Index scheduler batch failed after %.2fs.", time.perf_counter() - started_at)
@@ -130,6 +131,8 @@ def run_website_pages_daily_discovery() -> dict:
     discovered_count = 0
     saved_count = 0
     error_count = 0
+    google_submitted_count = 0
+    google_submit_error_count = 0
 
     try:
         logger.info(
@@ -174,19 +177,24 @@ def run_website_pages_daily_discovery() -> dict:
                 logger.exception("Website Pages daily discovery domain failed: domain=%s base_url=%s", domain, base_url)
 
         set_setting(PAGE_DISCOVERY_LAST_RUN_SETTING, _utc_now_text())
+        google_submit_result = _submit_not_indexed_urls_to_google()
+        google_submitted_count = google_submit_result["submitted"]
+        google_submit_error_count = google_submit_result["errors"]
         message = (
             f"Website Pages daily discovery complete. Scanned {scanned_count} website(s), "
-            f"saved {saved_count} new URL(s)."
+            f"saved {saved_count} new URL(s), submitted {google_submitted_count} not-indexed URL(s) to Google."
         )
-        update_system_background_job(job_id, "complete", message, status_code=200 if error_count == 0 else 207)
+        update_system_background_job(job_id, "complete", message, status_code=200 if error_count == 0 and google_submit_error_count == 0 else 207)
         logger.info(
-            "Website Pages daily discovery finished in %.2fs: domains=%d scanned=%d discovered=%d saved=%d errors=%d",
+            "Website Pages daily discovery finished in %.2fs: domains=%d scanned=%d discovered=%d saved=%d errors=%d google_submitted=%d google_submit_errors=%d",
             time.perf_counter() - started_at,
             len(site_roots),
             scanned_count,
             discovered_count,
             saved_count,
             error_count,
+            google_submitted_count,
+            google_submit_error_count,
         )
         return {
             "domains": len(site_roots),
@@ -194,11 +202,45 @@ def run_website_pages_daily_discovery() -> dict:
             "discovered": discovered_count,
             "saved": saved_count,
             "errors": error_count,
+            "google_submitted": google_submitted_count,
+            "google_submit_errors": google_submit_error_count,
         }
     except Exception as exc:
         logger.exception("Website Pages daily discovery failed after %.2fs.", time.perf_counter() - started_at)
         update_system_background_job(job_id, "failed", "Website Pages daily discovery failed.", error=str(exc), status_code=500)
         raise
+
+
+def _submit_not_indexed_urls_to_google() -> dict:
+    access_token = get_setting("google_oauth_access_token", "")
+    service_account_json = get_setting("google_service_account_json", "")
+    if not (access_token or service_account_json):
+        logger.info("Website Pages daily discovery skipped Google submit because Google settings are incomplete.")
+        return {"submitted": 0, "skipped": 0, "errors": 0}
+
+    due_rows = list_due_website_index_submission_urls()
+    urls = [item["url"] for item in due_rows[:CHECK_LIMIT]]
+    if not urls:
+        logger.info("Website Pages daily discovery found no not-indexed URLs due for Google submit.")
+        return {"submitted": 0, "skipped": 0, "errors": 0}
+
+    phase_started_at = time.perf_counter()
+    result = submit_google_indexing_urls(
+        urls=urls,
+        access_token=access_token,
+        service_account_json=service_account_json,
+        notification_type="URL_UPDATED",
+    )
+    error_count = len([item for item in result.items if item.status == "error"])
+    logger.info(
+        "Website Pages daily discovery Google submit finished in %.2fs: due_total=%d submitted=%d skipped=%d errors=%d",
+        time.perf_counter() - phase_started_at,
+        len(due_rows),
+        result.submitted_count,
+        len(result.skipped),
+        error_count,
+    )
+    return {"submitted": result.submitted_count, "skipped": len(result.skipped), "errors": error_count}
 
 
 def trigger_website_index_batch() -> None:
@@ -209,6 +251,93 @@ def trigger_website_index_batch() -> None:
     )
     thread.start()
     logger.info("Website Index manual batch trigger queued.")
+
+
+def submit_website_index_urls_to_indexnow(
+    urls: list[str],
+    key: str | None = None,
+    key_location: str | None = None,
+    endpoint: str | None = None,
+) -> dict:
+    key = (get_setting("indexnow_key", "") if key is None else key).strip()
+    if not key:
+        logger.info("Website Index skipped IndexNow submit because indexnow_key is empty.")
+        return {"hosts": 0, "submitted": 0, "skipped": len(urls), "errors": ["IndexNow key is missing."]}
+
+    endpoint = (get_setting("indexnow_endpoint", DEFAULT_INDEXNOW_ENDPOINT) if endpoint is None else endpoint).strip() or DEFAULT_INDEXNOW_ENDPOINT
+    key_location = (get_setting("indexnow_key_location", "") if key_location is None else key_location).strip()
+    grouped_urls = _group_urls_by_host(urls)
+    submitted_count = 0
+    skipped_count = len(urls) - sum(len(host_urls) for host_urls in grouped_urls.values())
+    errors: list[str] = []
+
+    for host, host_urls in grouped_urls.items():
+        try:
+            result = submit_indexnow_urls(
+                urls=host_urls,
+                key=key,
+                host=host,
+                key_location=_key_location_for_host(key_location, host),
+                endpoint=endpoint,
+            )
+        except Exception as exc:
+            errors.append(f"{host}: {exc}")
+            logger.warning("Website Index IndexNow submit failed: host=%s urls=%d error=%s", host, len(host_urls), exc)
+            continue
+
+        submitted_count += result.submitted_count
+        skipped_count += len(result.skipped)
+        for batch in result.batches:
+            if batch.status == "error":
+                errors.append(f"{host}: HTTP {batch.status_code or 'n/a'} - {batch.detail}")
+                logger.warning(
+                    "Website Index IndexNow batch failed: host=%s batch=%d status_code=%s detail=%s",
+                    host,
+                    batch.batch_number,
+                    batch.status_code,
+                    batch.detail,
+                )
+        logger.info(
+            "Website Index IndexNow host submitted: host=%s submitted=%d skipped=%d batches=%d ok=%s",
+            result.host,
+            result.submitted_count,
+            len(result.skipped),
+            len(result.batches),
+            result.ok,
+        )
+
+    return {
+        "hosts": len(grouped_urls),
+        "submitted": submitted_count,
+        "skipped": skipped_count,
+        "errors": errors,
+    }
+
+
+def _group_urls_by_host(urls: list[str]) -> dict[str, list[str]]:
+    grouped_urls: dict[str, list[str]] = {}
+    seen: set[str] = set()
+    for url in urls:
+        if url in seen:
+            continue
+        seen.add(url)
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            continue
+        host = parsed.netloc.lower()
+        grouped_urls.setdefault(host, []).append(url)
+    return grouped_urls
+
+
+def _key_location_for_host(key_location: str, host: str) -> str:
+    if not key_location:
+        return ""
+    parsed = urlparse(key_location)
+    if not parsed.netloc:
+        return key_location
+    if parsed.netloc.lower() == host.lower():
+        return key_location
+    return ""
 
 
 def _scheduler_loop() -> None:

@@ -90,6 +90,60 @@ def crop_image_to_box(image, crop_x: str, crop_y: str, crop_width: str, crop_hei
     )
 
 
+def normalize_image_quality(value: str, default: int = 82) -> int:
+    try:
+        quality = int(str(value or "").strip() or default)
+    except (TypeError, ValueError):
+        quality = default
+    return max(35, min(100, quality))
+
+
+def save_optimized_image(image, output_path: Path, normalized_format: str, quality: int = 82, optimize: bool = True) -> None:
+    save_format = "JPEG" if normalized_format == "jpg" else normalized_format.upper()
+    save_kwargs = {"format": save_format}
+    if save_format == "JPEG":
+        save_kwargs.update(
+            {
+                "quality": normalize_image_quality(str(quality)),
+                "optimize": bool(optimize),
+                "progressive": bool(optimize),
+                "subsampling": "4:2:0",
+            }
+        )
+    elif save_format == "WEBP":
+        save_kwargs.update(
+            {
+                "quality": normalize_image_quality(str(quality)),
+                "method": 6 if optimize else 4,
+            }
+        )
+    elif save_format == "AVIF":
+        save_kwargs.update(
+            {
+                "quality": normalize_image_quality(str(quality)),
+                "speed": 4 if optimize else 6,
+            }
+        )
+    elif save_format == "PNG":
+        save_kwargs.update(
+            {
+                "optimize": bool(optimize),
+                "compress_level": 9 if optimize else 6,
+            }
+        )
+    image.save(output_path, **save_kwargs)
+
+
+def format_file_size(size_bytes: int) -> str:
+    size = float(max(0, int(size_bytes or 0)))
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            if unit == "B":
+                return f"{int(size)} {unit}"
+            return f"{size:.1f} {unit}"
+        size /= 1024
+
+
 def apply_logo_watermark(
     base_image,
     logo_image,

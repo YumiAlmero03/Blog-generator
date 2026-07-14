@@ -16,6 +16,7 @@ from logger import logger
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_status_service import clear_generation_status, get_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
+from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_page_word_limits
@@ -241,6 +242,8 @@ def simple_page_generator():
         "meta_descriptions": [],
         "generated_content": "",
         "history_id": "",
+        "generation_log": [],
+        "generation_log_json": "[]",
         "quality_report": None,
         "change_request": "",
         "regenerate_scope": "full",
@@ -267,6 +270,8 @@ def simple_page_generator():
         state["generated_title"] = request.form.get("generated_title", "").strip()
         state["generated_content"] = request.form.get("generated_content", "").strip()
         state["history_id"] = request.form.get("history_id", "").strip()
+        state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+        state["generation_log_json"] = generation_log_json(state["generation_log"])
         state["meta_descriptions"] = _parse_meta_descriptions(request.form.get("meta_descriptions_json", "").strip())
 
         if action == "save_generated_blog":
@@ -281,7 +286,8 @@ def simple_page_generator():
                     upsert_brand(state["brand"])
                 brand_context = get_brand_context(state["brand"])
                 min_words, max_words = get_page_word_limits()
-                progress = _progress_callback("Simple page", generation_token)
+                progress = _progress_callback("Simple page", generation_token, state["generation_log"])
+                progress("Generation started.")
                 is_minor_revision = bool(state["generated_content"] and state["change_request"])
                 if is_minor_revision:
                     progress("Applying minor simple page changes...")
@@ -413,12 +419,14 @@ def simple_page_generator():
                     raise
             except Exception as exc:
                 logger.exception("simple_page_generator action failed")
+                append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
                 state["error"] = generation_error_message(
                     "An error occurred while generating the simple page. Check logs/app.log for details.",
                     exc,
                 )
 
     state["language_options"] = language_options(state["language"])
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("simple_page_generator.html", **base_template_context(), **state)
 
 
@@ -489,6 +497,7 @@ def _record_completed_simple_page(state: dict, selected_meta: str, min_words: in
             "expectations": state["expectations"],
             "regenerate_scope": state["regenerate_scope"],
             "change_request": state["change_request"],
+            "generation_log": state.get("generation_log", []),
         },
         content=state["generated_content"],
         quality_report=state["quality_report"],
@@ -583,6 +592,7 @@ def _save_simple_page_generation(state: dict):
             "language": state["language"],
             "expectations": state["expectations"],
             "manual_save": True,
+            "generation_log": state.get("generation_log", []),
         },
         content=state["generated_content"],
         quality_report=state["quality_report"],
@@ -639,6 +649,8 @@ def _load_simple_page_history_item(state: dict, history_id: int):
     state["generated_title"] = item.get("title", "") or ""
     state["meta_descriptions"] = [{"text": meta_description, "character_count": len(meta_description)}] if meta_description else []
     state["generated_content"] = item.get("content", "") or ""
+    state["generation_log"] = parse_generation_log(prompt_inputs.get("generation_log", []))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
     state["quality_report"] = _loads(item.get("quality_report", "{}"))
 
 

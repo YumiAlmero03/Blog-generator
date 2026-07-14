@@ -1,6 +1,7 @@
 import json
 import re
 
+from app.services.ollama_web_search_service import build_web_research_context
 from generators.content_generator import _generate_content_from_prompt, count_html_words, suggest_content_tags
 from generators.meta_description_generator import _generate_meta_descriptions_from_prompt
 from generators.title_generator import _generate_titles_from_prompt
@@ -33,6 +34,11 @@ def generate_news_titles(
     language: str = "English",
     progress_callback=None,
 ) -> list[str]:
+    reference_context = _with_web_research_context(
+        reference_context,
+        _news_search_query(keyword, target_country),
+        progress_callback=progress_callback,
+    )
     prompt = build_news_title_prompt(
         keyword=keyword,
         target_audience=target_audience,
@@ -66,6 +72,11 @@ def generate_news_meta_descriptions(
     language: str = "English",
     progress_callback=None,
 ) -> list[dict]:
+    reference_context = _with_web_research_context(
+        reference_context,
+        _news_search_query(title or keyword, target_country),
+        progress_callback=progress_callback,
+    )
     prompt = build_news_meta_description_prompt(
         title=title,
         keyword=keyword,
@@ -101,6 +112,11 @@ def generate_news_visual_ideas(
     language: str = "English",
     progress_callback=None,
 ) -> list[str]:
+    reference_context = _with_web_research_context(
+        reference_context,
+        _news_search_query(title or keyword, target_country),
+        progress_callback=progress_callback,
+    )
     prompt = build_news_visual_prompt(
         title=title,
         keyword=keyword,
@@ -159,6 +175,11 @@ def generate_news_content(
     language: str = "English",
     progress_callback=None,
 ) -> str:
+    reference_context = _with_web_research_context(
+        reference_context,
+        _news_search_query(title or keyword, target_country),
+        progress_callback=progress_callback,
+    )
     prompt = build_news_content_prompt(
         title=title,
         keyword=keyword,
@@ -203,6 +224,11 @@ def generate_news_tags(
     language: str = "English",
     progress_callback=None,
 ) -> list[str]:
+    reference_context = _with_web_research_context(
+        reference_context,
+        _news_search_query(title or keyword, target_country),
+        progress_callback=progress_callback,
+    )
     fallback = suggest_content_tags(
         title=title,
         keyword=keyword,
@@ -254,6 +280,21 @@ def _publish_progress(progress_callback, message: str, kind: str = "status") -> 
 
 def _contains_old_news_year(text: str) -> bool:
     return any(re.search(rf"(?<!\d){year}(?!\d)", text or "") for year in OLD_NEWS_YEARS)
+
+
+def _with_web_research_context(reference_context: str, query: str, progress_callback=None) -> str:
+    web_context = build_web_research_context(query, progress_callback=progress_callback)
+    if not web_context:
+        return reference_context
+    cleaned_reference_context = (reference_context or "").strip()
+    if cleaned_reference_context:
+        return f"{cleaned_reference_context}\n\n---\n\n{web_context}"
+    return web_context
+
+
+def _news_search_query(topic: str, target_country: str = "") -> str:
+    parts = [topic, target_country if target_country and target_country != "Worldwide" else "", "latest news"]
+    return " ".join(part for part in parts if part).strip()
 
 
 def _remove_selected_title_heading(content: str, title: str) -> str:

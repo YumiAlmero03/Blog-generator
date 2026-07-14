@@ -16,6 +16,10 @@
 {% endblock %}
 
 {% block content %}
+  {% set floating_keyword_selector = "#keyword" %}
+  {% set floating_brand_selector = "#brand" %}
+  {% set floating_language_selector = "#language" %}
+  {% include "_floating_generation_status.html" %}
   <div class="grid gap-6 lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]">
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if error %}
@@ -78,24 +82,7 @@
           <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100" data-loading-stop>Skip Generating</button>
         </div>
 
-        <div class="mt-5 rounded-[22px] border border-sand-200 bg-sand-50/80 p-4">
-          <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-sm font-bold uppercase tracking-[0.12em] text-sand-700">Generation Log</h2>
-            <button type="button" id="clearPageGenerationLog" class="inline-flex min-h-9 items-center justify-center rounded-full border border-sand-200 bg-white px-3 py-2 text-xs font-bold text-sand-700 transition hover:bg-sand-100">Clear Log</button>
-          </div>
-          <div id="pageGenerationLogBox" class="max-h-[360px] overflow-auto rounded-2xl border border-sand-200 bg-white px-4 py-4 text-xs leading-5 text-sand-800" data-generation-log='{{ generation_log | tojson }}'>
-            {% if generation_log %}
-              {% for item in generation_log %}
-                <div class="mb-3 rounded-xl bg-sand-50 px-3 py-2">
-                  <div class="mb-1 font-bold uppercase tracking-[0.08em] text-sand-500">{{ item.kind }}</div>
-                  <pre class="whitespace-pre-wrap font-sans text-xs leading-5 text-sand-800">{{ item.message }}</pre>
-                </div>
-              {% endfor %}
-            {% else %}
-              <p class="text-sm font-semibold leading-6 text-sand-500" data-generation-log-empty>No generation log yet.</p>
-            {% endif %}
-          </div>
-        </div>
+        {% include "_generation_log.html" %}
       </form>
     </section>
 

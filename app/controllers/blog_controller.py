@@ -10,6 +10,7 @@ from logger import logger
 
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
+from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
@@ -21,6 +22,7 @@ def index():
         "keyword": "",
         "brand": "",
         "supporting_keyword": "",
+        "suggested_h2s": "",
         "language": get_default_language(),
         "tone": "natural",
         "count": 10,
@@ -41,6 +43,8 @@ def index():
         "money_site_url": "",
         "links": [],
         "history_id": "",
+        "generation_log": [],
+        "generation_log_json": "[]",
         "brand_names": list_brand_names(),
         "content_checklist_items": list_checklist_items("blog", active_only=True),
         "language_options": language_options(get_default_language()),
@@ -58,6 +62,8 @@ def index():
             _handle_generate_titles(state)
         elif action in {"generate_meta_descriptions", "generate_visual", "generate_content", "generate_tags"}:
             _handle_generate_content(state)
+        elif action == "generate_all":
+            _handle_generate_all(state)
         elif action == "save_generated_blog":
             _handle_save_generated_blog(state)
 
@@ -65,6 +71,7 @@ def index():
         state["money_site_url"] = get_setting("money_site", "")
 
     state["language_options"] = language_options(state["language"])
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("index.html", **base_template_context(), **state)
 
 
@@ -72,8 +79,11 @@ def _handle_generate_titles(state: dict):
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
+    state["suggested_h2s"] = request.form.get("suggested_h2s", "").strip()
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
+    state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
     count_raw = request.form.get("count", "10").strip()
 
     if not state["keyword"]:
@@ -91,7 +101,7 @@ def _handle_generate_titles(state: dict):
     try:
         provider = get_provider()
         brand_context = get_brand_context(state["brand"])
-        progress = _progress_callback("Title", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("Title", request.form.get("generation_status_token", ""), state["generation_log"])
         progress("Starting title generation...")
         state["titles"] = generate_titles(
             provider,
@@ -107,6 +117,7 @@ def _handle_generate_titles(state: dict):
         state["step"] = "title"
     except Exception as exc:
         logger.exception("generate_titles action failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
         state["error"] = generation_error_message(
             "An error occurred while generating titles. Check logs/app.log for details.",
             exc,
@@ -122,6 +133,7 @@ def _load_history_item(state: dict, history_id: int):
     state["brand"] = item.get("brand_name", "") or ""
     state["keyword"] = item.get("primary_keyword", "") or ""
     state["supporting_keyword"] = prompt_inputs.get("supporting_keyword", "")
+    state["suggested_h2s"] = prompt_inputs.get("suggested_h2s", "")
     state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["tone"] = prompt_inputs.get("tone", state["tone"])
     state["include_money_site"] = bool(prompt_inputs.get("include_money_site", False))
@@ -134,6 +146,8 @@ def _load_history_item(state: dict, history_id: int):
     state["visual"] = prompt_inputs.get("visual", "") or ""
     state["quality_report"] = _loads(item.get("quality_report", "{}"))
     state["tag_suggestions"] = [tag.strip() for tag in (item.get("tags", "") or "").split(",") if tag.strip()]
+    state["generation_log"] = parse_generation_log(prompt_inputs.get("generation_log", []))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
     state["step"] = "content"
 
 
@@ -150,7 +164,7 @@ def _handle_generate_content(state: dict):
         state["titles"] = _json_list(request.form.get("titles_json", "").strip())
         state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
         provider = get_provider()
-        progress = _progress_callback("Blog", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("Blog", request.form.get("generation_status_token", ""), state["generation_log"])
         if state["brand"]:
             upsert_brand(state["brand"])
         state["money_site_url"] = get_setting("money_site", "")
@@ -170,13 +184,9 @@ def _handle_generate_content(state: dict):
                 language=state["language"],
                 progress_callback=progress,
             )
-            state["meta_description"] = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+            state["meta_description"] = ""
             state["step"] = "meta"
             clear_generation_status(request.form.get("generation_status_token", ""))
-            return
-
-        if not state["meta_description"]:
-            state["error"] = "Please generate and choose a meta description first."
             return
 
         if action == "generate_visual":
@@ -244,6 +254,7 @@ def _handle_generate_content(state: dict):
                 money_site_url=state["money_site_url"] if state["include_money_site"] else "",
                 brand=state["brand"],
                 brand_context=brand_context,
+                suggested_h2s=state["suggested_h2s"],
                 change_request=scoped_change_request,
                 min_words=min_words,
                 max_words=max_words,
@@ -254,8 +265,113 @@ def _handle_generate_content(state: dict):
         state["step"] = "content"
     except Exception as exc:
         logger.exception("generate_content action failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
         state["error"] = generation_error_message(
             "An error occurred while generating article content. Check logs/app.log for details.",
+            exc,
+        )
+
+
+def _handle_generate_all(state: dict):
+    _hydrate_blog_generation_state(state)
+
+    if not state["selected_title"]:
+        state["error"] = "Please select a title first."
+        return
+
+    try:
+        provider = get_provider()
+        progress = _progress_callback("Blog", request.form.get("generation_status_token", ""), state["generation_log"])
+        if state["brand"]:
+            upsert_brand(state["brand"])
+        state["money_site_url"] = get_setting("money_site", "")
+        min_words, max_words = get_blog_word_limits()
+        brand_context = get_brand_context(state["brand"])
+        scoped_change_request = _scoped_change_request(state["change_request"], state["regenerate_scope"])
+
+        progress("Generating article content...")
+        state["content"] = generate_content(
+            provider,
+            title=state["selected_title"],
+            keyword=state["keyword"],
+            supporting_keyword=state["supporting_keyword"],
+            tone=state["tone"],
+            links=state["links"],
+            money_site_url=state["money_site_url"] if state["include_money_site"] else "",
+            brand=state["brand"],
+            brand_context=brand_context,
+            suggested_h2s=state["suggested_h2s"],
+            change_request=scoped_change_request,
+            min_words=min_words,
+            max_words=max_words,
+            language=state["language"],
+            progress_callback=progress,
+        )
+
+        if state["meta_descriptions"]:
+            progress("Reusing existing meta descriptions.")
+        else:
+            try:
+                progress("Generating meta descriptions...")
+                state["meta_descriptions"] = generate_meta_descriptions(
+                    provider,
+                    title=state["selected_title"],
+                    keyword=state["keyword"],
+                    count=5,
+                    brand=state["brand"],
+                    brand_context=brand_context,
+                    language=state["language"],
+                    progress_callback=progress,
+                )
+                state["meta_description"] = ""
+            except Exception as exc:
+                logger.warning("blog meta generation skipped after content success: %s", exc)
+                progress("Meta descriptions could not be generated, continuing with the article.")
+
+        if state["visual"]:
+            progress("Reusing existing visual ideas.")
+        else:
+            try:
+                progress("Generating visual ideas...")
+                state["visual"] = _visual_text(generate_blog_visual_ideas(
+                    provider,
+                    title=state["selected_title"],
+                    keyword=state["keyword"],
+                    brand=state["brand"],
+                    context=brand_context,
+                    count=2,
+                    language=state["language"],
+                    progress_callback=progress,
+                ))
+            except Exception as exc:
+                logger.warning("blog visual generation skipped after content success: %s", exc)
+                progress("Visual ideas could not be generated, continuing with the article.")
+
+        try:
+            progress("Generating tags...")
+            state["tag_suggestions"] = generate_ai_content_tags(
+                provider,
+                title=state["selected_title"],
+                keyword=state["keyword"],
+                supporting_keyword=state["supporting_keyword"],
+                brand=state["brand"],
+                content=state["content"],
+                minimum=10,
+                language=state["language"],
+                progress_callback=progress,
+            )
+        except Exception as exc:
+            logger.warning("blog tag generation skipped after content success: %s", exc)
+            progress("Tags could not be generated, continuing with the article.")
+
+        _record_completed_blog(state, min_words, max_words)
+        clear_generation_status(request.form.get("generation_status_token", ""))
+        state["step"] = "content"
+    except Exception as exc:
+        logger.exception("generate_all_blog action failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
+        state["error"] = generation_error_message(
+            "An error occurred while generating the full blog. Check logs/app.log for details.",
             exc,
         )
 
@@ -265,6 +381,7 @@ def _hydrate_blog_generation_state(state: dict) -> str:
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
+    state["suggested_h2s"] = request.form.get("suggested_h2s", "").strip()
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["change_request"] = request.form.get("change_request", "").strip()
@@ -277,6 +394,8 @@ def _hydrate_blog_generation_state(state: dict) -> str:
     state["titles"] = _json_list(request.form.get("titles_json", "").strip())
     state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
     state["tag_suggestions"] = _tags_from_raw(request.form.get("tags_json", "").strip())
+    state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
 
     selected_meta_description = request.form.get("meta_description_choice", "").strip()
     if state["meta_descriptions"]:
@@ -284,7 +403,7 @@ def _hydrate_blog_generation_state(state: dict) -> str:
             (item for item in state["meta_descriptions"] if item.get("text", "").strip() == selected_meta_description),
             None,
         )
-        state["meta_description"] = (selected_match or state["meta_descriptions"][0]).get("text", "")
+        state["meta_description"] = selected_match.get("text", "") if selected_match else ""
     else:
         state["meta_description"] = selected_meta_description
     return selected_meta_description
@@ -311,6 +430,7 @@ def _record_completed_blog(state: dict, min_words: int, max_words: int):
         tags=state["tag_suggestions"],
         prompt_inputs={
             "supporting_keyword": state["supporting_keyword"],
+            "suggested_h2s": state["suggested_h2s"],
             "language": state["language"],
             "tone": state["tone"],
             "include_money_site": state["include_money_site"],
@@ -318,6 +438,7 @@ def _record_completed_blog(state: dict, min_words: int, max_words: int):
             "change_request": state["change_request"],
             "links": state["links"],
             "visual": state["visual"],
+            "generation_log": state.get("generation_log", []),
         },
         content=state["content"],
         quality_report=state["quality_report"],
@@ -336,6 +457,7 @@ def _handle_save_generated_blog(state: dict):
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
+    state["suggested_h2s"] = request.form.get("suggested_h2s", "").strip()
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["change_request"] = request.form.get("change_request", "").strip()
@@ -348,6 +470,8 @@ def _handle_save_generated_blog(state: dict):
     selected_meta_description = request.form.get("meta_description_choice", "").strip()
     state["meta_description"] = selected_meta_description
     state["links"] = _extract_links_from_request()
+    state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
 
     try:
         state["titles"] = json.loads(titles_raw) if titles_raw else []
@@ -388,12 +512,14 @@ def _handle_save_generated_blog(state: dict):
         tags=state["tag_suggestions"],
         prompt_inputs={
             "supporting_keyword": state["supporting_keyword"],
+            "suggested_h2s": state["suggested_h2s"],
             "language": state["language"],
             "tone": state["tone"],
             "include_money_site": state["include_money_site"],
             "manual_save": True,
             "links": state["links"],
             "visual": state["visual"],
+            "generation_log": state.get("generation_log", []),
         },
         content=state["content"],
         quality_report=state["quality_report"],
@@ -474,10 +600,12 @@ def _scoped_change_request(change_request: str, scope: str) -> str:
     return f"{prefix}\n{cleaned}".strip()
 
 
-def _progress_callback(label: str, token: str):
+def _progress_callback(label: str, token: str, log_entries: list[dict] | None = None):
     cleaned_label = (label or "Generation").strip()
 
     def publish(message: str, kind: str = "status"):
+        if log_entries is not None:
+            append_generation_log(log_entries, kind, message)
         if kind == "prompt":
             publish_generation_prompt(token, message)
             return

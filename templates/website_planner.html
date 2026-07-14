@@ -13,7 +13,28 @@
         <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
       {% endif %}
 
-      <form method="post" class="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+      <form method="post" enctype="multipart/form-data" class="grid gap-4 lg:grid-cols-3 lg:items-end">
+        <textarea name="generation_log_json" class="hidden-form lg:col-span-3" aria-hidden="true">{{ generation_log_json | e }}</textarea>
+        <div>
+          <label for="planner_client" class="mb-2 block text-sm font-bold text-sand-900">Client</label>
+          <input id="planner_client" name="planner_client" type="text" value="{{ planner_client }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="planner_domain" class="mb-2 block text-sm font-bold text-sand-900">Domain</label>
+          <input id="planner_domain" name="planner_domain" type="text" value="{{ planner_domain }}" placeholder="https://example.com" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="planner_target_market" class="mb-2 block text-sm font-bold text-sand-900">Target Market</label>
+          <input id="planner_target_market" name="planner_target_market" type="text" value="{{ planner_target_market }}" placeholder="Philippines" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="planner_language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+          <input id="planner_language" name="planner_language" type="text" value="{{ planner_language }}" placeholder="English" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="planner_site_type" class="mb-2 block text-sm font-bold text-sand-900">Site Type</label>
+          <input id="planner_site_type" name="planner_site_type" type="text" value="{{ planner_site_type }}" placeholder="Informational / Affiliate Lead Gen" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
         <div>
           <label for="page_count" class="mb-2 block text-sm font-bold text-sand-900">How many pages</label>
           <input id="page_count" name="page_count" type="number" min="0" max="500" value="{{ page_count }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
@@ -26,7 +47,20 @@
           <label for="blog_count" class="mb-2 block text-sm font-bold text-sand-900">How many blogs</label>
           <input id="blog_count" name="blog_count" type="number" min="0" max="500" value="{{ blog_count }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
         </div>
-        <div class="lg:col-span-4">
+        <div class="lg:col-span-3">
+          <label for="planner_reference_file" class="mb-2 block text-sm font-bold text-sand-900">Upload reference DOCX</label>
+          {% if planner_reference_filename %}
+            <p class="mb-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Using reference: {{ planner_reference_filename }}</p>
+          {% endif %}
+          <input id="planner_reference_file" name="planner_reference_file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-sand-100 file:px-4 file:py-2 file:text-sm file:font-bold file:text-sand-800 focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          <textarea name="planner_reference_content" class="hidden">{{ planner_reference_content }}</textarea>
+          <input type="hidden" name="planner_reference_filename" value="{{ planner_reference_filename }}" />
+          <p class="mt-2 text-xs font-bold leading-5 text-sand-600">The planner extracts DOCX text and treats it as website content context in the downloaded report.</p>
+          {% if planner_reference_content %}
+            <div class="mt-3 max-h-36 overflow-y-auto rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">{{ planner_reference_content[:900] }}{% if planner_reference_content|length > 900 %}...{% endif %}</div>
+          {% endif %}
+        </div>
+        <div class="lg:col-span-3">
           <label for="keyword_categories" class="mb-2 block text-sm font-bold text-sand-900">Keyword Category</label>
           <select id="keyword_categories" name="keyword_categories" multiple size="7" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
             {% for category in keyword_categories %}
@@ -45,6 +79,7 @@
       <div class="mt-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">
         Planner uses the Pages Main and Trust Page lists from <a href="/settings" class="underline decoration-sand-400 underline-offset-4">Settings</a>. Blogs are keyword targets referenced against Google Trends, not brand keywords.
       </div>
+      {% include "_generation_log.html" %}
     </section>
 
     {% if plan %}
@@ -61,6 +96,59 @@
           </div>
         </div>
 
+        <div class="mt-6 rounded-[24px] border border-sand-300 bg-sand-50 p-5">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-sand-600">Print Preview</p>
+              <h3 class="mt-2 font-display text-2xl font-bold text-sand-950">SEO Master Plan{% if planner_client or planner_domain %} - {{ planner_client or planner_domain }}{% endif %}</h3>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold text-sand-700">
+              <div class="rounded-2xl bg-white px-3 py-2">{{ plan.summary.main_pages }} Core</div>
+              <div class="rounded-2xl bg-white px-3 py-2">{{ plan.summary.trust_pages }} Trust</div>
+              <div class="rounded-2xl bg-white px-3 py-2">{{ plan.summary.blogs }} Blogs</div>
+            </div>
+          </div>
+          <div class="mt-4 grid gap-3 text-sm leading-6 text-sand-800 lg:grid-cols-2">
+            <div class="rounded-2xl bg-white px-4 py-3">
+              <div><strong>Client:</strong> {{ planner_client or "Blank" }}</div>
+              <div><strong>Domain:</strong> {{ planner_domain or "Blank" }}</div>
+              <div><strong>Target Market:</strong> {{ planner_target_market or "Blank" }}</div>
+              <div><strong>Language:</strong> {{ planner_language or "Blank" }}</div>
+              <div><strong>Site Type:</strong> {{ planner_site_type or "Blank" }}</div>
+              <div><strong>Date:</strong> Blank</div>
+            </div>
+            <div class="rounded-2xl bg-white px-4 py-3">
+              <strong>Report sections:</strong>
+              <ul class="mt-2 grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-sand-600">
+                <li>Keyword Plan + Main Page Keyword Clusters</li>
+                <li>Content Layout Plan</li>
+                <li>Internal Linking Plan + Anchor Guidelines</li>
+                <li>Blog Categories + Page-Derived Topics</li>
+                <li>Summary Dashboard + Core Page Mapping</li>
+                <li>Priority Launch Order, First 7 Days</li>
+              </ul>
+            </div>
+          </div>
+          {% if planner_reference_content %}
+            <div class="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-sand-700">
+              <strong class="text-sand-900">Website Content Reference:</strong>
+              {{ planner_reference_content[:420] }}{% if planner_reference_content|length > 420 %}...{% endif %}
+            </div>
+          {% endif %}
+        </div>
+
+        <form method="post" action="/website-planner/download-report" class="mt-4">
+          <input type="hidden" name="planner_client" value="{{ planner_client }}" />
+          <input type="hidden" name="planner_domain" value="{{ planner_domain }}" />
+          <input type="hidden" name="planner_target_market" value="{{ planner_target_market }}" />
+          <input type="hidden" name="planner_language" value="{{ planner_language }}" />
+          <input type="hidden" name="planner_site_type" value="{{ planner_site_type }}" />
+          <input type="hidden" name="planner_reference_filename" value="{{ planner_reference_filename }}" />
+          <textarea name="planner_reference_content" class="hidden">{{ planner_reference_content }}</textarea>
+          <textarea name="plan_json" class="hidden">{{ plan_json }}</textarea>
+          <button type="submit" class="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-sand-950 px-6 py-4 text-base font-bold text-white shadow-soft transition hover:bg-sand-800 sm:w-auto">Download report (.docx)</button>
+        </form>
+
         <div class="mt-6 grid gap-6 xl:grid-cols-3">
           {% for title, rows in [
             ("Main Pages", plan.main_pages),
@@ -74,6 +162,12 @@
                   {% for item in rows %}
                     <li class="rounded-2xl bg-sand-50 px-4 py-3 text-sm font-bold leading-6 text-sand-800">
                       <span class="text-sand-500">{{ item.index }}.</span> {{ item.name }}
+                      {% if item.h1 %}
+                        <span class="mt-1 block text-xs font-semibold text-sand-600">H1: {{ item.h1 }}</span>
+                      {% endif %}
+                      {% if item.headings %}
+                        <span class="mt-1 block text-xs font-semibold text-sand-600">Headings: {{ item.headings | join(", ") }}</span>
+                      {% endif %}
                       {% if item.trend_url %}
                         <a href="{{ item.trend_url }}" target="_blank" rel="noopener noreferrer" class="ml-2 text-xs uppercase tracking-[0.08em] text-sand-600 underline decoration-sand-300 underline-offset-4">Google Trends</a>
                       {% endif %}

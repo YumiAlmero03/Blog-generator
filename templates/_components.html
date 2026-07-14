@@ -1,0 +1,28 @@
+{% macro button_class(variant="primary", size="md") -%}
+  {%- set sizes = {
+    "sm": "min-h-9 px-3 py-2 text-xs",
+    "md": "min-h-11 px-4 py-2.5 text-sm",
+    "lg": "min-h-12 px-5 py-3 text-sm"
+  } -%}
+  {%- set variants = {
+    "primary": "bg-sand-600 text-sand-50 hover:bg-sand-700",
+    "secondary": "border border-sand-300 bg-white text-sand-700 hover:bg-sand-100",
+    "dark": "bg-stone-900 text-white hover:bg-black",
+    "success": "bg-moss-700 text-white hover:bg-moss-500",
+    "danger": "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100",
+    "blue": "bg-blue-700 text-white hover:bg-blue-800"
+  } -%}
+  inline-flex items-center justify-center rounded-full font-bold transition disabled:cursor-not-allowed disabled:opacity-60 {{ sizes.get(size, sizes["md"]) }} {{ variants.get(variant, variants["primary"]) }}
+{%- endmacro %}
+
+{% macro button(label, type="button", variant="primary", size="md", extra_class="", attrs="") -%}
+  <button type="{{ type }}" class="{{ button_class(variant, size) }} {{ extra_class }}" {{ attrs|safe }}>{{ label }}</button>
+{%- endmacro %}
+
+{% macro table_shell(extra_class="") -%}
+  <div class="overflow-hidden rounded-[22px] border border-sand-200 bg-white {{ extra_class }}">
+    <div class="overflow-x-auto">
+      {{ caller() }}
+    </div>
+  </div>
+{%- endmacro %}

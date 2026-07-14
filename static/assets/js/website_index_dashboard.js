@@ -11,8 +11,10 @@
   const prevPageButton = document.getElementById("websiteIndexPrevPage");
   const nextPageButton = document.getElementById("websiteIndexNextPage");
   const pageStatus = document.getElementById("websiteIndexPageStatus");
+  const downloadCsvButton = document.getElementById("websiteIndexDownloadCsv");
   const pageSize = 50;
   let currentPage = 1;
+  let matchedRowsCache = [];
 
   if (!rows.length) {
     return;
@@ -59,6 +61,7 @@
       }
       return firstChecked.localeCompare(secondChecked);
     });
+    matchedRowsCache = matchedRows;
 
     const totalPages = Math.max(1, Math.ceil(matchedRows.length / pageSize));
     currentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -86,6 +89,60 @@
       nextPageButton.disabled = currentPage >= totalPages;
       nextPageButton.classList.toggle("opacity-50", currentPage >= totalPages);
     }
+    if (downloadCsvButton) {
+      downloadCsvButton.disabled = matchedRows.length === 0;
+      downloadCsvButton.classList.toggle("opacity-50", matchedRows.length === 0);
+    }
+  }
+
+  function csvCell(value) {
+    const text = String(value || "");
+    if (/[",\n\r]/.test(text)) {
+      return '"' + text.replace(/"/g, '""') + '"';
+    }
+    return text;
+  }
+
+  function rowToCsvRecord(row) {
+    return [
+      row.dataset.url || "",
+      row.dataset.domain || "",
+      row.dataset.status || "",
+      row.dataset.weekly || "",
+      row.dataset.google || "",
+      row.dataset.bing || "",
+      row.dataset.yahoo || "",
+      row.dataset.coverage || "",
+      row.dataset.lastChecked || "",
+      row.dataset.lastCrawl || "",
+    ];
+  }
+
+  function downloadFilteredCsv() {
+    const headers = [
+      "url",
+      "domain",
+      "check_status",
+      "due_status",
+      "google_status",
+      "bing_status",
+      "yahoo_status",
+      "coverage",
+      "last_checked_at",
+      "google_last_crawl_time",
+    ];
+    const lines = [headers].concat(matchedRowsCache.map(rowToCsvRecord)).map(function (record) {
+      return record.map(csvCell).join(",");
+    });
+    const blob = new Blob([lines.join("\n") + "\n"], { type: "text/csv;charset=utf-8" });
+    const link = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    link.href = URL.createObjectURL(blob);
+    link.download = "website-index-dashboard-" + stamp + ".csv";
+    document.body.appendChild(link);
+    link.click();
+    URL.revokeObjectURL(link.href);
+    link.remove();
   }
 
   [searchInput, domainFilter, weeklyFilter, googleFilter, bingFilter, yahooFilter].forEach(function (element) {
@@ -113,6 +170,9 @@
       currentPage += 1;
       applyFilters();
     });
+  }
+  if (downloadCsvButton) {
+    downloadCsvButton.addEventListener("click", downloadFilteredCsv);
   }
 
   applyFilters();

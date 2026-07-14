@@ -55,15 +55,18 @@ def generate_social_media_post(
     social_type: str,
     brand_context: str = "",
     reference_link: str = "",
+    research_context: str = "",
+    max_characters: int | None = None,
     progress_callback=None,
 ) -> dict:
-    max_characters = get_social_post_character_limit(social_type)
+    max_characters = int(max_characters or get_social_post_character_limit(social_type))
     prompt = build_social_media_post_prompt(
         focus_word=focus_word,
         brand_name=brand_name,
         social_type=social_type,
         brand_context=brand_context,
         reference_link=reference_link,
+        research_context=research_context,
         max_characters=max_characters,
     )
     attempt = 0

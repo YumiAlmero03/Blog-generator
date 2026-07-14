@@ -14,6 +14,8 @@
       <input type="hidden" name="gsc_api_notice" value="{{ gsc_api_notice }}" />
       <input type="hidden" name="gsc_api_rows_json" value='{{ gsc_api_rows_json }}' />
       <input type="hidden" name="gsc_api_daily_rows_json" value='{{ gsc_api_daily_rows_json }}' />
+      <input type="hidden" name="backlink_snapshot_json" value='{{ backlink_snapshot_json }}' />
+      <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
 
       <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Search Console API data will be fetched from the saved Google credentials in Settings.</p>
 
@@ -69,6 +71,7 @@
 
     <p id="gscPlannerStatus" class="mt-4 hidden text-sm font-bold leading-6 text-moss-700"></p>
     <p id="gscPlannerError" class="mt-3 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+    {% include "_generation_log.html" %}
 
     {% if error %}
       <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
@@ -82,6 +85,54 @@
       <div class="mt-5 rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
         <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-500">Search Console API Data Sent To Prompt</p>
         <pre class="mt-3 max-h-[360px] overflow-auto whitespace-pre-wrap text-xs leading-5 text-sand-800">{{ gsc_api_summary }}</pre>
+      </div>
+    {% endif %}
+
+    {% if backlink_snapshot %}
+      <div class="mt-5 rounded-2xl border border-sand-200 bg-white/85 px-4 py-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-500">Backlink Snapshot</p>
+            <h2 class="mt-1 font-display text-2xl font-bold text-sand-950">{{ backlink_snapshot.total_count }} saved backlink{% if backlink_snapshot.total_count != 1 %}s{% endif %}</h2>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs font-bold text-sand-700">
+            <span class="rounded-full bg-moss-100 px-3 py-1.5 text-moss-700">{{ backlink_snapshot.scored_count }} with DP/DA/DR</span>
+            <span class="rounded-full bg-sand-100 px-3 py-1.5">{{ backlink_snapshot.unscored_count }} without score</span>
+          </div>
+        </div>
+        <p class="mt-3 text-sm leading-6 text-sand-700">Backlinks can affect SEO through authority, relevance, trust, anchor context, and discovery. This snapshot is sent to the report as supporting evidence.</p>
+        {% if backlink_snapshot.top_high or backlink_snapshot.lowest %}
+          <div class="mt-4 grid gap-4 lg:grid-cols-2">
+            <div class="rounded-2xl border border-moss-200 bg-moss-50/70 p-4">
+              <h3 class="text-sm font-bold uppercase tracking-[0.12em] text-moss-800">Top High DP Links</h3>
+              <div class="mt-3 grid gap-2">
+                {% for item in backlink_snapshot.top_high %}
+                  <div class="rounded-xl bg-white px-3 py-2 text-sm leading-6 text-sand-800">
+                    <div class="font-bold text-sand-950">{{ item.name }} <span class="text-moss-700">DP/DA/DR {{ item.authority_label }}</span></div>
+                    {% if item.url %}<div class="break-all text-xs text-sand-600">{{ item.url }}</div>{% endif %}
+                  </div>
+                {% else %}
+                  <p class="text-sm font-semibold text-sand-600">No scored backlinks yet.</p>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+              <h3 class="text-sm font-bold uppercase tracking-[0.12em] text-amber-800">Lowest DP Links</h3>
+              <div class="mt-3 grid gap-2">
+                {% for item in backlink_snapshot.lowest %}
+                  <div class="rounded-xl bg-white px-3 py-2 text-sm leading-6 text-sand-800">
+                    <div class="font-bold text-sand-950">{{ item.name }} <span class="text-amber-700">DP/DA/DR {{ item.authority_label }}</span></div>
+                    {% if item.url %}<div class="break-all text-xs text-sand-600">{{ item.url }}</div>{% endif %}
+                  </div>
+                {% else %}
+                  <p class="text-sm font-semibold text-sand-600">No scored backlinks yet.</p>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        {% elif backlink_snapshot.total_count %}
+          <p class="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">No DP/DA/DR values found. Add values like DP 45, DA 32, or DR 50 in Medium notes/rules to rank high and low links.</p>
+        {% endif %}
       </div>
     {% endif %}
   </section>
@@ -121,8 +172,10 @@
           <input type="hidden" name="gsc_api_notice" value="{{ gsc_api_notice }}" />
           <input type="hidden" name="gsc_api_rows_json" value='{{ gsc_api_rows_json }}' />
           <input type="hidden" name="gsc_api_daily_rows_json" value='{{ gsc_api_daily_rows_json }}' />
+          <input type="hidden" name="backlink_snapshot_json" value='{{ backlink_snapshot_json }}' />
           <input type="hidden" name="report_json" value='{{ report_json }}' />
           <input type="hidden" name="chat_history_json" value='{{ chat_history_json }}' />
+          <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
           <label for="chat_question" class="sr-only">Ask next-step question</label>
           <textarea id="chat_question" name="chat_question" rows="4" required placeholder="Ask what to fix first, how to rewrite title/meta, what content to add, or how to monitor results." class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ chat_question }}</textarea>
           <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-black">Ask AI</button>
@@ -131,8 +184,31 @@
 
       <div class="order-1 grid gap-6 xl:order-2">
         <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">{{ brand }}{% if target_url %} / {{ target_url }}{% endif %}</p>
-          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">SEO Report</h2>
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">{{ brand }}{% if target_url %} / {{ target_url }}{% endif %}</p>
+              <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">SEO Report</h2>
+            </div>
+            <form method="post" action="/gsc-planner/download-summary">
+              <input type="hidden" name="brand" value="{{ brand }}" />
+              <input type="hidden" name="target_url" value="{{ target_url }}" />
+              <input type="hidden" name="gsc_property" value="{{ gsc_property }}" />
+              <input type="hidden" name="language" value="{{ language }}" />
+              <input type="hidden" name="gsc_notes" value="{{ gsc_notes }}" />
+              <input type="hidden" name="gsc_start_date" value="{{ gsc_start_date }}" />
+              <input type="hidden" name="gsc_end_date" value="{{ gsc_end_date }}" />
+              <input type="hidden" name="gsc_row_limit" value="{{ gsc_row_limit }}" />
+              <input type="hidden" name="gsc_api_summary" value="{{ gsc_api_summary }}" />
+              <input type="hidden" name="gsc_api_notice" value="{{ gsc_api_notice }}" />
+              <input type="hidden" name="gsc_api_rows_json" value='{{ gsc_api_rows_json }}' />
+              <input type="hidden" name="gsc_api_daily_rows_json" value='{{ gsc_api_daily_rows_json }}' />
+              <input type="hidden" name="backlink_snapshot_json" value='{{ backlink_snapshot_json }}' />
+              <input type="hidden" name="report_json" value='{{ report_json }}' />
+              <input type="hidden" name="chat_history_json" value='{{ chat_history_json }}' />
+              <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
+              <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-moss-800">Download Summary Report</button>
+            </form>
+          </div>
           <p class="mt-4 text-base leading-7 text-sand-800">{{ report.executive_summary }}</p>
         </div>
 
@@ -160,6 +236,7 @@
           ("GSC Diagnosis", report.gsc_diagnosis, ["finding", "evidence", "meaning"]),
           ("Opportunities", report.opportunities, ["opportunity", "reason", "recommended_action"]),
           ("Recommendations", report.recommendations, ["priority", "area", "recommendation", "impact", "effort"]),
+          ("Backlink Analysis", report.backlink_analysis, ["finding", "evidence", "seo_effect", "recommended_action"]),
           ("Content Plan", report.content_plan, ["section_or_asset", "target_query", "notes"]),
           ("Technical Checks", report.technical_checks, ["check", "why", "how"]),
           ("Monitoring Plan", report.monitoring_plan, ["metric", "target", "timing"]),

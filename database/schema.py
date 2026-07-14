@@ -102,6 +102,7 @@ def init_db():
                 title_max_characters INTEGER NOT NULL DEFAULT 0,
                 min_words INTEGER NOT NULL DEFAULT 0,
                 max_characters INTEGER NOT NULL DEFAULT 0,
+                domain_power INTEGER NOT NULL DEFAULT 0,
                 blog_url TEXT NOT NULL DEFAULT '',
                 tier_level TEXT NOT NULL DEFAULT 'Tier 1',
                 include_in_tier1 INTEGER NOT NULL DEFAULT 1,
@@ -136,7 +137,16 @@ def init_db():
                 id INTEGER PRIMARY KEY,
                 brand_name TEXT NOT NULL DEFAULT '',
                 social_type TEXT NOT NULL DEFAULT '',
-                posts_per_day INTEGER NOT NULL DEFAULT 0
+                account_name TEXT NOT NULL DEFAULT '',
+                platform_account_id TEXT NOT NULL DEFAULT '',
+                profile_url TEXT NOT NULL DEFAULT '',
+                api_key TEXT NOT NULL DEFAULT '',
+                api_secret TEXT NOT NULL DEFAULT '',
+                access_token TEXT NOT NULL DEFAULT '',
+                refresh_token TEXT NOT NULL DEFAULT '',
+                posts_per_day INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                notes TEXT NOT NULL DEFAULT ''
             );
 
             CREATE TABLE IF NOT EXISTS generation_history (
@@ -189,6 +199,7 @@ def init_db():
         _ensure_column(connection, "backlinks", "title_max_characters", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "backlinks", "min_words", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "backlinks", "max_characters", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "backlinks", "domain_power", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "backlinks", "include_in_tier1", "INTEGER NOT NULL DEFAULT 1")
         _ensure_column(connection, "backlinks", "brand_topic_mode", "TEXT NOT NULL DEFAULT 'example'")
         _ensure_column(connection, "backlinks", "posts_per_day", "INTEGER NOT NULL DEFAULT 0")
@@ -196,7 +207,16 @@ def init_db():
         _ensure_column(connection, "backlinks", "content_guidelines", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "social_profiles", "brand_name", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "social_profiles", "social_type", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "account_name", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "platform_account_id", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "profile_url", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "api_key", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "api_secret", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "access_token", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "social_profiles", "refresh_token", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "social_profiles", "posts_per_day", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "social_profiles", "is_active", "INTEGER NOT NULL DEFAULT 1")
+        _ensure_column(connection, "social_profiles", "notes", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "brands", "brand_color", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "brands", "include_in_posting_planner", "INTEGER NOT NULL DEFAULT 0")
         _ensure_column(connection, "brands", "include_in_backlink_follow_up", "INTEGER NOT NULL DEFAULT 0")

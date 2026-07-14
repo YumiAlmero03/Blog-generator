@@ -1,4 +1,5 @@
 import json
+from app.services.ollama_web_search_service import append_web_research_context
 from prompts import build_backlink_title_prompt, build_title_prompt
 from utils import extract_json_string
 from logger import logger
@@ -99,6 +100,11 @@ def generate_titles(
         brand=brand,
         brand_context=brand_context,
         language=language,
+    )
+    prompt = append_web_research_context(
+        prompt,
+        " ".join(part for part in [brand, keyword, supporting_keyword] if part).strip(),
+        progress_callback=progress_callback,
     )
     return _generate_titles_from_prompt(provider, prompt, progress_callback=progress_callback)
 

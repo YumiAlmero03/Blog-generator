@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% set active_page = "social-scheduler" %}
+
+{% block title %}Social Scheduler{% endblock %}
+{% block eyebrow %}Auto Posting{% endblock %}
+{% block hero_title %}Social Scheduler{% endblock %}
+{% block hero_text %}Build the social account list and daily posting targets before connecting platform auto-posting APIs.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ success }}</div>
+      {% endif %}
+      {% if post_error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ post_error }}</div>
+      {% endif %}
+      {% if post_result %}
+        <div class="mb-5 rounded-2xl border border-moss-200 bg-moss-50 px-4 py-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-moss-700">{{ post_result.platform }} / {{ post_result.account_name }}</p>
+              <h2 class="mt-1 font-display text-2xl font-bold text-sand-950">Generated Social Post</h2>
+            </div>
+            <a href="/generation-history/{{ post_result.history_id }}" class="inline-flex min-h-10 items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-bold text-moss-800 ring-1 ring-moss-200 transition hover:bg-moss-100">Open History</a>
+          </div>
+          <p class="mt-4 whitespace-pre-wrap rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-sand-900">{{ post_result.post_content }}</p>
+          <div class="mt-3 grid gap-2 text-sm leading-6 text-sand-700">
+            <div><strong class="text-sand-950">Characters:</strong> {{ post_result.character_count }}/{{ post_result.character_limit }}</div>
+            <div><strong class="text-sand-950">Web search:</strong> {{ "Used" if post_result.web_search_used else "No context returned" }} for {{ post_result.web_search_query }}</div>
+            {% if post_result.reference_link %}
+              <div><strong class="text-sand-950">Link:</strong> <a href="{{ post_result.reference_link }}" target="_blank" rel="noopener noreferrer" class="break-all font-bold text-moss-700 underline decoration-moss-500/40 underline-offset-2">{{ post_result.reference_link }}</a></div>
+            {% endif %}
+            {% if post_result.tags %}
+              <div><strong class="text-sand-950">Tags:</strong> {{ post_result.tags|join(", ") }}</div>
+            {% endif %}
+            {% if post_result.image_description %}
+              <div><strong class="text-sand-950">Image idea:</strong> {{ post_result.image_description }}</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      <form method="post" class="grid gap-1">
+        <input type="hidden" name="action" value="save_profile" />
+        <input type="hidden" name="profile_id" value="{{ profile_id }}" />
+
+        <label for="brand_name" class="mb-2 block text-sm font-bold text-sand-900">Brand <span class="text-red-600">*</span></label>
+        <input id="brand_name" name="brand_name" type="text" list="socialBrandSuggestions" value="{{ brand_name }}" placeholder="Select saved brand" class="mb-4 min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="social_type" class="mb-2 block text-sm font-bold text-sand-900">Platform</label>
+        <select id="social_type" name="social_type" class="mb-4 min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+          {% for value, label in platform_options %}
+            <option value="{{ value }}" {% if social_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="account_name" class="mb-2 block text-sm font-bold text-sand-900">Account / Handle <span class="text-red-600">*</span></label>
+        <input id="account_name" name="account_name" type="text" value="{{ account_name }}" placeholder="@brand or Page name" class="mb-4 min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="platform_account_id" class="mb-2 block text-sm font-bold text-sand-900">Platform Account ID</label>
+        <input id="platform_account_id" name="platform_account_id" type="text" value="{{ platform_account_id }}" placeholder="Facebook Page ID, LinkedIn organization ID, etc." class="mb-4 min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="profile_url" class="mb-2 block text-sm font-bold text-sand-900">Profile URL</label>
+        <input id="profile_url" name="profile_url" type="url" value="{{ profile_url }}" placeholder="https://social.example/brand" class="mb-4 min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <div class="mb-4 rounded-2xl border border-sand-200 bg-sand-50/80 p-4">
+          <h2 class="text-sm font-bold text-sand-950">API Credentials</h2>
+          <div class="mt-4 grid gap-4">
+            <div>
+              <label for="api_key" class="mb-2 block text-sm font-bold text-sand-900">API Key</label>
+              <input id="api_key" name="api_key" type="password" autocomplete="off" value="{{ api_key }}" placeholder="Platform API key or client ID" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+            </div>
+            <div>
+              <label for="api_secret" class="mb-2 block text-sm font-bold text-sand-900">API Secret</label>
+              <input id="api_secret" name="api_secret" type="password" autocomplete="off" value="{{ api_secret }}" placeholder="Platform API secret or client secret" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+            </div>
+            <div>
+              <label for="access_token" class="mb-2 block text-sm font-bold text-sand-900">Access Token</label>
+              <input id="access_token" name="access_token" type="password" autocomplete="off" value="{{ access_token }}" placeholder="Posting access token" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+            </div>
+            <div>
+              <label for="refresh_token" class="mb-2 block text-sm font-bold text-sand-900">Refresh Token</label>
+              <input id="refresh_token" name="refresh_token" type="password" autocomplete="off" value="{{ refresh_token }}" placeholder="Refresh token when available" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+            </div>
+          </div>
+        </div>
+
+        <label for="posts_per_day" class="mb-2 block text-sm font-bold text-sand-900">Target Posts / Day</label>
+        <input id="posts_per_day" name="posts_per_day" type="number" min="0" value="{{ posts_per_day }}" class="mb-4 min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+        <label for="is_active" class="mb-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-sand-200 bg-sand-50/80 px-4 py-3 text-sm leading-6 text-sand-800">
+          <input id="is_active" name="is_active" type="checkbox" value="1" class="mt-1 h-4 w-4 rounded border-sand-400 text-sand-600 focus:ring-sand-500" {% if is_active %}checked{% endif %} />
+          <span>
+            <strong class="block text-sand-950">Active in scheduler</strong>
+            <span class="block text-sand-700">Count this account toward daily social posting targets.</span>
+          </span>
+        </label>
+
+        <label for="notes" class="mb-2 block text-sm font-bold text-sand-900">Notes</label>
+        <textarea id="notes" name="notes" rows="5" placeholder="Token status, content angle, approval notes, posting windows, or platform limits." class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ notes }}</textarea>
+
+        <div class="flex flex-wrap gap-2">
+          <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">
+            {% if profile_id %}Update Account{% else %}Save Account{% endif %}
+          </button>
+          {% if profile_id %}
+            <a href="/social-scheduler" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-100 px-5 py-3 text-sm font-bold text-sand-700 transition hover:bg-sand-200">Cancel</a>
+          {% endif %}
+        </div>
+      </form>
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="mb-5 grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
+        <div>
+          <label for="socialProfileFilter" class="mb-2 block text-sm font-bold text-sand-900">Filter accounts</label>
+          <input id="socialProfileFilter" type="search" placeholder="Search brand, platform, handle, URL, status, or notes" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold text-sand-800">
+          {{ profiles|length }} account{% if profiles|length != 1 %}s{% endif %} · {{ active_profile_count }} active · {{ total_daily_target }} target/day
+        </div>
+      </div>
+
+      {% if profiles %}
+        <div class="overflow-x-auto rounded-[22px] border border-sand-200 bg-white">
+          <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+            <thead class="bg-sand-100/80 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">
+              <tr>
+                <th class="px-4 py-3">Brand</th>
+                <th class="px-4 py-3">Platform</th>
+                <th class="px-4 py-3">Account</th>
+                <th class="px-4 py-3">Credentials</th>
+                <th class="px-4 py-3">Target</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Notes</th>
+                <th class="px-4 py-3">Post</th>
+                <th class="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="socialProfileRows" class="divide-y divide-sand-100">
+              {% for profile in profiles %}
+                {% set platform_label = platform_labels.get(profile.social_type, profile.social_type|replace('_', ' ')|title) %}
+                <tr class="align-top" data-social-profile-row data-social-profile-search="{{ [profile.brand_name, platform_label, profile.account_name, profile.profile_url, profile.notes, 'api key' if profile.api_key else '', 'api secret' if profile.api_secret else '', 'access token' if profile.access_token else '', 'refresh token' if profile.refresh_token else '', 'active' if profile.is_active else 'inactive']|join(' ')|lower }}">
+                  <td class="px-4 py-4 font-bold text-sand-950">{{ profile.brand_name }}</td>
+                  <td class="px-4 py-4 text-sand-700">{{ platform_label }}</td>
+                  <td class="px-4 py-4">
+                    <div class="font-bold text-sand-900">{{ profile.account_name }}</div>
+                    {% if profile.platform_account_id %}
+                      <div class="mt-1 text-xs font-bold text-sand-600">ID: {{ profile.platform_account_id }}</div>
+                    {% endif %}
+                    {% if profile.profile_url %}
+                      <a href="{{ profile.profile_url }}" target="_blank" rel="noopener noreferrer" class="mt-1 block max-w-[260px] break-all text-xs font-bold text-moss-700 underline decoration-moss-500/40 underline-offset-2 hover:text-moss-500">{{ profile.profile_url }}</a>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="grid min-w-[150px] gap-1 text-xs font-bold text-sand-700">
+                      <span>Key: {{ masked_secret(profile.api_key) or "Not set" }}</span>
+                      <span>Secret: {{ masked_secret(profile.api_secret) or "Not set" }}</span>
+                      <span>Access: {{ masked_secret(profile.access_token) or "Not set" }}</span>
+                      <span>Refresh: {{ masked_secret(profile.refresh_token) or "Not set" }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="inline-flex min-w-10 justify-center rounded-full bg-moss-100 px-3 py-1 text-sm font-bold text-moss-700">{{ profile.posts_per_day or 0 }}</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    {% if profile.is_active %}
+                      <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-green-700">Active</span>
+                    {% else %}
+                      <span class="inline-flex rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-sand-600">Inactive</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-4 text-sand-700">
+                    {% if profile.notes %}
+                      <div class="max-w-[320px] whitespace-pre-wrap leading-6">{{ profile.notes }}</div>
+                    {% else %}
+                      <span class="text-sand-400">No notes</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-4">
+                    <a href="/generated-social-post?profile_id={{ profile.id }}" class="inline-flex min-h-10 w-fit items-center justify-center rounded-full bg-moss-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-moss-800">Post</a>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex min-w-[140px] flex-wrap gap-2">
+                      <a href="/social-scheduler?edit={{ profile.id }}" class="inline-flex min-h-9 items-center rounded-full bg-sand-100 px-3 py-2 text-xs font-bold text-sand-700 transition hover:bg-sand-200">Edit</a>
+                      <form method="post" onsubmit="return confirm('Delete this social account?');">
+                        <input type="hidden" name="action" value="delete_profile" />
+                        <input type="hidden" name="profile_id" value="{{ profile.id }}" />
+                        <button type="submit" class="inline-flex min-h-9 items-center rounded-full bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100">Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div id="socialProfileEmpty" class="mt-4 hidden rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          No social accounts match that filter.
+        </div>
+      {% else %}
+        <div class="rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          Add your first social account to start building the scheduler.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <datalist id="socialBrandSuggestions">
+    {% for item in brand_names %}
+      <option value="{{ item }}"></option>
+    {% endfor %}
+  </datalist>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const socialProfileFilter = document.getElementById("socialProfileFilter");
+    const socialProfileRows = Array.from(document.querySelectorAll("[data-social-profile-row]"));
+    const socialProfileEmpty = document.getElementById("socialProfileEmpty");
+
+    function updateSocialProfileFilter() {
+      const query = socialProfileFilter ? socialProfileFilter.value.trim().toLowerCase() : "";
+      let visibleCount = 0;
+      socialProfileRows.forEach((row) => {
+        const isVisible = !query || row.dataset.socialProfileSearch.includes(query);
+        row.classList.toggle("hidden", !isVisible);
+        if (isVisible) {
+          visibleCount += 1;
+        }
+      });
+      if (socialProfileEmpty) {
+        socialProfileEmpty.classList.toggle("hidden", visibleCount !== 0);
+      }
+    }
+
+    if (socialProfileFilter) {
+      socialProfileFilter.addEventListener("input", updateSocialProfileFilter);
+    }
+  </script>
+{% endblock %}

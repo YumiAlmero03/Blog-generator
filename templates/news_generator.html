@@ -21,6 +21,10 @@
 {% block hero_text %}Enter a keyword for today's event, choose a title, then generate meta descriptions, visual directions, content, and tags with separate news-focused prompts.{% endblock %}
 
 {% block content %}
+  {% set floating_keyword_selector = "#keyword" %}
+  {% set floating_brand_selector = "#brand" %}
+  {% set floating_language_selector = "#language" %}
+  {% include "_floating_generation_status.html" %}
   <div class="grid gap-6">
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if error %}
@@ -30,7 +34,8 @@
         <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
       {% endif %}
 
-      <form method="post" id="titlesForm" data-loading-message="Generating current news titles..." data-background-submit class="grid gap-1">
+      <form method="post" id="titlesForm" data-loading-message="Generating current news titles..." data-inline-loading data-inline-status-target="#newsGenerationStatus" data-inline-error-target="#newsGenerationError" data-inline-actions-target="#newsGenerationActions" data-background-submit class="grid gap-1">
+        <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
         <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 1</span>
         <h2 class="mb-4 font-display text-3xl text-sand-950">Generate News Titles</h2>
 
@@ -64,6 +69,9 @@
                     <div class="mt-1 font-semibold text-red-700">{{ item.error }}</div>
                   {% elif item.character_count %}
                     <div class="mt-1 font-semibold text-moss-800">{{ item.character_count }} readable character(s) extracted.</div>
+                    {% if item.fetch_method %}
+                      <div class="mt-1 text-xs font-bold uppercase tracking-[0.08em] text-sand-600">Reader: {{ item.fetch_method }}</div>
+                    {% endif %}
                   {% endif %}
                 </div>
               {% endfor %}
@@ -98,6 +106,7 @@
           <option value="neutral" {% if tone == 'neutral' %}selected{% endif %}>Neutral</option>
           <option value="explainer" {% if tone == 'explainer' %}selected{% endif %}>Explainer</option>
           <option value="professional" {% if tone == 'professional' %}selected{% endif %}>Professional</option>
+          <option value="promotional" {% if tone == 'promotional' %}selected{% endif %}>Promotional</option>
         </select>
 
         <label for="count" class="mb-2 block text-sm font-bold text-sand-900">Number of Titles</label>
@@ -108,12 +117,19 @@
 
         <input type="hidden" name="action" value="generate_titles" />
         <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if titles %}Regenerate Titles{% else %}Generate Titles{% endif %}</button>
+        <p id="newsGenerationStatus" class="mt-3 hidden text-sm font-bold leading-6 text-moss-700"></p>
+        <p id="newsGenerationError" class="mt-2 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+        <div id="newsGenerationActions" class="mt-2 hidden">
+          <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100" data-loading-stop>Skip Generating</button>
+        </div>
+        {% include "_generation_log.html" %}
       </form>
     </section>
 
     {% if titles %}
       <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-        <form method="post" id="contentForm" data-loading-message="Generating news pieces..." data-background-submit class="grid gap-6">
+        <form method="post" id="contentForm" data-loading-message="Generating news pieces..." data-inline-loading data-inline-status-target="#newsGenerationStatus" data-inline-error-target="#newsGenerationError" data-inline-actions-target="#newsGenerationActions" data-background-submit class="grid gap-6">
+          <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <span class="mb-2 inline-flex w-fit items-center rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">Step 2</span>
@@ -143,6 +159,9 @@
                       <div class="mt-1 font-semibold text-red-700">{{ item.error }}</div>
                     {% elif item.character_count %}
                       <div class="mt-1 font-semibold text-moss-800">{{ item.character_count }} readable character(s) extracted.</div>
+                      {% if item.fetch_method %}
+                        <div class="mt-1 text-xs font-bold uppercase tracking-[0.08em] text-sand-600">Reader: {{ item.fetch_method }}</div>
+                      {% endif %}
                     {% endif %}
                   </div>
                 {% endfor %}
@@ -152,12 +171,20 @@
 
           <div>
             <h3 class="mb-4 font-display text-2xl text-sand-950">Select Title <span class="text-red-600">*</span></h3>
-            <p class="mb-4 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Choose the exact title first. The selected title and SEO keywords below are what the article generator will use.</p>
+            <p class="mb-4 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Choose or write the exact title first. The selected title and SEO keywords below are what the article generator will use.</p>
+            <div class="mb-4 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4">
+              <label for="customTitleRadio" class="mb-3 flex cursor-pointer items-center gap-3 text-sm font-bold text-sand-900">
+                <input id="customTitleRadio" name="selected_title" type="radio" value="{{ custom_title }}" class="h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if custom_title %}checked{% endif %} />
+                <span>Use custom title</span>
+              </label>
+              <label for="customTitleInput" class="mb-2 block text-sm font-bold text-sand-900">Custom title</label>
+              <input id="customTitleInput" name="custom_title" type="text" value="{{ custom_title }}" placeholder="Write your own news title instead of using one below" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+            </div>
             <ul class="grid gap-3">
               {% for title in titles %}
                 <li>
                   <label for="title_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
-                    <input id="title_{{ loop.index }}" name="selected_title" type="radio" value="{{ title }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if selected_title == title %}checked{% endif %} />
+                    <input id="title_{{ loop.index }}" name="selected_title" type="radio" value="{{ title }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if selected_title == title or (not selected_title and not custom_title and loop.first) %}checked{% endif %} />
                     <span class="text-sm font-semibold leading-6 text-sand-900">{{ title }}</span>
                   </label>
                 </li>
@@ -213,6 +240,19 @@
                 <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ meta_descriptions|length }} Options</span>
               </div>
               <ul class="grid gap-3">
+                <li>
+                  <label for="meta_none" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
+                    <input
+                      type="radio"
+                      id="meta_none"
+                      name="meta_description_choice"
+                      value=""
+                      class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500"
+                      {% if not meta_description %}checked{% endif %}
+                    />
+                    <span class="block text-sm font-semibold leading-6 text-sand-900">No meta description</span>
+                  </label>
+                </li>
                 {% for meta_desc in meta_descriptions %}
                   <li>
                     <label for="meta_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
@@ -222,7 +262,7 @@
                         name="meta_description_choice"
                         value="{{ meta_desc.text }}"
                         class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500"
-                        {% if meta_description == meta_desc.text or (not meta_description and loop.first) %}checked{% endif %}
+                        {% if meta_description == meta_desc.text %}checked{% endif %}
                       />
                       <span class="block">
                         <span class="block text-sm font-semibold leading-6 text-sand-900">{{ meta_desc.text }}</span>

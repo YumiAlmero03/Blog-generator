@@ -1,7 +1,9 @@
+{% import "_components.html" as ui %}
+
 <div class="mt-5 rounded-[22px] border border-sand-200 bg-sand-50/80 p-4">
   <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
     <h2 class="text-sm font-bold uppercase tracking-[0.12em] text-sand-700">Generation Log</h2>
-    <button type="button" class="inline-flex min-h-9 items-center justify-center rounded-full border border-sand-200 bg-white px-3 py-2 text-xs font-bold text-sand-700 transition hover:bg-sand-100" data-generation-log-clear>Clear Log</button>
+    {{ ui.button("Clear Log", variant="secondary", size="sm", attrs="data-generation-log-clear") }}
   </div>
   <div class="max-h-[360px] overflow-auto rounded-2xl border border-sand-200 bg-white px-4 py-4 text-xs leading-5 text-sand-800" data-generation-log='{{ generation_log | default([]) | tojson }}'>
     {% if generation_log %}

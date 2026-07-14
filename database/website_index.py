@@ -159,7 +159,7 @@ def website_index_stats() -> dict:
     }
 
 
-def list_due_website_index_urls(hours: float = 10 / 60) -> list[dict]:
+def list_due_website_index_urls(hours: float = 0.5) -> list[dict]:
     cutoff = datetime.now(timezone.utc) - timedelta(hours=max(0.1, hours))
     cutoff_text = cutoff.isoformat(timespec="seconds")
     with get_connection() as connection:
@@ -168,6 +168,29 @@ def list_due_website_index_urls(hours: float = 10 / 60) -> list[dict]:
             SELECT *
             FROM website_index_urls
             WHERE COALESCE(google_status, '') <> 'indexed'
+              AND (
+                TRIM(COALESCE(last_checked_at, '')) = ''
+                OR last_checked_at <= ?
+              )
+            ORDER BY
+                CASE WHEN TRIM(COALESCE(last_checked_at, '')) = '' THEN 0 ELSE 1 END,
+                last_checked_at,
+                id
+            """,
+            (cutoff_text,),
+        ).fetchall()
+        return [row_to_dict(row) for row in rows]
+
+
+def list_due_website_index_submission_urls(hours: float = 24) -> list[dict]:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max(0.1, hours))
+    cutoff_text = cutoff.isoformat(timespec="seconds")
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM website_index_urls
+            WHERE google_status = 'not-indexed'
               AND (
                 TRIM(COALESCE(last_checked_at, '')) = ''
                 OR last_checked_at <= ?

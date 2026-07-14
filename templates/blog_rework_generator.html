@@ -21,6 +21,11 @@
 {% block hero_text %}Paste one blog link or paste source content, then generate a reworked title, meta description, keywords, visual image ideas, tags, and article content in one run.{% endblock %}
 
 {% block content %}
+  {% set floating_keyword_label = "Keywords / Source" %}
+  {% set floating_keyword_selector = "#manual_supporting_keywords, #source_url" %}
+  {% set floating_brand_selector = "#brand" %}
+  {% set floating_language_selector = "#language" %}
+  {% include "_floating_generation_status.html" %}
   <div class="grid gap-6">
     <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
       {% if error %}
@@ -30,9 +35,10 @@
         <div class="mb-5 rounded-2xl bg-moss-100 px-4 py-3 text-sm font-semibold text-moss-800">{{ success }}</div>
       {% endif %}
 
-      <form method="post" id="blogReworkSourceForm" data-loading-message="Reworking source blog..." data-background-submit class="grid gap-5">
+      <form method="post" id="blogReworkSourceForm" data-loading-message="Reworking source blog..." data-inline-loading data-inline-status-target="#blogReworkGenerationStatus" data-inline-error-target="#blogReworkGenerationError" data-inline-actions-target="#blogReworkGenerationActions" data-background-submit class="grid gap-5">
         <input type="hidden" name="action" value="generate_rework" />
         <input type="hidden" id="sourceContentHtmlInput" name="source_content_html" value="{{ source_content | e }}" />
+        <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
 
         <div>
           <label for="source_url" class="mb-2 block text-sm font-bold text-sand-900">Blog Link</label>
@@ -74,6 +80,7 @@
               <option value="natural" {% if tone == 'natural' %}selected{% endif %}>Natural</option>
               <option value="professional" {% if tone == 'professional' %}selected{% endif %}>Professional</option>
               <option value="friendly" {% if tone == 'friendly' %}selected{% endif %}>Friendly</option>
+              <option value="promotional" {% if tone == 'promotional' %}selected{% endif %}>Promotional</option>
             </select>
           </div>
           <div>
@@ -87,6 +94,12 @@
         </div>
 
         <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if content %}Rework Again{% else %}Rework Blog{% endif %}</button>
+        <p id="blogReworkGenerationStatus" class="hidden text-sm font-bold leading-6 text-moss-700"></p>
+        <p id="blogReworkGenerationError" class="hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+        <div id="blogReworkGenerationActions" class="hidden">
+          <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100" data-loading-stop>Skip Generating</button>
+        </div>
+        {% include "_generation_log.html" %}
       </form>
     </section>
 
@@ -110,6 +123,7 @@
           <input type="hidden" id="contentHtmlInput" name="content_html" value="" />
           <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />
           <input type="hidden" name="tags_json" value='{{ tag_suggestions | tojson }}' />
+          <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
           <input type="radio" name="selected_title" value="{{ selected_title }}" checked class="hidden" aria-hidden="true" />
           <input type="radio" name="meta_description_choice" value="{{ meta_description }}" checked class="hidden" aria-hidden="true" />
 

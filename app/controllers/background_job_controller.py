@@ -3,6 +3,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 from app.controllers.helpers import base_template_context
 from app.services.background_job_service import background_job_stats, get_background_job, list_background_jobs, start_background_post
+from app.services.scheduled_job_service import list_scheduled_jobs
 from logger import logger
 
 
@@ -46,12 +47,13 @@ def background_jobs_dashboard():
         **base_template_context(),
         jobs=jobs,
         stats=background_job_stats(jobs),
+        scheduled_jobs=list_scheduled_jobs(),
     )
 
 
 def background_jobs_dashboard_data():
     jobs = list_background_jobs()
-    return jsonify({"jobs": jobs, "stats": background_job_stats(jobs)})
+    return jsonify({"jobs": jobs, "stats": background_job_stats(jobs), "scheduled_jobs": list_scheduled_jobs()})
 
 
 def _background_file_data() -> dict[str, list[dict]]:

@@ -5,6 +5,7 @@ from flask import render_template, request
 
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
+from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.locale_settings import (
     country_options,
@@ -15,7 +16,7 @@ from app.services.locale_settings import (
     normalize_language,
 )
 from app.services.provider_service import generation_error_message, get_provider
-from app.services.reference_link_service import fetch_reference_context
+from app.services.reference_link_service import fetch_reference_context, merge_reference_context_parts
 from app.services.word_limit_settings import get_blog_word_limits
 from database import get_brand_context, get_generation_history_item, list_brand_names, list_checklist_items, record_generation, upsert_brand
 from generators.content_generator import count_html_words
@@ -28,6 +29,9 @@ from generators.news_generator import (
 )
 from logger import logger
 from prompts.news import current_news_date
+
+
+NEWS_REFERENCE_CONTENT_TAGS = ("p", "h1", "h2", "h3", "table")
 
 
 TARGET_COUNTRIES = [
@@ -166,6 +170,7 @@ def news_generator():
     state["language_options"] = language_options(state["language"])
     state["target_countries"] = country_options(state["target_country"])
     state["reference_fetch_summary"] = _reference_fetch_summary(state.get("reference_fetches", []))
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("news_generator.html", **base_template_context(), **state)
 
 
@@ -184,6 +189,7 @@ def _initial_state() -> dict:
         "count": 10,
         "titles": [],
         "selected_title": "",
+        "custom_title": "",
         "meta_descriptions": [],
         "meta_description": "",
         "content": "",
@@ -197,6 +203,8 @@ def _initial_state() -> dict:
         "success": None,
         "step": "title",
         "history_id": "",
+        "generation_log": [],
+        "generation_log_json": "[]",
         "brand_names": list_brand_names(),
         "current_date": current_news_date(),
         "content_checklist_items": list_checklist_items("blog", active_only=True),
@@ -211,6 +219,8 @@ def _handle_generate_titles(state: dict) -> None:
     state["target_country"] = _target_country_from_request()
     state["links"] = _extract_reference_links_from_request()
     state["tone"] = request.form.get("tone", "news").strip() or "news"
+    state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
     count_raw = request.form.get("count", "10").strip()
 
     if not state["keyword"]:
@@ -229,7 +239,7 @@ def _handle_generate_titles(state: dict) -> None:
     try:
         provider = get_provider()
         brand_context = get_brand_context(state["brand"])
-        progress = _progress_callback("News Title", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("News Title", request.form.get("generation_status_token", ""), state["generation_log"])
         reference_context = _reference_context_for_state(state, progress)
         if state["error"]:
             return
@@ -261,6 +271,7 @@ def _handle_generate_titles(state: dict) -> None:
         progress("News titles passed validation.")
     except Exception as exc:
         logger.exception("generate_news_titles action failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
         state["error"] = generation_error_message(
             "An error occurred while generating news titles. Check logs/app.log for details.",
             exc,
@@ -280,7 +291,7 @@ def _handle_generate_all(state: dict) -> None:
             upsert_brand(state["brand"])
         brand_context = get_brand_context(state["brand"])
         min_words, max_words = get_blog_word_limits()
-        progress = _progress_callback("News", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("News", request.form.get("generation_status_token", ""), state["generation_log"])
         reference_context = _reference_context_for_state(state, progress)
         if state["error"]:
             return
@@ -305,7 +316,6 @@ def _handle_generate_all(state: dict) -> None:
 
         if state["meta_descriptions"]:
             progress("Reusing existing meta descriptions.")
-            state["meta_description"] = state["meta_description"] or state["meta_descriptions"][0].get("text", "")
         else:
             try:
                 progress("Generating 3 meta descriptions...")
@@ -323,7 +333,7 @@ def _handle_generate_all(state: dict) -> None:
                     language=state["language"],
                     progress_callback=progress,
                 )
-                state["meta_description"] = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+                state["meta_description"] = ""
             except Exception as exc:
                 logger.warning("news meta generation skipped after content success: %s", exc)
                 progress("Meta descriptions could not be generated, continuing with the article.")
@@ -376,6 +386,7 @@ def _handle_generate_all(state: dict) -> None:
         state["step"] = "content"
     except Exception as exc:
         logger.exception("generate_all_news action failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
         state["error"] = generation_error_message(
             "An error occurred while generating the news article. Check logs/app.log for details.",
             exc,
@@ -395,7 +406,7 @@ def _handle_generate_news_piece(state: dict, action: str) -> None:
             upsert_brand(state["brand"])
         brand_context = get_brand_context(state["brand"])
         min_words, max_words = get_blog_word_limits()
-        progress = _progress_callback("News", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("News", request.form.get("generation_status_token", ""), state["generation_log"])
         reference_context = _reference_context_for_state(state, progress)
         if state["error"]:
             return
@@ -416,7 +427,7 @@ def _handle_generate_news_piece(state: dict, action: str) -> None:
                 language=state["language"],
                 progress_callback=progress,
             )
-            state["meta_description"] = state["meta_descriptions"][0].get("text", "") if state["meta_descriptions"] else ""
+            state["meta_description"] = ""
             state["step"] = "content"
             clear_generation_status(request.form.get("generation_status_token", ""))
             return
@@ -487,6 +498,7 @@ def _handle_generate_news_piece(state: dict, action: str) -> None:
         state["step"] = "content"
     except Exception as exc:
         logger.exception("generate_news_piece action failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
         state["error"] = generation_error_message(
             "An error occurred while generating the news piece. Check logs/app.log for details.",
             exc,
@@ -531,12 +543,15 @@ def _load_history_item(state: dict, history_id: int) -> None:
     state["tone"] = prompt_inputs.get("tone", state["tone"])
     state["titles"] = [item.get("title", "")] if item.get("title") else []
     state["selected_title"] = item.get("title", "") or ""
+    state["custom_title"] = ""
     state["meta_description"] = item.get("meta_description", "") or ""
     state["meta_descriptions"] = [{"text": state["meta_description"], "character_count": len(state["meta_description"])}] if state["meta_description"] else []
     state["content"] = item.get("content", "") or ""
     state["visual"] = prompt_inputs.get("visual", "") or ""
     state["links"] = prompt_inputs.get("links", [])
     state["reference_fetches"] = prompt_inputs.get("reference_fetches", [])
+    state["generation_log"] = parse_generation_log(prompt_inputs.get("generation_log", []))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
     state["quality_report"] = _loads(item.get("quality_report", "{}"))
     state["tag_suggestions"] = [tag.strip() for tag in (item.get("tags", "") or "").split(",") if tag.strip()]
     state["step"] = "content"
@@ -550,7 +565,8 @@ def _load_history_item(state: dict, history_id: int) -> None:
 
 
 def _hydrate_news_state(state: dict) -> None:
-    state["selected_title"] = request.form.get("selected_title", "").strip()
+    state["custom_title"] = request.form.get("custom_title", "").strip()
+    state["selected_title"] = state["custom_title"] or request.form.get("selected_title", "").strip()
     state["keyword"] = request.form.get("keyword", "").strip()
     state["focus_keyword"] = request.form.get("focus_keyword", "").strip() or _default_focus_keyword(state["keyword"])
     state["supporting_keywords"] = request.form.get("supporting_keywords", "").strip()
@@ -567,6 +583,8 @@ def _hydrate_news_state(state: dict) -> None:
     state["titles"] = _json_list(request.form.get("titles_json", "").strip())
     state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
     state["tag_suggestions"] = _tags_from_raw(request.form.get("tags_json", "").strip())
+    state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
 
     selected_meta_description = request.form.get("meta_description_choice", "").strip()
     if state["meta_descriptions"]:
@@ -574,7 +592,7 @@ def _hydrate_news_state(state: dict) -> None:
             (item for item in state["meta_descriptions"] if item.get("text", "").strip() == selected_meta_description),
             None,
         )
-        state["meta_description"] = (selected_match or state["meta_descriptions"][0]).get("text", "")
+        state["meta_description"] = selected_match.get("text", "") if selected_match else ""
     else:
         state["meta_description"] = selected_meta_description
 
@@ -618,6 +636,7 @@ def _record_completed_news(state: dict, min_words: int, max_words: int) -> None:
             "reference_fetches": state["reference_fetches"],
             "current_date": state["current_date"],
             "news_generator": True,
+            "generation_log": state.get("generation_log", []),
         },
         content=state["content"],
         quality_report=state["quality_report"],
@@ -695,8 +714,14 @@ def _reference_context_for_state(state: dict, progress) -> str:
         fetched_count = len([item for item in state["reference_fetches"] if item.get("status") == "fetched"])
         progress(f"Reusing {fetched_count} cached reference link(s).")
         return cached_context
-    progress(f"Fetching {len(state['links'])} reference link(s)...")
-    reference_context, fetched = fetch_reference_context(state["links"])
+    progress(f"Fetching {len(state['links'])} reference link(s) with normal reader and browser fallback...")
+    reference_context, fetched = fetch_reference_context(
+        state["links"],
+        use_browser=True,
+        browser_wait_seconds=2,
+        content_tags=NEWS_REFERENCE_CONTENT_TAGS,
+        merge_context=True,
+    )
     state["reference_fetches"] = fetched
     fetched_count = len([item for item in fetched if item.get("status") == "fetched"])
     if fetched_count == 0:
@@ -727,10 +752,13 @@ def _reference_context_from_cached_fetches(links: list[dict], fetched: list[dict
     for index, url in enumerate(requested_urls, start=1):
         item = fetched_by_url[url]
         source_label = item.get("source_label") or item.get("text") or item.get("title") or item.get("url")
-        context_parts.append(
-            f"Reference {index}: {source_label}\nURL: {item.get('url')}\nExtracted content:\n{item.get('excerpt')}"
-        )
-    return "\n\n---\n\n".join(context_parts).strip()
+        context_parts.append({
+            "index": index,
+            "source_label": source_label,
+            "url": item.get("url"),
+            "excerpt": item.get("excerpt"),
+        })
+    return merge_reference_context_parts(context_parts)
 
 
 def _reference_fetch_summary(fetched: list[dict]) -> dict | None:
@@ -863,10 +891,12 @@ _KEYWORD_STOP_WORDS = {
 }
 
 
-def _progress_callback(label: str, token: str):
+def _progress_callback(label: str, token: str, log_entries: list[dict] | None = None):
     cleaned_label = (label or "Generation").strip()
 
     def publish(message: str, kind: str = "status"):
+        if log_entries is not None:
+            append_generation_log(log_entries, kind, message)
         if kind == "prompt":
             publish_generation_prompt(token, message)
             return

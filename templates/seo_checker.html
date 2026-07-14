@@ -9,6 +9,7 @@
 {% block content %}
   <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
     <form method="post" data-loading-message="Listing pages and running SEO checks..." data-inline-loading data-inline-status-target="#seoCheckerStatus" data-inline-error-target="#seoCheckerError" data-background-submit class="grid gap-4 lg:grid-cols-[1fr_160px_auto] lg:items-end">
+      <textarea name="generation_log_json" class="hidden-form lg:col-span-3" aria-hidden="true">{{ generation_log_json | e }}</textarea>
       <div>
         <label for="url" class="mb-2 block text-sm font-bold text-sand-900">Website URL <span class="text-red-600">*</span></label>
         <input
@@ -47,6 +48,7 @@
     </form>
     <p id="seoCheckerStatus" class="mt-4 hidden text-sm font-bold leading-6 text-moss-700"></p>
     <p id="seoCheckerError" class="mt-3 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+    {% include "_generation_log.html" %}
 
     {% if error %}
       <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>

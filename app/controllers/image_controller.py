@@ -12,6 +12,9 @@ from app.services.image_service import (
     apply_logo_watermark,
     calculate_output_dimensions,
     crop_image_to_box,
+    format_file_size,
+    normalize_image_quality,
+    save_optimized_image,
     save_uploaded_image,
 )
 
@@ -24,6 +27,8 @@ def image_tools():
         "source_image_name": "",
         "result_image_url": "",
         "result_download_name": "",
+        "result_file_size": "",
+        "result_original_file_size": "",
         "error": None,
         "success": None,
         "pixel_width": "800",
@@ -34,6 +39,8 @@ def image_tools():
         "logo_scale": "20",
         "output_filename": "watermarked-image",
         "output_format": "webp",
+        "optimize_image": True,
+        "image_quality": "82",
         "crop_x": "0",
         "crop_y": "0",
         "crop_width": "",
@@ -63,6 +70,7 @@ def _handle_image_tools_post(state: dict):
         ("logo_scale", "20"),
         ("output_filename", "watermarked-image"),
         ("output_format", "webp"),
+        ("image_quality", "82"),
         ("crop_x", "0"),
         ("crop_y", "0"),
         ("crop_width", ""),
@@ -75,6 +83,8 @@ def _handle_image_tools_post(state: dict):
         state[key] = request.form.get(key, default).strip() or default
 
     state["output_format"] = state["output_format"].lower()
+    state["image_quality"] = str(normalize_image_quality(state["image_quality"]))
+    state["optimize_image"] = request.form.get("optimize_image") == "1"
     state["use_watermark"] = request.form.get("use_watermark") == "1"
     saved_source_image = request.form.get("saved_source_image", "").strip()
 
@@ -107,6 +117,7 @@ def _handle_image_tools_post(state: dict):
         source_path = IMAGE_TOOL_DIR / source_filename
         if not source_path.exists():
             raise ValueError("The last uploaded image could not be found. Please upload it again.")
+        source_size = source_path.stat().st_size
 
         state["source_image_name"] = Path(source_filename).name
         state["source_image_url"] = image_url(f"image_tools/{source_filename}")
@@ -151,15 +162,20 @@ def _handle_image_tools_post(state: dict):
 
             output_name = f"{clean_base_name}.{normalized_format}"
             output_path = IMAGE_TOOL_DIR / output_name
-            save_format = "JPEG" if normalized_format == "jpg" else normalized_format.upper()
-            save_kwargs = {"format": save_format}
-            if save_format in {"JPEG", "WEBP", "AVIF"}:
-                save_kwargs["quality"] = 92
-            working_image.save(output_path, **save_kwargs)
+            save_optimized_image(
+                working_image,
+                output_path,
+                normalized_format,
+                quality=normalize_image_quality(state["image_quality"]),
+                optimize=state["optimize_image"],
+            )
 
         state["result_image_url"] = image_url(f"image_tools/{output_name}")
         state["result_download_name"] = f"{clean_base_name}.{normalized_format}"
-        state["success"] = f"Image processed as {state['result_download_name']}."
+        output_size = output_path.stat().st_size
+        state["result_file_size"] = format_file_size(output_size)
+        state["result_original_file_size"] = format_file_size(source_size)
+        state["success"] = f"Image processed as {state['result_download_name']} ({state['result_file_size']})."
     except ImportError:
         state["error"] = "Image processing needs Pillow. Install it with: pip install pillow"
     except ValueError as exc:

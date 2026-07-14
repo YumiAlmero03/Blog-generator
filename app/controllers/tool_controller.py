@@ -9,7 +9,7 @@ from flask import Response, redirect, render_template, request, url_for
 from urllib.parse import urlparse
 
 from app.controllers.helpers import base_template_context
-from app.services.document_service import build_docx_response
+from app.services.document_service import build_docx_response, build_gsc_summary_report_response, build_website_planner_report_response, extract_docx_website_reference
 from app.services.indexnow_service import (
     DEFAULT_INDEXNOW_ENDPOINT,
     GOOGLE_INDEXING_ENDPOINT,
@@ -40,11 +40,12 @@ from app.services.provider_service import generation_error_message, get_provider
 from app.services.reference_link_service import fetch_url_html, fetch_url_rendered_html
 from app.services.seo_checker_service import run_seo_audit
 from app.services.generation_status_service import publish_generation_prompt, publish_generation_status
+from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.website_page_discovery_service import discover_website_pages
-from app.services.website_index_scheduler import trigger_website_index_batch
+from app.services.website_index_scheduler import submit_website_index_urls_to_indexnow, trigger_website_index_batch
 from app.services.website_planner_service import DEFAULT_KEYWORD_CATEGORIES, build_website_plan, get_main_pages_setting, get_trust_pages_setting, parse_keyword_categories
 from database import get_brand_context, get_brand_record, get_setting, list_backlinks, list_brand_names, list_brand_records, set_setting
-from database import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
+from database import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 from logger import logger
 
 
@@ -142,6 +143,14 @@ def context_planner():
 def website_planner():
     default_keyword_categories = list(DEFAULT_KEYWORD_CATEGORIES)
     state = {
+        "planner_client": "",
+        "planner_domain": "",
+        "planner_target_market": "",
+        "planner_language": "English",
+        "planner_site_type": "",
+        "planner_reference_content": "",
+        "planner_reference_filename": "",
+        "planner_reference_pages": [],
         "page_count": 5,
         "trust_page_count": 3,
         "blog_count": 10,
@@ -151,9 +160,17 @@ def website_planner():
         "main_pages_text": get_main_pages_setting(),
         "trust_pages_text": get_trust_pages_setting(),
         "plan": None,
+        "plan_json": "",
+        "generation_log": [],
+        "generation_log_json": "[]",
         "error": None,
     }
     if request.method == "POST":
+        for key in ("planner_client", "planner_domain", "planner_target_market", "planner_language", "planner_site_type", "planner_reference_content", "planner_reference_filename"):
+            state[key] = request.form.get(key, "").strip()
+        state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+        state["generation_log_json"] = generation_log_json(state["generation_log"])
+        append_generation_log(state["generation_log"], "status", "Website Planner: Starting plan build.")
         state["page_count"] = _planner_count(request.form.get("page_count", "5"), 5)
         state["trust_page_count"] = _planner_count(request.form.get("trust_page_count", "3"), 3)
         state["blog_count"] = _planner_count(request.form.get("blog_count", "10"), 10)
@@ -163,19 +180,57 @@ def website_planner():
         state["selected_keyword_categories"] = _merge_planner_categories(selected_categories, custom_categories)
         state["keyword_categories"] = _merge_planner_categories(default_keyword_categories, custom_categories)
         try:
+            reference_upload = request.files.get("planner_reference_file")
+            if reference_upload and reference_upload.filename:
+                reference = extract_docx_website_reference(reference_upload)
+                state["planner_reference_content"] = reference["text"]
+                state["planner_reference_filename"] = reference_upload.filename
+                state["planner_reference_pages"] = reference["pages"]
+                append_generation_log(state["generation_log"], "status", f"Read reference file: {reference_upload.filename}.")
+                if state["planner_reference_pages"]:
+                    append_generation_log(state["generation_log"], "status", f"Extracted {len(state['planner_reference_pages'])} page(s) from DOCX Heading 1/Page sections.")
+                else:
+                    append_generation_log(state["generation_log"], "status", "No DOCX Heading 1/Page sections found. Using Settings main pages.")
             state["plan"] = build_website_plan(
                 state["main_pages_text"],
                 state["trust_pages_text"],
-                page_count=state["page_count"],
+                page_count=len(state["planner_reference_pages"]) if state["planner_reference_pages"] else state["page_count"],
                 trust_page_count=state["trust_page_count"],
                 blog_count=state["blog_count"],
                 keyword_categories_text=state["selected_keyword_categories"],
                 brand_names=list_brand_names(),
             )
+            if state["planner_reference_pages"]:
+                state["plan"]["main_pages"] = _planner_reference_page_items(state["planner_reference_pages"])
+                state["plan"]["summary"]["main_pages"] = len(state["plan"]["main_pages"])
+                state["plan"]["summary"]["total"] = state["plan"]["summary"]["main_pages"] + state["plan"]["summary"]["trust_pages"] + state["plan"]["summary"]["blogs"]
+                state["page_count"] = len(state["plan"]["main_pages"])
+                append_generation_log(state["generation_log"], "status", "Using uploaded DOCX pages as the core page list.")
+            append_generation_log(state["generation_log"], "status", f"Plan created: {state['plan']['summary']['main_pages']} core page(s), {state['plan']['summary']['trust_pages']} trust page(s), {state['plan']['summary']['blogs']} blog topic(s).")
+            state["plan_json"] = json.dumps(state["plan"], ensure_ascii=True)
         except Exception as exc:
             logger.exception("website planner failed")
+            append_generation_log(state["generation_log"], "error", str(exc) or "Could not create the website plan.")
             state["error"] = str(exc) or "Could not create the website plan."
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("website_planner.html", **base_template_context(), **state)
+
+
+def download_website_planner_report():
+    plan = _json_dict(request.form.get("plan_json", ""))
+    if not plan:
+        return redirect(url_for("web.website_planner"))
+    metadata = {
+        "client": request.form.get("planner_client", "").strip(),
+        "domain": request.form.get("planner_domain", "").strip(),
+        "target_market": request.form.get("planner_target_market", "").strip(),
+        "language": request.form.get("planner_language", "").strip(),
+        "site_type": request.form.get("planner_site_type", "").strip(),
+        "reference_content": request.form.get("planner_reference_content", "").strip(),
+        "reference_filename": request.form.get("planner_reference_filename", "").strip(),
+        "date": "",
+    }
+    return build_website_planner_report_response(metadata, plan)
 
 
 def keyword_suggestions():
@@ -186,18 +241,22 @@ def keyword_suggestions():
         "count": 30,
         "result": None,
         "error": None,
+        "generation_log": [],
+        "generation_log_json": "[]",
     }
     if request.method == "POST":
         state["topic"] = request.form.get("topic", "").strip()
         state["target_country"] = normalize_country_target(request.form.get("target_country", get_default_country_target()))
         state["target_countries"] = country_options(state["target_country"])
+        state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+        state["generation_log_json"] = generation_log_json(state["generation_log"])
         try:
             state["count"] = max(10, min(60, int(request.form.get("count", "30"))))
         except ValueError:
             state["count"] = 30
         try:
             provider = get_provider()
-            progress = _keyword_suggestions_progress_callback(request.form.get("generation_status_token", ""))
+            progress = _keyword_suggestions_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
             state["result"] = generate_keyword_suggestions(
                 provider,
                 topic=state["topic"],
@@ -206,22 +265,28 @@ def keyword_suggestions():
                 progress_callback=progress,
             )
             publish_generation_status(request.form.get("generation_status_token", ""), "Keyword Suggestions: Generation complete.")
+            append_generation_log(state["generation_log"], "status", "Generation complete.")
         except Exception as exc:
             logger.exception("keyword suggestions action failed")
+            append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
             state["error"] = generation_error_message(
                 "Could not generate keyword suggestions. Check logs/app.log for details.",
                 exc,
             )
     state["target_countries"] = country_options(state["target_country"])
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("keyword_suggestions.html", **base_template_context(), **state)
 
 
 def meta_generator():
     state = _default_meta_generator_state()
     if request.method == "POST":
+        state["brand"] = request.form.get("brand", "").strip()
         state["page_type"] = request.form.get("page_type", "Blog").strip() or "Blog"
         state["keyword"] = keyword_from_page_type(state["page_type"])
         state["language"] = normalize_language(request.form.get("language", get_default_language()))
+        state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+        state["generation_log_json"] = generation_log_json(state["generation_log"])
         try:
             state["count"] = max(1, min(10, int(request.form.get("count", str(DEFAULT_META_OPTION_COUNT)))))
         except ValueError:
@@ -229,24 +294,30 @@ def meta_generator():
 
         try:
             provider = get_provider()
-            progress = _meta_generator_progress_callback(request.form.get("generation_status_token", ""))
+            progress = _meta_generator_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
             state["result"] = generate_meta_titles_and_descriptions(
                 provider,
                 keyword=state["keyword"],
                 page_type=state["page_type"],
+                brand=state["brand"],
+                brand_context=get_brand_context(state["brand"]),
                 count=state["count"],
                 language=state["language"],
                 progress_callback=progress,
             )
             publish_generation_status(request.form.get("generation_status_token", ""), "Meta Generator: Generation complete.")
+            append_generation_log(state["generation_log"], "status", "Generation complete.")
         except Exception as exc:
             logger.exception("meta generator action failed")
+            append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
             state["error"] = generation_error_message(
                 "Could not generate meta titles and descriptions. Check logs/app.log for details.",
                 exc,
             )
 
     state["languages"] = language_options(state["language"])
+    state["brand_names"] = list_brand_names()
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("meta_generator.html", **base_template_context(), **state)
 
 
@@ -263,12 +334,33 @@ def gsc_planner():
     state["languages"] = language_options(state["language"])
     state["brand_names"] = list_brand_names()
     state["brand_websites"] = _brand_website_map()
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("gsc_planner.html", **base_template_context(), **state)
+
+
+def download_gsc_summary_report():
+    state = _default_gsc_planner_state()
+    _apply_gsc_planner_form(state)
+    if not state["report"]:
+        return redirect(url_for("web.gsc_planner"))
+    return build_gsc_summary_report_response(
+        brand=state["brand"],
+        target_url=state["target_url"],
+        gsc_property=state["gsc_property"],
+        start_date=state["gsc_start_date"],
+        end_date=state["gsc_end_date"],
+        report=state["report"],
+        query_rows=state["gsc_api_rows"],
+        daily_rows=state["gsc_api_daily_rows"],
+        backlink_snapshot=state["backlink_snapshot"],
+    )
 
 
 def _default_meta_generator_state() -> dict:
     return {
         "keyword": "",
+        "brand": "",
+        "brand_names": list_brand_names(),
         "page_type": "Blog",
         "page_types": _meta_page_types(),
         "count": DEFAULT_META_OPTION_COUNT,
@@ -285,6 +377,7 @@ def _default_gsc_planner_state() -> dict:
     today = date.today()
     default_end = today - timedelta(days=2)
     default_start = default_end - timedelta(days=27)
+    backlink_snapshot = _gsc_backlink_snapshot()
     return {
         "brand": "",
         "target_url": "",
@@ -299,6 +392,9 @@ def _default_gsc_planner_state() -> dict:
         "gsc_api_rows_json": "[]",
         "gsc_api_daily_rows": [],
         "gsc_api_daily_rows_json": "[]",
+        "backlink_snapshot": backlink_snapshot,
+        "backlink_snapshot_json": json.dumps(backlink_snapshot, ensure_ascii=True),
+        "backlink_summary": backlink_snapshot.get("summary", ""),
         "language": get_default_language(),
         "languages": language_options(get_default_language()),
         "brand_names": list_brand_names(),
@@ -308,9 +404,105 @@ def _default_gsc_planner_state() -> dict:
         "chat_history": [],
         "chat_history_json": "[]",
         "chat_question": "",
+        "generation_log": [],
+        "generation_log_json": "[]",
         "error": None,
         "chat_error": None,
     }
+
+
+def _gsc_backlink_snapshot() -> dict:
+    backlinks = list_backlinks()
+    items = [_gsc_backlink_item(item) for item in backlinks]
+    scored_items = [item for item in items if item["authority_score"] is not None]
+    top_high = sorted(scored_items, key=lambda item: (-item["authority_score"], item["name"].casefold()))[:5]
+    lowest = sorted(scored_items, key=lambda item: (item["authority_score"], item["name"].casefold()))[:5]
+    unscored_count = len(items) - len(scored_items)
+    summary = _gsc_backlink_summary(
+        total_count=len(items),
+        scored_count=len(scored_items),
+        unscored_count=unscored_count,
+        top_high=top_high,
+        lowest=lowest,
+    )
+    return {
+        "total_count": len(items),
+        "scored_count": len(scored_items),
+        "unscored_count": unscored_count,
+        "top_high": top_high,
+        "lowest": lowest,
+        "summary": summary,
+    }
+
+
+def _gsc_backlink_item(item: dict) -> dict:
+    name = _clean_compact_text(item.get("website_name", "")) or "Unnamed medium"
+    url = _clean_compact_text(item.get("blog_url", ""))
+    authority_score = _extract_backlink_authority_score(item)
+    authority_label = str(authority_score) if authority_score is not None else "Not saved"
+    return {
+        "id": item.get("id"),
+        "name": name,
+        "url": url,
+        "type": _clean_compact_text(item.get("website_type", "")),
+        "publication": _clean_compact_text(item.get("blog_name", "") or item.get("account_name", "")),
+        "authority_score": authority_score,
+        "authority_label": authority_label,
+        "posts_per_day": item.get("posts_per_day", 0) or 0,
+        "notes": _clean_compact_text(item.get("notes", "")),
+    }
+
+
+def _extract_backlink_authority_score(item: dict) -> int | None:
+    explicit_score = _int_between(item.get("domain_power", 0), 0, 100, 0)
+    if explicit_score:
+        return explicit_score
+    searchable_text = " ".join(
+        _clean_compact_text(item.get(key, ""))
+        for key in ("website_name", "blog_name", "blog_url", "content_guidelines", "notes")
+    )
+    patterns = [
+        r"\b(?:dp|da|dr|domain\s+power|domain\s+authority|domain\s+rating)\s*[:=#-]?\s*(\d{1,3})\b",
+        r"\b(\d{1,3})\s*(?:dp|da|dr)\b",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, searchable_text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        value = _int_between(match.group(1), 0, 100, 0)
+        return value
+    return None
+
+
+def _gsc_backlink_summary(total_count: int, scored_count: int, unscored_count: int, top_high: list[dict], lowest: list[dict]) -> str:
+    lines = [
+        f"Saved backlinks / publishing mediums: total={total_count}, with_saved_dp_da_dr={scored_count}, without_saved_dp_da_dr={unscored_count}.",
+    ]
+    if top_high:
+        lines.append("Top high-DP/DA/DR saved links:")
+        lines.extend(_gsc_backlink_summary_lines(top_high))
+    if lowest:
+        lines.append("Lowest-DP/DA/DR saved links:")
+        lines.extend(_gsc_backlink_summary_lines(lowest))
+    if total_count and not scored_count:
+        lines.append("No DP/DA/DR values were found in saved backlink notes, names, URLs, or rules. Add values like DP 45, DA 32, or DR 50 to rank backlink strength.")
+    elif not total_count:
+        lines.append("No saved backlinks or publishing mediums were found.")
+    lines.append("Backlinks can affect SEO through authority, trust, relevance, anchor context, and discovery. Treat this as supporting evidence unless backlink acquisition/loss timing is known.")
+    return "\n".join(lines)
+
+
+def _gsc_backlink_summary_lines(items: list[dict]) -> list[str]:
+    lines = []
+    for item in items:
+        url = item.get("url") or "No URL saved"
+        publication = f" / {item['publication']}" if item.get("publication") else ""
+        lines.append(f"- {item['name']}{publication}: DP/DA/DR={item['authority_label']}; type={item.get('type') or 'unknown'}; url={url}")
+    return lines
+
+
+def _clean_compact_text(value: str) -> str:
+    return " ".join(str(value or "").split()).strip()
 
 
 def _brand_website_map() -> dict:
@@ -337,11 +529,16 @@ def _apply_gsc_planner_form(state: dict) -> None:
     state["gsc_api_rows_json"] = json.dumps(state["gsc_api_rows"], ensure_ascii=True)
     state["gsc_api_daily_rows"] = _json_list_of_dicts(request.form.get("gsc_api_daily_rows_json", ""))
     state["gsc_api_daily_rows_json"] = json.dumps(state["gsc_api_daily_rows"], ensure_ascii=True)
+    state["backlink_snapshot"] = _json_dict(request.form.get("backlink_snapshot_json", "")) or _gsc_backlink_snapshot()
+    state["backlink_snapshot_json"] = json.dumps(state["backlink_snapshot"], ensure_ascii=True)
+    state["backlink_summary"] = state["backlink_snapshot"].get("summary", "")
     state["language"] = normalize_language(request.form.get("language", get_default_language()))
     state["report"] = _json_dict(request.form.get("report_json", ""))
     state["report_json"] = json.dumps(state["report"], ensure_ascii=True) if state["report"] else ""
     state["chat_history"] = _json_list_of_dicts(request.form.get("chat_history_json", ""))
     state["chat_history_json"] = json.dumps(state["chat_history"], ensure_ascii=True)
+    state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
 
 
 def _handle_gsc_planner_report(state: dict) -> None:
@@ -369,7 +566,7 @@ def _handle_gsc_planner_report(state: dict) -> None:
             f"{gsc_performance.start_date} to {gsc_performance.end_date} using {gsc_performance.site_url}."
         )
         provider = get_provider()
-        progress = _gsc_planner_progress_callback(request.form.get("generation_status_token", ""))
+        progress = _gsc_planner_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
         state["report"] = generate_gsc_seo_report(
             provider,
             brand=state["brand"],
@@ -377,6 +574,7 @@ def _handle_gsc_planner_report(state: dict) -> None:
             gsc_notes=state["gsc_notes"],
             brand_context=get_brand_context(state["brand"]),
             gsc_api_summary=state["gsc_api_summary"],
+            backlink_summary=state["backlink_summary"],
             language=state["language"],
             progress_callback=progress,
         )
@@ -389,8 +587,10 @@ def _handle_gsc_planner_report(state: dict) -> None:
         ]
         state["chat_history_json"] = json.dumps(state["chat_history"], ensure_ascii=True)
         publish_generation_status(request.form.get("generation_status_token", ""), "GSC Planner: Report complete.")
+        append_generation_log(state["generation_log"], "status", "Report complete.")
     except Exception as exc:
         logger.exception("gsc planner report action failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
         state["error"] = generation_error_message(
             "Could not generate the GSC SEO report. Check logs/app.log for details.",
             exc,
@@ -414,7 +614,7 @@ def _handle_gsc_planner_chat(state: dict) -> None:
             brand_context=get_brand_context(state["brand"]),
             language=state["language"],
             chat_history=state["chat_history"],
-            progress_callback=_gsc_planner_progress_callback(request.form.get("generation_status_token", "")),
+            progress_callback=_gsc_planner_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"]),
         )
         state["chat_history"].append({"role": "user", "content": state["chat_question"]})
         state["chat_history"].append({"role": "assistant", "content": answer})
@@ -422,16 +622,19 @@ def _handle_gsc_planner_chat(state: dict) -> None:
         state["chat_question"] = ""
     except Exception as exc:
         logger.exception("gsc planner chat action failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
         state["chat_error"] = generation_error_message(
             "Could not answer the GSC planner chat question. Check logs/app.log for details.",
             exc,
         )
 
 
-def _gsc_planner_progress_callback(token: str):
+def _gsc_planner_progress_callback(token: str, log_entries: list[dict] | None = None):
     cleaned_token = (token or "").strip()
 
     def progress(message: str, kind: str = "status") -> None:
+        if log_entries is not None:
+            append_generation_log(log_entries, kind, message)
         if not cleaned_token:
             return
         if kind == "prompt":
@@ -458,10 +661,12 @@ def _meta_page_types() -> list[str]:
     ]
 
 
-def _meta_generator_progress_callback(token: str):
+def _meta_generator_progress_callback(token: str, log_entries: list[dict] | None = None):
     cleaned_token = (token or "").strip()
 
     def progress(message: str, kind: str = "status") -> None:
+        if log_entries is not None:
+            append_generation_log(log_entries, kind, message)
         if not cleaned_token:
             return
         if kind == "prompt":
@@ -491,10 +696,12 @@ def _json_list_of_dicts(raw: str) -> list[dict]:
     return [item for item in parsed if isinstance(item, dict)]
 
 
-def _keyword_suggestions_progress_callback(token: str):
+def _keyword_suggestions_progress_callback(token: str, log_entries: list[dict] | None = None):
     cleaned_token = (token or "").strip()
 
     def progress(message: str, kind: str = "status") -> None:
+        if log_entries is not None:
+            append_generation_log(log_entries, kind, message)
         if not cleaned_token:
             return
         if kind == "prompt":
@@ -539,6 +746,35 @@ def _planner_count(value: str, default: int) -> int:
         return max(0, min(500, int(value or default)))
     except (TypeError, ValueError):
         return default
+
+
+def _planner_reference_page_items(pages: list[dict]) -> list[dict]:
+    items = []
+    for index, page in enumerate(pages, start=1):
+        keyword = " ".join(str(page.get("keyword") or page.get("name") or page.get("h1") or "").split()).strip()
+        if not keyword:
+            continue
+        h1 = " ".join(str(page.get("h1") or keyword).split()).strip()
+        headings = []
+        seen = set()
+        for heading in page.get("headings", []):
+            cleaned = " ".join(str(heading or "").split()).strip()
+            key = cleaned.casefold()
+            if cleaned and key not in seen:
+                seen.add(key)
+                headings.append(cleaned)
+        items.append(
+            {
+                "type": "page",
+                "index": len(items) + 1,
+                "name": keyword,
+                "keyword": keyword,
+                "h1": h1,
+                "headings": headings,
+                "source": "DOCX reference",
+            }
+        )
+    return items
 
 
 def _int_between(value, minimum: int, maximum: int, default: int) -> int:
@@ -626,17 +862,21 @@ def seo_checker():
         "limit": 10,
         "result": None,
         "error": None,
+        "generation_log": [],
+        "generation_log_json": "[]",
     }
 
     if request.method == "POST":
         state["url"] = request.form.get("url", "").strip()
         state["ignore_ssl_errors"] = request.form.get("ignore_ssl_errors") == "1"
+        state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+        state["generation_log_json"] = generation_log_json(state["generation_log"])
         try:
             state["limit"] = max(1, min(100, int(request.form.get("limit", "10"))))
         except ValueError:
             state["limit"] = 10
         try:
-            progress = _seo_checker_progress_callback(request.form.get("generation_status_token", ""))
+            progress = _seo_checker_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
             state["result"] = _run_site_seo_checks(
                 state["url"],
                 limit=state["limit"],
@@ -644,10 +884,13 @@ def seo_checker():
                 progress_callback=progress,
             )
             publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker: Check complete.")
+            append_generation_log(state["generation_log"], "status", "Check complete.")
         except Exception as exc:
             logger.exception("seo_checker action failed")
+            append_generation_log(state["generation_log"], "error", str(exc) or "SEO check failed.")
             state["error"] = str(exc) or "Could not complete the SEO check."
 
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("seo_checker.html", **base_template_context(), **state)
 
 
@@ -749,10 +992,12 @@ def _seo_grade(score: int) -> str:
     return "F"
 
 
-def _seo_checker_progress_callback(token: str):
+def _seo_checker_progress_callback(token: str, log_entries: list[dict] | None = None):
     cleaned_token = (token or "").strip()
 
     def progress(message: str) -> None:
+        if log_entries is not None:
+            append_generation_log(log_entries, "status", message)
         if not cleaned_token:
             return
         publish_generation_status(cleaned_token, f"Website SEO Checker: {message}")
@@ -1055,8 +1300,8 @@ def indexnow():
     state = {
         "host": "",
         "key": get_setting("indexnow_key", ""),
-        "key_location": "",
-        "endpoint": DEFAULT_INDEXNOW_ENDPOINT,
+        "key_location": get_setting("indexnow_key_location", ""),
+        "endpoint": get_setting("indexnow_endpoint", DEFAULT_INDEXNOW_ENDPOINT),
         "google_access_token": get_setting("google_oauth_access_token", ""),
         "google_service_account_json": get_setting("google_service_account_json", ""),
         "google_notification_type": "URL_UPDATED",
@@ -1130,10 +1375,13 @@ def indexnow():
                 logger.info("Website Index due check selecting due URLs.")
                 due_rows = list_due_website_index_urls()
                 due_urls = [item["url"] for item in due_rows[:WEBSITE_INDEX_CHECK_LIMIT]]
+                submit_due_lookup = {item["url"] for item in list_due_website_index_submission_urls()}
+                submit_urls = [url for url in due_urls if url in submit_due_lookup]
                 logger.info(
-                    "Website Index due check selected: due_total=%d batch_urls=%d limit=%d",
+                    "Website Index due check selected: due_total=%d batch_urls=%d submit_urls=%d limit=%d",
                     len(due_rows),
                     len(due_urls),
+                    len(submit_urls),
                     WEBSITE_INDEX_CHECK_LIMIT,
                 )
                 if not due_urls:
@@ -1142,6 +1390,21 @@ def indexnow():
                     phase_started_at = time.perf_counter()
                     mark_website_index_urls_checking(due_urls)
                     logger.info("Website Index marked %d URL(s) checking in %.2fs.", len(due_urls), time.perf_counter() - phase_started_at)
+                    phase_started_at = time.perf_counter()
+                    indexnow_due_result = submit_website_index_urls_to_indexnow(
+                        submit_urls,
+                        key=state["key"],
+                        key_location=state["key_location"],
+                        endpoint=state["endpoint"],
+                    )
+                    logger.info(
+                        "Website Index due IndexNow submit finished in %.2fs: hosts=%d submitted=%d skipped=%d errors=%d",
+                        time.perf_counter() - phase_started_at,
+                        indexnow_due_result["hosts"],
+                        indexnow_due_result["submitted"],
+                        indexnow_due_result["skipped"],
+                        len(indexnow_due_result["errors"]),
+                    )
                     phase_started_at = time.perf_counter()
                     update_website_index_bing_yahoo_weekly_result(due_urls)
                     logger.info("Website Index marked Bing/Yahoo manual for %d URL(s) in %.2fs.", len(due_urls), time.perf_counter() - phase_started_at)
@@ -1155,10 +1418,12 @@ def indexnow():
                         for item in state["google_inspection_result"].items:
                             update_website_index_google_result(item)
                         _log_google_inspection_result(state["google_inspection_result"], time.perf_counter() - action_started_at)
-                        state["success"] = f"Due check ran for {len(due_urls)} URL(s). Bing/Yahoo were marked for manual webmaster review."
+                        state["success"] = f"Due check submitted {indexnow_due_result['submitted']} URL(s) to IndexNow and ran Google inspection for {len(due_urls)} URL(s). Bing/Yahoo were marked for manual webmaster review."
                     else:
                         logger.warning("Website Index due check skipped Google inspection because Google settings are incomplete.")
-                        state["success"] = f"Due check marked Bing/Yahoo for {len(due_urls)} URL(s). Add Google credentials to include Google URL Inspection."
+                        state["success"] = f"Due check submitted {indexnow_due_result['submitted']} URL(s) to IndexNow and marked Bing/Yahoo for {len(due_urls)} URL(s). Add Google credentials to include Google URL Inspection."
+                    if indexnow_due_result["errors"]:
+                        state["success"] += f" IndexNow reported {len(indexnow_due_result['errors'])} issue(s); check logs for details."
                     if len(due_rows) > WEBSITE_INDEX_CHECK_LIMIT:
                         state["success"] += f" {len(due_rows) - WEBSITE_INDEX_CHECK_LIMIT} URL(s) remain queued for the next run."
             elif action == "sitemap":

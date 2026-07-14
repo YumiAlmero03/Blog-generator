@@ -58,6 +58,7 @@ def test_blog_generator_retries_filters_and_returns_complete_blog():
         title=titles[0],
         keyword="gaming platform safety",
         supporting_keyword="account protection",
+        suggested_h2s="Account Protection Basics\nSafer Session Habits",
         min_words=80,
         max_words=130,
         progress_callback=progress_messages.append,
@@ -70,6 +71,9 @@ def test_blog_generator_retries_filters_and_returns_complete_blog():
     assert "IMPORTANT RETRY REQUIREMENT" in provider.prompts[1]
     assert "IMPORTANT RETRY REQUIREMENT" in provider.prompts[4]
     assert "valid HTML content" not in provider.prompts[4]
+    assert "Suggested H2 headings from the user" in provider.prompts[3]
+    assert "Account Protection Basics" in provider.prompts[3]
+    assert "Safer Session Habits" in provider.prompts[3]
     assert any("Title attempt 1" in message and "banned terms" in message for message in progress_messages)
     assert any("Meta attempt 1" in message and "ignored descriptions" in message for message in progress_messages)
     assert any("Content attempt 1" in message and "minimum is 80" in message for message in progress_messages)

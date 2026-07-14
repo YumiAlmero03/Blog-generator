@@ -5,6 +5,7 @@ from flask import render_template, request
 
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
+from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
@@ -25,6 +26,7 @@ def blog_rework_generator():
             _handle_generate_blog_rework(state)
 
     state["language_options"] = language_options(state["language"])
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("blog_rework_generator.html", **base_template_context(), **state)
 
 
@@ -49,6 +51,8 @@ def _default_state() -> dict:
         "quality_report": None,
         "tag_suggestions": [],
         "history_id": "",
+        "generation_log": [],
+        "generation_log_json": "[]",
         "error": None,
         "success": None,
         "brand_names": list_brand_names(),
@@ -65,6 +69,8 @@ def _handle_generate_blog_rework(state: dict) -> None:
     state["brand"] = request.form.get("brand", "").strip()
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
+    state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
     if not state["source_url"] and not _has_readable_source_content(state["source_content"]):
         state["error"] = "Please enter a blog link or paste the source content to rework."
         return
@@ -75,7 +81,7 @@ def _handle_generate_blog_rework(state: dict) -> None:
     try:
         provider = get_provider()
         min_words, max_words = _rework_word_limits(state["rework_content_type"])
-        progress = _progress_callback("Blog Rework", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("Blog Rework", request.form.get("generation_status_token", ""), state["generation_log"])
         progress("Starting blog rework...")
         result = generate_blog_rework(
             provider,
@@ -106,6 +112,7 @@ def _handle_generate_blog_rework(state: dict) -> None:
         clear_generation_status(request.form.get("generation_status_token", ""))
     except Exception as exc:
         logger.exception("blog rework generation failed")
+        append_generation_log(state["generation_log"], "error", str(exc) or "Generation failed.")
         state["error"] = generation_error_message(
             "Could not generate the blog rework. Check logs/app.log for details.",
             exc,
@@ -131,6 +138,8 @@ def _handle_save_blog_rework(state: dict) -> None:
     state["history_id"] = request.form.get("history_id", "").strip()
     state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", ""))
     state["tag_suggestions"] = _tags_from_raw(request.form.get("tags_json", ""))
+    state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
 
     if not state["selected_title"] or not state["content"]:
         state["error"] = "There is no generated rework to save."
@@ -197,6 +206,7 @@ def _record_blog_rework(state: dict, min_words: int, max_words: int) -> None:
             "visual": state["visual"],
             "min_words": min_words,
             "max_words": max_words,
+            "generation_log": state.get("generation_log", []),
         },
         content=state["content"],
         quality_report=state["quality_report"] or {},
@@ -242,10 +252,12 @@ def _tags_from_raw(raw: str) -> list[str]:
     return tags
 
 
-def _progress_callback(label: str, token: str):
+def _progress_callback(label: str, token: str, log_entries: list[dict] | None = None):
     cleaned_label = (label or "Generation").strip()
 
     def publish(message: str, kind: str = "status"):
+        if log_entries is not None:
+            append_generation_log(log_entries, kind, message)
         if kind == "prompt":
             publish_generation_prompt(token, message)
             return

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from database.common import get_connection
 from app import create_app
-from database.website_index import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_urls, upsert_website_index_urls
+from database.website_index import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, upsert_website_index_urls
 from app.controllers.tool_controller import _website_index_dashboard_sort_key
 
 
@@ -70,11 +70,11 @@ def test_upsert_website_index_urls_saves_and_updates_keywords():
             connection.execute("DELETE FROM website_index_urls WHERE url = ?", (url,))
 
 
-def test_due_website_index_urls_use_10_minute_window():
-    fresh_url = "https://website-index-test.example/fresh-10-minute"
-    due_url = "https://website-index-test.example/due-10-minute"
-    fresh_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(timespec="seconds")
-    due_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=11)).isoformat(timespec="seconds")
+def test_due_website_index_urls_use_30_minute_window():
+    fresh_url = "https://website-index-test.example/fresh-30-minute"
+    due_url = "https://website-index-test.example/due-30-minute"
+    fresh_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=29)).isoformat(timespec="seconds")
+    due_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=31)).isoformat(timespec="seconds")
 
     try:
         upsert_website_index_urls([fresh_url, due_url])
@@ -108,12 +108,72 @@ def test_due_website_index_urls_use_10_minute_window():
             )
 
 
+def test_due_website_index_submission_urls_only_include_not_indexed():
+    not_indexed_url = "https://website-index-submit-test.example/not-indexed"
+    fresh_not_indexed_url = "https://website-index-submit-test.example/fresh-not-indexed"
+    unchecked_url = "https://website-index-submit-test.example/unchecked"
+    error_url = "https://website-index-submit-test.example/error"
+    old_checked_at = (datetime.now(timezone.utc) - timedelta(hours=25)).isoformat(timespec="seconds")
+    fresh_checked_at = (datetime.now(timezone.utc) - timedelta(hours=23)).isoformat(timespec="seconds")
+
+    try:
+        upsert_website_index_urls([not_indexed_url, fresh_not_indexed_url, unchecked_url, error_url])
+        with get_connection() as connection:
+            connection.execute(
+                """
+                UPDATE website_index_urls
+                SET last_checked_at = ?, google_status = 'not-indexed'
+                WHERE url = ?
+                """,
+                (old_checked_at, not_indexed_url),
+            )
+            connection.execute(
+                """
+                UPDATE website_index_urls
+                SET last_checked_at = ?, google_status = 'not-indexed'
+                WHERE url = ?
+                """,
+                (fresh_checked_at, fresh_not_indexed_url),
+            )
+            connection.execute(
+                """
+                UPDATE website_index_urls
+                SET last_checked_at = '', google_status = ''
+                WHERE url = ?
+                """,
+                (unchecked_url,),
+            )
+            connection.execute(
+                """
+                UPDATE website_index_urls
+                SET last_checked_at = ?, google_status = 'error'
+                WHERE url = ?
+                """,
+                (old_checked_at, error_url),
+            )
+
+        test_urls = {not_indexed_url, fresh_not_indexed_url, unchecked_url, error_url}
+        due_submit_urls = {
+            item["url"]
+            for item in list_due_website_index_submission_urls()
+            if item["url"] in test_urls
+        }
+
+        assert due_submit_urls == {not_indexed_url}
+    finally:
+        with get_connection() as connection:
+            connection.execute(
+                "DELETE FROM website_index_urls WHERE url IN (?, ?, ?, ?)",
+                (not_indexed_url, fresh_not_indexed_url, unchecked_url, error_url),
+            )
+
+
 def test_due_website_index_urls_prioritize_never_inspected_urls():
     old_checked_url = "https://website-index-test.example/old-checked"
     never_checked_url = "https://website-index-test.example/never-checked"
     older_checked_url = "https://website-index-test.example/older-checked"
-    old_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=12)).isoformat(timespec="seconds")
-    older_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=20)).isoformat(timespec="seconds")
+    old_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=32)).isoformat(timespec="seconds")
+    older_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=40)).isoformat(timespec="seconds")
 
     try:
         upsert_website_index_urls([old_checked_url, never_checked_url, older_checked_url])
@@ -232,6 +292,7 @@ def test_website_index_dashboard_can_remove_specific_url():
 
         assert response.status_code == 200
         assert "Removed that URL from Website Index." in html
+        assert "Download CSV" in html
         with get_connection() as connection:
             remaining = {
                 row["url"]

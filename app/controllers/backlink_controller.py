@@ -37,6 +37,7 @@ def backlinks():
         "title_max_characters": 0,
         "min_words": 0,
         "max_characters": 0,
+        "domain_power": 0,
         "blog_url": "",
         "posts_per_day": 0,
         "include_in_tier1": True,
@@ -84,6 +85,7 @@ def _populate_for_edit(state: dict, backlink_id: int):
     state["title_max_characters"] = backlink.get("title_max_characters", 0) or 0
     state["min_words"] = backlink.get("min_words", 0) or 0
     state["max_characters"] = backlink.get("max_characters", 0) or 0
+    state["domain_power"] = backlink.get("domain_power", 0) or 0
     state["blog_url"] = backlink.get("blog_url", "")
     state["posts_per_day"] = backlink.get("posts_per_day", 0) or 0
     state["include_in_tier1"] = bool(backlink.get("include_in_tier1", 1))
@@ -103,6 +105,7 @@ def _handle_save_backlink(state: dict):
     state["title_max_characters"] = request.form.get("title_max_characters", "0").strip()
     state["min_words"] = request.form.get("min_words", "0").strip()
     state["max_characters"] = request.form.get("max_characters", "0").strip()
+    state["domain_power"] = request.form.get("domain_power", "0").strip()
     state["blog_url"] = request.form.get("blog_url", "").strip()
     state["posts_per_day"] = request.form.get("posts_per_day", "0").strip()
     state["include_in_tier1"] = request.form.get("include_in_tier1") == "1"
@@ -136,6 +139,10 @@ def _handle_save_backlink(state: dict):
     except ValueError:
         state["max_characters"] = 0
     try:
+        state["domain_power"] = max(0, min(100, int(state["domain_power"] or 0)))
+    except ValueError:
+        state["domain_power"] = 0
+    try:
         state["posts_per_day"] = max(0, int(state["posts_per_day"] or 0))
     except ValueError:
         state["posts_per_day"] = 0
@@ -150,6 +157,7 @@ def _handle_save_backlink(state: dict):
         title_max_characters=state["title_max_characters"],
         min_words=state["min_words"],
         max_characters=state["max_characters"],
+        domain_power=state["domain_power"],
         blog_url=state["blog_url"],
         tier_level="Tier 1",
         posts_per_day=state["posts_per_day"],
@@ -172,6 +180,7 @@ def _handle_save_backlink(state: dict):
             "title_max_characters": 0,
             "min_words": 0,
             "max_characters": 0,
+            "domain_power": 0,
             "blog_url": "",
             "posts_per_day": 0,
             "include_in_tier1": True,
@@ -204,7 +213,7 @@ def _apply_medium_preset(state: dict, preset_key: str):
     preset = _medium_presets().get(preset_key)
     if not preset:
         return
-    for key in ("website_type", "post_type", "title_max_characters", "min_words", "max_characters", "content_guidelines", "brand_topic_mode"):
+    for key in ("website_type", "post_type", "title_max_characters", "min_words", "max_characters", "domain_power", "content_guidelines", "brand_topic_mode"):
         current = str(state.get(key, "")).strip()
         if current and current not in {"0", "blog", "html", "example"}:
             continue
