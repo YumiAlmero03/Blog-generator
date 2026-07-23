@@ -19,6 +19,7 @@ from utils import extract_json_string
 FETCH_TIMEOUT = 12
 USER_AGENT = "AutoBlogGeneratorSeoChecker/1.0"
 COMMON_SITEMAP_PATHS = ("/sitemap.xml", "/sitemap_index.xml", "/sitemap-index.xml")
+LINK_HEALTH_CHECK_LIMIT = 50
 SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 UNVERIFIED_SSL_CONTEXT = ssl._create_unverified_context()
 
@@ -410,7 +411,7 @@ def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict
         _check(
             "Sample link health",
             "pass" if link_report["broken_sample_count"] == 0 else "warn",
-            f"{link_report['broken_sample_count']} broken/unreachable link(s) in sample of {len(link_report['sample_checks'])}",
+            f"{link_report['broken_sample_count']} broken/unreachable link(s), including {link_report['not_found_count']} 404 link(s), in {len(link_report['sample_checks'])} checked link(s)",
             "Review broken links and update or remove URLs that no longer resolve.",
             5,
         ),
@@ -482,9 +483,10 @@ def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bo
         if item["url"] in seen:
             continue
         seen.add(item["url"])
-        if len(sample_checks) >= 8:
+        if len(sample_checks) >= LINK_HEALTH_CHECK_LIMIT:
             break
         sample_checks.append(_check_link_url(item["url"], item["type"], verify_ssl=verify_ssl))
+    not_found_links = [item for item in sample_checks if item.get("status_code") == 404]
 
     return {
         "total_count": len(normalized_links),
@@ -493,6 +495,9 @@ def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bo
         "items": normalized_links,
         "sample_checks": sample_checks,
         "broken_sample_count": sum(1 for item in sample_checks if item["status"] in {"broken", "unreachable"}),
+        "checked_count": len(sample_checks),
+        "not_found_count": len(not_found_links),
+        "not_found_links": not_found_links,
     }
 
 

@@ -36,6 +36,9 @@
         <input type="hidden" id="pageTitleHidden" name="page_title" value="{{ page_title }}" />
         <input type="hidden" id="pageMetaHidden" name="meta_description" value="{{ meta_description }}" />
         <input type="hidden" name="image_count" value="{{ image_count }}" />
+        <textarea id="generatedSectionHidden" name="generated_section" class="hidden-form" aria-hidden="true">{{ generated_section }}</textarea>
+        <input type="hidden" id="generatedSectionTitleHidden" name="generated_section_title" value="{{ generated_section_title }}" />
+        <input type="hidden" id="generatedSectionWordCountHidden" name="generated_section_word_count" value="{{ generated_section_word_count }}" />
         <textarea id="pageGenerationLogJson" name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
         <textarea id="pageContentHidden" name="page_content" class="hidden-form" aria-hidden="true">{{ page_content }}</textarea>
         <label for="brand" class="mb-2 block text-sm font-bold text-sand-900">Brand</label>
@@ -68,6 +71,15 @@
             <option value="meta" {% if regenerate_scope == 'meta' %}selected{% endif %}>Meta angle</option>
           </select>
           <textarea id="change_request" name="change_request" placeholder="e.g. make the CTA softer, add more local proof, simplify the service explanation" class="mb-5 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ change_request }}</textarea>
+        {% endif %}
+
+        {% if page_content %}
+          <div class="mb-5 rounded-[24px] border border-sand-200 bg-sand-50/80 p-5">
+            <h3 class="font-display text-2xl text-sand-950">Section Generator</h3>
+            <label for="section_request" class="mb-2 mt-4 block text-sm font-bold text-sand-900">Section to add</label>
+            <textarea id="section_request" name="section_request" placeholder="e.g. add a payment methods section, create an FAQ block, add service areas, add a trust and safety section" class="min-h-[120px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ section_request }}</textarea>
+            <button type="submit" name="action" value="generate_page_section" data-loading-message="Generating page section..." class="mt-4 inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Generate Section</button>
+          </div>
         {% endif %}
 
         <div class="flex flex-wrap gap-3">
@@ -150,6 +162,23 @@
             <p class="text-sm leading-6 text-sand-800">{{ meta_description }}</p>
             <textarea id="metaOutputFull" readonly class="sr-copy-field">{{ meta_description }}</textarea>
           </div>
+        {% endif %}
+
+        {% if generated_section %}
+          <section id="pageSectionInsertWorkspace" class="mb-5 rounded-[24px] border border-moss-200 bg-moss-50/70 p-5" data-section-workspace>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-[0.14em] text-moss-700">Generated Section</p>
+                <h3 class="mt-2 font-display text-2xl text-sand-950">{{ generated_section_title or "New section ready" }}</h3>
+                <p class="mt-1 text-sm font-bold leading-6 text-moss-700">{{ generated_section_word_count }} word{% if generated_section_word_count != 1 %}s{% endif %}</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <select id="sectionInsertTarget" class="min-h-11 rounded-2xl border border-moss-200 bg-white px-3 py-2 text-sm font-bold text-sand-800 outline-none focus:border-moss-500 focus:ring-2 focus:ring-moss-100" aria-label="Section insertion target"></select>
+                <button type="button" id="insertGeneratedSectionButton" class="inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Insert Section</button>
+              </div>
+            </div>
+            <div id="generatedSectionSource" draggable="true" class="mt-4 cursor-grab rounded-[22px] border border-moss-200 bg-white px-5 py-5 text-sand-900 shadow-sm active:cursor-grabbing" data-generated-section>{{ generated_section|safe }}</div>
+          </section>
         {% endif %}
 
         <div id="previewArea" class="rounded-[22px] border border-sand-200 bg-white px-6 py-6 text-sand-900">{{ page_content|safe }}</div>

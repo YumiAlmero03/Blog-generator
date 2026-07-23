@@ -51,6 +51,9 @@
         <label for="page_title" class="mb-2 block text-sm font-bold text-sand-900">Page title <span class="text-red-600">*</span></label>
         <input id="page_title" name="page_title" type="text" value="{{ page_title }}" placeholder="e.g. Privacy Policy" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
 
+        <label for="supporting_keywords" class="mb-2 block text-sm font-bold text-sand-900">Supporting keywords</label>
+        <textarea id="supporting_keywords" name="supporting_keywords" placeholder="e.g. personal data, cookie policy, account security" class="mb-4 min-h-[96px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ supporting_keywords }}</textarea>
+
         <label for="expectations" class="mb-2 block text-sm font-bold text-sand-900">What to include</label>
         <textarea id="expectations" name="expectations" placeholder="e.g. include data collection details, contact email, refund timeframe, governing law, or other notes" class="mb-5 min-h-[130px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ expectations }}</textarea>
 
@@ -165,6 +168,7 @@
           <input type="hidden" name="language" value="{{ language }}" />
           <input type="hidden" name="page_title" value="{{ page_title }}" />
           <input type="hidden" name="page_type" value="{{ page_title }}" />
+          <input type="hidden" name="supporting_keywords" value="{{ supporting_keywords }}" />
           <input type="hidden" name="expectations" value="{{ expectations }}" />
           <input type="hidden" name="generated_title" value="{{ generated_title }}" />
           <input type="hidden" name="meta_descriptions_json" value='{{ meta_descriptions | tojson }}' />

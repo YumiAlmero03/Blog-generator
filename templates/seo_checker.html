@@ -68,6 +68,7 @@
           <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.discovered_count }} page{% if result.summary.discovered_count != 1 %}s{% endif %} listed</div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.checked_count }} page{% if result.summary.checked_count != 1 %}s{% endif %} checked</div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.issue_count }} warning/fix item{% if result.summary.issue_count != 1 %}s{% endif %}</div>
+          <div class="{% if result.summary.not_found_link_count %}rounded-2xl bg-red-50 px-4 py-3 text-red-700{% else %}rounded-2xl bg-sand-100 px-4 py-3{% endif %}">{{ result.summary.not_found_link_count or 0 }} 404 link{% if result.summary.not_found_link_count != 1 %}s{% endif %} found in {{ result.summary.checked_link_count or 0 }} checked link{% if result.summary.checked_link_count != 1 %}s{% endif %}</div>
           {% if result.summary.error_count %}
             <div class="rounded-2xl bg-red-50 px-4 py-3 text-red-700">{{ result.summary.error_count }} page check error{% if result.summary.error_count != 1 %}s{% endif %}</div>
           {% endif %}
@@ -154,6 +155,17 @@
                     <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">H1:</strong> {{ page.result.stats.h1_count }}</div>
                     <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">Missing alt:</strong> {{ page.result.stats.missing_alt_count }}</div>
                   </div>
+                  {% set page_links = page.result.stats.links|default({}) %}
+                  {% if page_links.not_found_count %}
+                    <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+                      <p class="text-sm font-bold leading-6 text-red-700">{{ page_links.not_found_count }} 404 link{% if page_links.not_found_count != 1 %}s{% endif %} found</p>
+                      <ul class="mt-2 grid gap-1 text-xs leading-5 text-red-700">
+                        {% for link in page_links.not_found_links[:5] %}
+                          <li class="break-words">HTTP 404 · {{ link.url }}</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  {% endif %}
                   <details class="mt-4 rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
                     <summary class="cursor-pointer text-sm font-bold text-sand-900">Show checks and AI notes</summary>
                     <p class="mt-4 text-sm leading-6 text-sand-700">{{ page.result.ai_summary.summary }}</p>
@@ -253,7 +265,7 @@
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Images</dt><dd class="mt-1 text-sand-700">{{ result.stats.missing_alt_count }} missing alt text out of {{ result.stats.image_count }} images</dd></div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Canonical</dt><dd class="mt-1 break-words text-sand-700">{{ result.stats.canonical or "Missing" }}</dd></div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Social cards</dt><dd class="mt-1 text-sand-700">{{ result.stats.open_graph|length }} Open Graph tags, {{ result.stats.twitter_cards|length }} Twitter card tags</dd></div>
-          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Links</dt><dd class="mt-1 text-sand-700">{{ result.stats.links.internal_count }} internal, {{ result.stats.links.external_count }} external, {{ result.stats.links.total_count }} total</dd></div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Links</dt><dd class="mt-1 text-sand-700">{{ result.stats.links.internal_count }} internal, {{ result.stats.links.external_count }} external, {{ result.stats.links.total_count }} total, {{ result.stats.links.not_found_count or 0 }} 404</dd></div>
         </dl>
       </div>
 
@@ -303,13 +315,29 @@
       </div>
 
       <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
-        <h2 class="font-display text-3xl font-bold text-sand-950">Sample Link Health</h2>
+        <h2 class="font-display text-3xl font-bold text-sand-950">Link Health & 404s</h2>
+        <p class="mt-2 text-sm leading-6 text-sand-700">{{ result.stats.links.not_found_count or 0 }} 404 link{% if result.stats.links.not_found_count != 1 %}s{% endif %} found in {{ result.stats.links.checked_count or result.stats.links.sample_checks|length }} checked link{% if (result.stats.links.checked_count or result.stats.links.sample_checks|length) != 1 %}s{% endif %}.</p>
+        {% if result.stats.links.not_found_links %}
+          <div class="mt-4 grid gap-2">
+            {% for link in result.stats.links.not_found_links %}
+              <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">404</span>
+                  <span class="text-xs font-bold uppercase tracking-[0.1em] text-red-700">{{ link.type }}</span>
+                </div>
+                <p class="mt-2 break-words text-sm leading-6 text-red-700">{{ link.url }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
         <div class="mt-5 grid gap-3">
           {% for link in result.stats.links.sample_checks %}
             <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
               <div class="flex flex-wrap items-center gap-2">
                 {% if link.status == "ok" %}
                   <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">OK</span>
+                {% elif link.status_code == 404 %}
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">404</span>
                 {% elif link.status == "broken" %}
                   <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Broken</span>
                 {% else %}

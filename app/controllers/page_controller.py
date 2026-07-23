@@ -5,7 +5,7 @@ from flask import render_template, request
 from database import get_brand_context, get_generation_history_item, list_brand_names, list_checklist_items, record_generation, record_page, upsert_brand
 from generation_retry_policy import GenerationCancelled, raise_if_generation_cancelled
 from generators.content_generator import count_html_words, revise_existing_content
-from generators.page_generator import generate_page_content, generate_page_meta_description, generate_page_title, inject_image_placeholders
+from generators.page_generator import generate_page_content, generate_page_meta_description, generate_page_section, generate_page_title, inject_image_placeholders
 from generators.simple_page_generator import (
     generate_simple_page_content,
     generate_simple_page_meta_descriptions,
@@ -34,6 +34,10 @@ def page_generator():
         "change_request": "",
         "meta_description": "",
         "page_content": "",
+        "section_request": "",
+        "generated_section": "",
+        "generated_section_title": "",
+        "generated_section_word_count": 0,
         "history_id": "",
         "generation_log": [],
         "generation_log_json": "[]",
@@ -64,6 +68,10 @@ def page_generator():
         state["page_title"] = request.form.get("page_title", "").strip()
         state["meta_description"] = request.form.get("meta_description", "").strip()
         state["page_content"] = request.form.get("page_content", "").strip()
+        state["section_request"] = request.form.get("section_request", "").strip()
+        state["generated_section"] = request.form.get("generated_section", "").strip()
+        state["generated_section_title"] = request.form.get("generated_section_title", "").strip()
+        state["generated_section_word_count"] = _int_or_zero(request.form.get("generated_section_word_count", "0"))
         state["history_id"] = request.form.get("history_id", "").strip()
         state["generation_log"] = _parse_generation_log(request.form.get("generation_log_json", ""))
         state["generation_log_json"] = json.dumps(state["generation_log"], ensure_ascii=True)
@@ -84,7 +92,32 @@ def page_generator():
                 progress = _progress_callback("Page", generation_token, state["generation_log"])
                 progress("Generation started.")
                 is_minor_revision = bool(state["page_content"] and state["change_request"])
-                if is_minor_revision:
+                if action == "generate_page_section":
+                    if not state["page_content"]:
+                        state["error"] = "Generate the full page content before adding a section."
+                    elif not state["section_request"]:
+                        state["error"] = "Describe the section you want to generate."
+                    else:
+                        progress("Generating insertable page section...")
+                        section_result = generate_page_section(
+                            provider,
+                            keyword=state["keyword"],
+                            title=state["page_title"] or state["keyword"],
+                            current_content=state["page_content"],
+                            section_request=state["section_request"],
+                            brand=state["brand"],
+                            supporting_keywords=state["supporting_keywords"],
+                            page_type=state["page_type"],
+                            expectations=state["expectations"],
+                            brand_context=brand_context,
+                            language=state["language"],
+                            progress_callback=progress,
+                        )
+                        state["generated_section"] = section_result.get("section_content", "")
+                        state["generated_section_title"] = section_result.get("section_title", "")
+                        state["generated_section_word_count"] = section_result.get("section_word_count", 0)
+                        progress("Section ready. Drag it into the page preview.")
+                elif is_minor_revision:
                     progress("Applying minor page changes...")
                     state["page_content"] = revise_existing_content(
                         provider,
@@ -237,6 +270,7 @@ def simple_page_generator():
         "language": get_default_language(),
         "page_title": "",
         "page_type": "",
+        "supporting_keywords": "",
         "expectations": "",
         "generated_title": "",
         "meta_descriptions": [],
@@ -264,6 +298,7 @@ def simple_page_generator():
         state["language"] = _language_from_request()
         state["page_title"] = request.form.get("page_title", "").strip()
         state["page_type"] = state["page_title"]
+        state["supporting_keywords"] = request.form.get("supporting_keywords", "").strip()
         state["expectations"] = request.form.get("expectations", "").strip()
         state["change_request"] = request.form.get("change_request", "").strip()
         state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
@@ -314,6 +349,7 @@ def simple_page_generator():
                         page_title=state["page_title"],
                         page_type=state["page_type"],
                         brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
                         language=state["language"],
@@ -327,6 +363,7 @@ def simple_page_generator():
                         generated_title=state["generated_title"],
                         page_type=state["page_type"],
                         brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
                         language=state["language"],
@@ -342,6 +379,7 @@ def simple_page_generator():
                         selected_meta_description=selected_meta,
                         page_type=state["page_type"],
                         brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
                         change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
@@ -364,6 +402,7 @@ def simple_page_generator():
                         page_title=state["page_title"],
                         page_type=state["page_type"],
                         brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
                         language=state["language"],
@@ -377,6 +416,7 @@ def simple_page_generator():
                         generated_title=state["generated_title"],
                         page_type=state["page_type"],
                         brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
                         language=state["language"],
@@ -392,6 +432,7 @@ def simple_page_generator():
                         selected_meta_description=selected_meta,
                         page_type=state["page_type"],
                         brand=state["brand"],
+                        supporting_keywords=state["supporting_keywords"],
                         expectations=state["expectations"],
                         brand_context=brand_context,
                         change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
@@ -494,6 +535,7 @@ def _record_completed_simple_page(state: dict, selected_meta: str, min_words: in
         prompt_inputs={
             "page_type": state["page_type"],
             "language": state["language"],
+            "supporting_keywords": state["supporting_keywords"],
             "expectations": state["expectations"],
             "regenerate_scope": state["regenerate_scope"],
             "change_request": state["change_request"],
@@ -508,7 +550,7 @@ def _record_completed_simple_page(state: dict, selected_meta: str, min_words: in
         keyword=state["page_title"],
         page_title=title,
         page_type=state["page_type"] or "simple page",
-        supporting_keywords="",
+        supporting_keywords=state["supporting_keywords"],
         expectations=state["expectations"],
     )
 
@@ -590,6 +632,7 @@ def _save_simple_page_generation(state: dict):
         prompt_inputs={
             "page_type": state["page_type"],
             "language": state["language"],
+            "supporting_keywords": state["supporting_keywords"],
             "expectations": state["expectations"],
             "manual_save": True,
             "generation_log": state.get("generation_log", []),
@@ -603,7 +646,7 @@ def _save_simple_page_generation(state: dict):
         keyword=state["page_title"],
         page_title=title,
         page_type=state["page_type"] or "simple page",
-        supporting_keywords="",
+        supporting_keywords=state["supporting_keywords"],
         expectations=state["expectations"],
     )
     state["success"] = "Generated simple page saved to history."
@@ -643,6 +686,7 @@ def _load_simple_page_history_item(state: dict, history_id: int):
     state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["page_title"] = item.get("primary_keyword", "") or item.get("title", "") or ""
     state["page_type"] = prompt_inputs.get("page_type", "")
+    state["supporting_keywords"] = prompt_inputs.get("supporting_keywords", "")
     state["expectations"] = prompt_inputs.get("expectations", "")
     state["change_request"] = prompt_inputs.get("change_request", "")
     state["regenerate_scope"] = prompt_inputs.get("regenerate_scope", "full") or "full"

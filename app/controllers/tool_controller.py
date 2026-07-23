@@ -959,6 +959,14 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
         for check in item.get("checks", [])
         if check.get("status") in {"fail", "warn"}
     )
+    not_found_link_count = sum(
+        int(item.get("stats", {}).get("links", {}).get("not_found_count", 0) or 0)
+        for item in checked_results
+    )
+    checked_link_count = sum(
+        int(item.get("stats", {}).get("links", {}).get("checked_count", 0) or 0)
+        for item in checked_results
+    )
     return {
         "mode": "site",
         "source_url": raw_url,
@@ -976,6 +984,8 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
             "average_score": average_score,
             "average_grade": _seo_grade(average_score),
             "issue_count": issue_count,
+            "not_found_link_count": not_found_link_count,
+            "checked_link_count": checked_link_count,
         },
     }
 

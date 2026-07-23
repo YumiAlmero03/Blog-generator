@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from app import create_app
 from app.controllers import tool_controller
+from app.services import seo_checker_service
 from app.services.seo_checker_service import PageSeoParser
 
 
@@ -51,6 +52,29 @@ def test_page_seo_parser_collects_core_seo_fields():
     assert parser.images[1]["alt"] == "Example logo"
     assert parser.links[0]["href"] == "/internal"
     assert parser.links[0]["text"] == "Internal"
+
+
+def test_link_report_tracks_404_links(monkeypatch):
+    def fake_check_link_url(url, link_type, verify_ssl=True):
+        status_code = 404 if url.endswith("/missing") else 200
+        status = "broken" if status_code == 404 else "ok"
+        return {"url": url, "type": link_type, "status_code": status_code, "status": status}
+
+    monkeypatch.setattr(seo_checker_service, "_check_link_url", fake_check_link_url)
+
+    report = seo_checker_service._build_link_report(
+        [
+            {"href": "/missing", "text": "Missing page"},
+            {"href": "/working", "text": "Working page"},
+        ],
+        page_url="https://example.com/page",
+        base_url="https://example.com",
+    )
+
+    assert report["checked_count"] == 2
+    assert report["broken_sample_count"] == 1
+    assert report["not_found_count"] == 1
+    assert report["not_found_links"][0]["url"] == "https://example.com/missing"
 
 
 @dataclass

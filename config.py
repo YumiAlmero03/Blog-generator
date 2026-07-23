@@ -19,8 +19,7 @@ def _load_dotenv(path: str = ".env") -> None:
 _load_dotenv()
 
 PROVIDER = os.getenv("PROVIDER", "ollama").strip() or "ollama"   # ollama | openai | gemini
-# MODEL = os.getenv("MODEL", "qwen3:8b").strip() or "qwen3.5:8b"   # change depending on provider
-MODEL = "qwen3.5:9b"   # change depending on provider
+MODEL = os.getenv("MODEL", "gemma4:31b-cloud").strip() or "gemma4:31b-cloud"   # change depending on provider
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "").strip()
 OLLAMA_WEB_SEARCH_ENABLED = os.getenv("OLLAMA_WEB_SEARCH_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 OLLAMA_WEB_SEARCH_MAX_RESULTS = min(10, max(1, int(os.getenv("OLLAMA_WEB_SEARCH_MAX_RESULTS", "5") or 5)))
@@ -28,4 +27,4 @@ OLLAMA_WEB_SEARCH_MAX_RESULTS = min(10, max(1, int(os.getenv("OLLAMA_WEB_SEARCH_
 # Examples:
 # OpenAI: "gpt-5.4-mini"
 # Gemini: "gemini-3-flash-preview"
-# Ollama: "qwen3.5:8b"
+# Ollama: "gemma4:31b-cloud"

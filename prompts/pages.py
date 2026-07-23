@@ -282,6 +282,7 @@ def build_simple_page_prompt(
     page_title: str,
     page_type: str = "",
     brand: str = "",
+    supporting_keywords: str = "",
     expectations: str = "",
     brand_context: str = "",
     change_request: str = "",
@@ -325,6 +326,9 @@ Create a complete simple WordPress page for:
 Page type:
 {page_type}
 
+Supporting keywords:
+{supporting_keywords}
+
 Brand:
 {brand}
 {context_section}
@@ -343,6 +347,7 @@ Rules:
 - Include exactly one # H1 heading
 - Include at least 3 ### H3 subheadings in the content.
 - Keep the tone clear, professional, and easy to understand
+- Include supporting keywords naturally where they fit, without keyword stuffing
 - If a brand is provided, use the brand name naturally where relevant
 - If brand context is provided, align the page with that brand only when it fits naturally
 - Adapt the structure to the page type
@@ -371,6 +376,7 @@ def build_simple_page_title_prompt(
     page_title: str,
     page_type: str = "",
     brand: str = "",
+    supporting_keywords: str = "",
     expectations: str = "",
     brand_context: str = "",
     language: str = "English",
@@ -387,6 +393,9 @@ Create one clear page title for:
 Page type:
 {page_type}
 
+Supporting keywords:
+{supporting_keywords}
+
 Brand:
 {brand}
 {context_section}
@@ -400,6 +409,7 @@ Rules:
 - Start the title with the exact page title as the first words.
 - Format it like: "{page_title} generated title".
 - Keep the title clear, professional, and suitable for the selected page type.
+- Use supporting keywords only when they fit naturally.
 - If a brand is provided, use it naturally only when it fits the page.
 - Do not use banned words.
 - Do not add explanations before or after the JSON.
@@ -417,6 +427,7 @@ def build_simple_page_meta_prompt(
     generated_title: str,
     page_type: str = "",
     brand: str = "",
+    supporting_keywords: str = "",
     expectations: str = "",
     brand_context: str = "",
     language: str = "English",
@@ -438,6 +449,9 @@ Selected title:
 Page type:
 {page_type}
 
+Supporting keywords:
+{supporting_keywords}
+
 Brand:
 {brand}
 {context_section}
@@ -449,6 +463,7 @@ What to include:
 
 Rules:
 - Each meta description must be natural, useful for search snippets, and between 120 and 140 characters.
+- Include supporting keywords naturally where they fit, without keyword stuffing.
 - Do not use banned words.
 - Do not add explanations before or after the JSON.
 - Start your response with '{{' and end with '}}'
@@ -470,6 +485,7 @@ def build_simple_page_content_prompt(
     selected_meta_description: str = "",
     page_type: str = "",
     brand: str = "",
+    supporting_keywords: str = "",
     expectations: str = "",
     brand_context: str = "",
     change_request: str = "",
@@ -519,6 +535,9 @@ Selected meta description for context. Do not rewrite it:
 Page type:
 {page_type}
 
+Supporting keywords:
+{supporting_keywords}
+
 Brand:
 {brand}
 {context_section}
@@ -537,6 +556,7 @@ Rules:
 - Include exactly one # H1 heading using the selected title.
 - Include at least 3 ### H3 subheadings in the content.
 - Keep the tone clear, professional, and easy to understand.
+- Include supporting keywords naturally where they fit, without keyword stuffing.
 - If a brand is provided, use the brand name naturally where relevant.
 - If brand context is provided, align the page with that brand only when it fits naturally.
 - Adapt the structure to the page type.
@@ -549,6 +569,77 @@ Rules:
 Return valid JSON only in this format:
 {{
   "content": "# {generated_title}\\n\\nParagraph..."
+}}
+"""
+
+
+def build_page_section_prompt(
+    keyword: str,
+    title: str,
+    current_content: str,
+    section_request: str,
+    supporting_keywords: str = "",
+    page_type: str = "",
+    expectations: str = "",
+    brand: str = "",
+    brand_context: str = "",
+    language: str = "English",
+) -> str:
+    context_section = build_brand_context_section(brand_context)
+    language_section = build_language_instruction(language)
+    banned_words_section = build_banned_words_prompt_section()
+    return f"""
+You are an expert SEO landing page section writer for WordPress.
+
+Write one new insertable section for this existing page.
+
+Selected page title:
+{title}
+
+Primary keyword:
+{keyword}
+
+Supporting keywords:
+{supporting_keywords}
+
+Page type:
+{page_type}
+
+Brand:
+{brand}
+{context_section}
+{language_section}
+{banned_words_section}
+
+Original page expectations:
+{expectations}
+
+Existing page content for context:
+{current_content}
+
+Section request:
+{section_request}
+
+Rules:
+- Return only the new section, not the full page.
+- Start the section with one ## H2 heading.
+- Use ### H3 subheadings only if they genuinely help.
+- Write 120-450 words unless the request clearly needs a shorter section.
+- Match the existing page voice and structure.
+- Write as the website owner: use first-person plural language like we, our, and us where relevant.
+- Include the primary keyword and supporting keywords only where they fit naturally.
+- Avoid keyword stuffing and repeated exact-match phrasing.
+- Do not use banned words.
+- Return clean Markdown only inside JSON.
+- Do not include a # H1 heading.
+- Do not use raw HTML.
+- Do not add explanations before or after the JSON.
+- Start your response with '{{' and end with '}}'
+
+Return valid JSON only in this format:
+{{
+  "section_title": "Section Heading",
+  "content": "## Section Heading\\n\\nParagraph..."
 }}
 """
 

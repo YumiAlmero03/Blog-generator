@@ -10,7 +10,7 @@ from generation_retry_policy import (
     wait_before_retry,
 )
 from logger import logger
-from prompts import build_page_content_prompt, build_page_meta_description_prompt, build_page_prompt, build_page_title_prompt
+from prompts import build_page_content_prompt, build_page_meta_description_prompt, build_page_prompt, build_page_section_prompt, build_page_title_prompt
 from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
 from content_repetition import repeated_content_issue
@@ -94,6 +94,7 @@ def generate_page(
     best_word_count = 0
     best_title = ""
     best_meta_description = ""
+    last_failure_detail = ""
 
     attempt = 0
     while attempt < max_generation_attempts():
@@ -126,6 +127,7 @@ def generate_page(
             banned_terms = find_banned_terms_in_text("\n".join([title, meta_description, markdown_content]))
 
             if banned_terms:
+                last_failure_detail = f"banned terms found: {', '.join(banned_terms)}"
                 _publish_progress(
                     progress_callback,
                     f"Page attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
@@ -147,6 +149,7 @@ def generate_page(
                         f"Page attempt {attempt}: accepting close meta description after strict retries.",
                     )
                 else:
+                    last_failure_detail = f"meta description was {meta_description_length} characters; target is {MIN_META_DESCRIPTION_CHARACTERS}-{MAX_META_DESCRIPTION_CHARACTERS}"
                     _publish_progress(
                         progress_callback,
                         f"Page attempt {attempt}: meta description is {meta_description_length} characters, target is 130-160. Retrying...",
@@ -164,6 +167,7 @@ def generate_page(
 
             repetition_issue = repeated_content_issue(markdown_content)
             if repetition_issue:
+                last_failure_detail = repetition_issue
                 _publish_progress(
                     progress_callback,
                     f"Page content attempt {attempt}: {repetition_issue} Retrying...",
@@ -195,6 +199,7 @@ def generate_page(
                         f"Page attempt {attempt}: accepting close word count after strict retries ({word_count} words).",
                     )
                 else:
+                    last_failure_detail = f"{word_count} words; content must be more than {min_word_count}"
                     _publish_progress(
                         progress_callback,
                         f"Page attempt {attempt}: {word_count} words, content must be more than {min_word_count}. Retrying...",
@@ -210,6 +215,7 @@ def generate_page(
                     continue
 
             if not min_word_count and word_count > max_word_count:
+                last_failure_detail = f"{word_count} words; maximum is {max_word_count}"
                 _publish_progress(
                     progress_callback,
                     f"Page attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",
@@ -265,6 +271,7 @@ def generate_page(
 
     raise ValueError(
         "Generated page could not satisfy the rules. "
+        f"{last_failure_detail + '. ' if last_failure_detail else ''}"
         f"Last attempt was {last_word_count} words."
     )
 
@@ -505,6 +512,7 @@ def generate_page_content(
     last_word_count = 0
     best_markdown_content = ""
     best_word_count = 0
+    last_failure_detail = ""
     attempt = 0
     while attempt < max_generation_attempts():
         raise_if_generation_cancelled(progress_callback)
@@ -534,6 +542,7 @@ def generate_page_content(
             banned_terms = find_banned_terms_in_text(markdown_content)
 
             if banned_terms:
+                last_failure_detail = f"banned terms found: {', '.join(banned_terms)}"
                 _publish_progress(
                     progress_callback,
                     f"Page content attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...",
@@ -549,6 +558,7 @@ def generate_page_content(
 
             repetition_issue = repeated_content_issue(markdown_content)
             if repetition_issue:
+                last_failure_detail = repetition_issue
                 _publish_progress(
                     progress_callback,
                     f"Page content attempt {attempt}: {repetition_issue} Retrying...",
@@ -578,6 +588,7 @@ def generate_page_content(
                         f"Page content attempt {attempt}: accepting close word count after strict retries ({word_count} words).",
                     )
                 else:
+                    last_failure_detail = f"{word_count} words; content must be more than {min_word_count}"
                     _publish_progress(
                         progress_callback,
                         f"Page content attempt {attempt}: {word_count} words, content must be more than {min_word_count}. Retrying...",
@@ -593,6 +604,7 @@ def generate_page_content(
                     continue
 
             if not min_word_count and word_count > max_word_count:
+                last_failure_detail = f"{word_count} words; maximum is {max_word_count}"
                 _publish_progress(
                     progress_callback,
                     f"Page content attempt {attempt}: {word_count} words, maximum is {max_word_count}. Retrying...",
@@ -637,8 +649,109 @@ def generate_page_content(
 
     raise ValueError(
         "Generated page content could not satisfy the rules. "
+        f"{last_failure_detail + '. ' if last_failure_detail else ''}"
         f"Last attempt was {last_word_count} words."
     )
+
+
+def generate_page_section(
+    provider,
+    keyword: str,
+    title: str,
+    current_content: str,
+    section_request: str,
+    supporting_keywords: str = "",
+    page_type: str = "",
+    expectations: str = "",
+    brand: str = "",
+    brand_context: str = "",
+    language: str = "English",
+    progress_callback=None,
+) -> dict:
+    from app.services.content_format_service import count_markdown_words, html_to_markdown, markdown_to_html
+
+    cleaned_request = (section_request or "").strip()
+    if not cleaned_request:
+        raise ValueError("Describe the section you want to generate.")
+
+    current_markdown = html_to_markdown(current_content or "")
+    prompt = build_page_section_prompt(
+        keyword=keyword,
+        title=title,
+        current_content=current_markdown[:12000],
+        section_request=cleaned_request,
+        supporting_keywords=supporting_keywords,
+        page_type=page_type,
+        expectations=expectations,
+        brand=brand,
+        brand_context=brand_context,
+        language=language,
+    )
+
+    attempt = 0
+    last_failure_detail = ""
+    while attempt < max_generation_attempts():
+        raise_if_generation_cancelled(progress_callback)
+        attempt += 1
+        retry_instruction = ""
+        if attempt > 1:
+            retry_instruction = (
+                "\n\nIMPORTANT RETRY REQUIREMENT:\n"
+                "- Your previous section was missing, used banned words, repeated content, or did not start with a ## H2 heading.\n"
+                "- Return one fresh insertable section in valid JSON only.\n"
+                "- Do not return the full page.\n"
+            )
+
+        full_prompt = prompt + retry_instruction
+        _publish_progress(progress_callback, full_prompt, kind="prompt")
+        raw = provider.generate_json(full_prompt)
+        try:
+            data = json.loads(extract_json_string(raw))
+            markdown_content = (data.get("content", "") or "").strip()
+            section_title = (data.get("section_title", "") or "").strip()
+            if not markdown_content:
+                last_failure_detail = "no section content returned"
+                _publish_progress(progress_callback, f"Page section attempt {attempt}: no content returned. Retrying...")
+                wait_before_retry(attempt, progress_callback, "empty page section")
+                continue
+            if not re.match(r"^##\s+", markdown_content):
+                last_failure_detail = "section did not start with a H2 heading"
+                _publish_progress(progress_callback, f"Page section attempt {attempt}: section must start with a ## H2 heading. Retrying...")
+                wait_before_retry(attempt, progress_callback, "missing section h2")
+                continue
+            banned_terms = find_banned_terms_in_text(markdown_content)
+            if banned_terms:
+                last_failure_detail = f"banned terms found: {', '.join(banned_terms)}"
+                _publish_progress(progress_callback, f"Page section attempt {attempt}: banned terms found ({', '.join(banned_terms)}). Retrying...")
+                wait_before_retry(attempt, progress_callback, "banned term match")
+                continue
+            repetition_issue = repeated_content_issue(markdown_content)
+            if repetition_issue:
+                last_failure_detail = repetition_issue
+                _publish_progress(progress_callback, f"Page section attempt {attempt}: {repetition_issue} Retrying...")
+                wait_before_retry(attempt, progress_callback, "repeated content")
+                continue
+
+            html_content = markdown_to_html(markdown_content)
+            return {
+                "section_title": section_title or _section_title_from_markdown(markdown_content),
+                "section_content": html_content,
+                "section_markdown": markdown_content,
+                "section_word_count": count_markdown_words(markdown_content),
+            }
+        except Exception as exc:
+            logger.exception("generate_page_section failed on attempt %d. Raw response: %s", attempt, raw)
+            raise ValueError("Could not parse JSON from model output.") from exc
+
+    raise ValueError(
+        "Generated page section could not satisfy the rules. "
+        f"{last_failure_detail or 'Last section attempt failed validation.'}"
+    )
+
+
+def _section_title_from_markdown(markdown_content: str) -> str:
+    match = re.search(r"^##\s+(.+)$", markdown_content or "", flags=re.MULTILINE)
+    return match.group(1).strip() if match else "Generated Section"
 
 
 def _publish_progress(progress_callback, message: str, kind: str = "status") -> None:

@@ -4,6 +4,9 @@
   const pageTitleHidden = document.getElementById("pageTitleHidden");
   const pageMetaHidden = document.getElementById("pageMetaHidden");
   const pageContentHidden = document.getElementById("pageContentHidden");
+  const generatedSectionHidden = document.getElementById("generatedSectionHidden");
+  const generatedSectionTitleHidden = document.getElementById("generatedSectionTitleHidden");
+  const generatedSectionWordCountHidden = document.getElementById("generatedSectionWordCountHidden");
   const savePageTitle = document.getElementById("savePageTitle");
   const savePageMeta = document.getElementById("savePageMeta");
   const savePageContent = document.getElementById("savePageContent");
@@ -20,6 +23,9 @@
   const liveWorkspace = document.getElementById("pageLiveDraftWorkspace");
   const livePreviewArea = document.getElementById("pageLivePreviewArea");
   const liveHtmlOutput = document.getElementById("pageLiveHtmlOutput");
+  const generatedSectionSource = document.getElementById("generatedSectionSource");
+  const sectionInsertTarget = document.getElementById("sectionInsertTarget");
+  const insertGeneratedSectionButton = document.getElementById("insertGeneratedSectionButton");
   const generatorForm = document.getElementById("pageGeneratorForm");
   const saveForm = document.getElementById("savePageForm");
   const generationLogBox = document.querySelector("[data-generation-log]");
@@ -169,6 +175,116 @@
     if (markdownOutput && !shouldShowLive) {
       markdownOutput.value = html;
     }
+    if (!shouldShowLive) {
+      renderSectionInsertControls();
+    }
+  }
+
+  function cleanPreviewHtml() {
+    if (!previewArea) {
+      return htmlOutput ? htmlOutput.value : "";
+    }
+    const clone = previewArea.cloneNode(true);
+    clone.querySelectorAll("[data-section-drop-zone]").forEach(function (element) {
+      element.remove();
+    });
+    return clone.innerHTML;
+  }
+
+  function sectionHtml() {
+    if (generatedSectionHidden && generatedSectionHidden.value.trim()) {
+      return generatedSectionHidden.value;
+    }
+    return generatedSectionSource ? generatedSectionSource.innerHTML : "";
+  }
+
+  function topLevelContentElements(container) {
+    if (!container) {
+      return [];
+    }
+    return Array.prototype.filter.call(container.children, function (element) {
+      return !element.hasAttribute("data-section-drop-zone");
+    });
+  }
+
+  function labelForElement(element, index) {
+    if (!element) {
+      return "End of page";
+    }
+    const heading = element.matches("h1,h2,h3,h4,h5,h6") ? element : element.querySelector("h1,h2,h3,h4,h5,h6");
+    const text = heading ? heading.textContent : element.textContent;
+    const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+    return "Before " + (cleaned ? cleaned.slice(0, 54) : "block " + (index + 1));
+  }
+
+  function renderSectionInsertControls() {
+    const html = sectionHtml();
+    if (!previewArea || !html) {
+      return;
+    }
+    previewArea.querySelectorAll("[data-section-drop-zone]").forEach(function (element) {
+      element.remove();
+    });
+    const elements = topLevelContentElements(previewArea);
+    if (sectionInsertTarget) {
+      sectionInsertTarget.innerHTML = "";
+      elements.forEach(function (element, index) {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = labelForElement(element, index);
+        sectionInsertTarget.appendChild(option);
+      });
+      const endOption = document.createElement("option");
+      endOption.value = String(elements.length);
+      endOption.textContent = "End of page";
+      sectionInsertTarget.appendChild(endOption);
+    }
+    for (let index = 0; index <= elements.length; index += 1) {
+      const zone = document.createElement("button");
+      zone.type = "button";
+      zone.className = "my-3 flex min-h-11 w-full items-center justify-center rounded-2xl border-2 border-dashed border-moss-300 bg-moss-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-moss-700 transition hover:bg-moss-100";
+      zone.textContent = index === elements.length ? "Drop section at end" : "Drop section here";
+      zone.setAttribute("data-section-drop-zone", String(index));
+      zone.addEventListener("dragover", function (event) {
+        event.preventDefault();
+        zone.classList.add("bg-moss-100");
+      });
+      zone.addEventListener("dragleave", function () {
+        zone.classList.remove("bg-moss-100");
+      });
+      zone.addEventListener("drop", function (event) {
+        event.preventDefault();
+        zone.classList.remove("bg-moss-100");
+        insertSectionAt(index);
+      });
+      zone.addEventListener("click", function () {
+        insertSectionAt(index);
+      });
+      if (index < elements.length) {
+        previewArea.insertBefore(zone, elements[index]);
+      } else {
+        previewArea.appendChild(zone);
+      }
+    }
+  }
+
+  function insertSectionAt(index) {
+    const html = sectionHtml();
+    if (!html || !previewArea) {
+      return;
+    }
+    const holder = document.createElement("div");
+    holder.innerHTML = cleanPreviewHtml();
+    const sectionHolder = document.createElement("div");
+    sectionHolder.innerHTML = html;
+    const nodes = Array.prototype.slice.call(sectionHolder.childNodes);
+    const elements = Array.prototype.slice.call(holder.children);
+    const reference = elements[Math.max(0, Math.min(index, elements.length))] || null;
+    nodes.forEach(function (node) {
+      holder.insertBefore(node, reference);
+    });
+    setContent(holder.innerHTML, { live: false });
+    appendGenerationLog("status", "Inserted generated section into page content.");
   }
 
   const htmlCopyButton = document.getElementById("copyHtmlButton");
@@ -192,6 +308,18 @@
   if (liveHtmlOutput) {
     liveHtmlOutput.addEventListener("input", function () {
       setContent(liveHtmlOutput.value, { live: true });
+    });
+  }
+  if (generatedSectionSource) {
+    generatedSectionSource.addEventListener("dragstart", function (event) {
+      event.dataTransfer.effectAllowed = "copy";
+      event.dataTransfer.setData("text/html", sectionHtml());
+    });
+  }
+  if (insertGeneratedSectionButton) {
+    insertGeneratedSectionButton.addEventListener("click", function () {
+      const index = sectionInsertTarget ? parseInt(sectionInsertTarget.value || "0", 10) : topLevelContentElements(previewArea).length;
+      insertSectionAt(Number.isNaN(index) ? 0 : index);
     });
   }
   document.addEventListener("app:generation-draft", function (event) {
@@ -232,4 +360,5 @@
   syncTitle();
   syncMeta();
   syncGenerationLogFields();
+  renderSectionInsertControls();
 })();
