@@ -395,9 +395,10 @@ def build_website_planner_report_response(metadata: dict, plan: dict):
     doc.add_heading("Keyword CLUSTER", level=3)
     for index, page in enumerate(main_pages, start=1):
         keyword = _planner_page_keyword(page, f"Main Page {index}")
+        page_name = _planner_page_name(page, keyword)
         h1 = _planner_page_h1(page, keyword)
-        doc.add_paragraph(f"CLUSTER {index}: {keyword}", style="Heading 3")
-        _add_label_value(doc, "Primary Target Page", _planner_slug(keyword))
+        doc.add_paragraph(f"CLUSTER {index}: {page_name}", style="Heading 3")
+        _add_label_value(doc, "Primary Target Page", _planner_page_slug(page, keyword))
         _add_label_value(doc, "Main Keyword", keyword)
         _add_label_value(doc, "H1 / Page Title", h1)
         if page.get("headings"):
@@ -424,16 +425,17 @@ def build_website_planner_report_response(metadata: dict, plan: dict):
     doc.add_paragraph("Homepage (/)")
     for page in main_pages:
         keyword = _planner_page_keyword(page)
-        doc.add_paragraph(f"{_planner_slug(keyword)} [{_planner_page_h1(page, keyword)}]", style="List Bullet")
+        doc.add_paragraph(f"{_planner_page_slug(page, keyword)} [{_planner_page_h1(page, keyword)}]", style="List Bullet")
     doc.add_paragraph("/blog/ [Blog Hub]", style="List Bullet")
     for blog in blogs[:10]:
         doc.add_paragraph(f"/blog/{_slug_text(blog.get('name', 'topic'))}/ [{blog.get('name', '')}]", style="List Bullet")
 
     for index, page in enumerate(main_pages, start=1):
         keyword = _planner_page_keyword(page, f"Main Page {index}")
+        page_name = _planner_page_name(page, keyword)
         h1 = _planner_page_h1(page, keyword)
         headings = page.get("headings", []) if isinstance(page.get("headings", []), list) else []
-        doc.add_heading(f"Page {index}: {keyword}", level=3)
+        doc.add_heading(f"Page {index}: {page_name}", level=3)
         _add_label_value(doc, "Primary Keyword", keyword)
         _add_label_value(doc, "H1 / Page Title", h1)
         if headings:
@@ -544,6 +546,133 @@ def build_website_planner_report_response(metadata: dict, plan: dict):
     return response
 
 
+def build_website_planner_v2_detailed_report_response(metadata: dict, plan: dict):
+    doc = Document()
+    client = (metadata or {}).get("client", "").strip()
+    domain = (metadata or {}).get("domain", "").strip()
+    title_subject = client or domain or "Website Planner V2"
+    title_para = doc.add_paragraph(f"SEO Master Plan - {title_subject}", style="Title")
+    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    core_pages = _planner_items(plan, "core_pages")
+    support_pages = _planner_items(plan, "support_pages")
+    blogs = _planner_items(plan, "blogs")
+    categories = _planner_items(plan, "categories")
+    blog_category_plans = _planner_items(plan, "blog_category_plans")
+    summary = plan.get("summary", {}) if isinstance(plan.get("summary", {}), dict) else {}
+    target_market = (metadata or {}).get("target_market", "").strip()
+    language = (metadata or {}).get("language", "").strip()
+    site_type = (metadata or {}).get("site_type", "").strip()
+    source_filename = (metadata or {}).get("reference_filename", "").strip()
+
+    doc.add_paragraph(
+        " ".join(
+            item
+            for item in (
+                f"Client: {client}" if client else "",
+                f"Domain: {domain}" if domain else "",
+                f"Target Market: {target_market}" if target_market else "",
+                f"Language: {language}" if language else "",
+                f"Site Type: {site_type}" if site_type else "",
+                "Date:",
+            )
+            if item
+        )
+    )
+    if source_filename:
+        _add_label_value(doc, "Keyword Source File", source_filename)
+
+    doc.add_heading("PART 1 - KEYWORD PLAN", level=2)
+    doc.add_paragraph(
+        "Strategic Overview: build one focused core page for each major keyword category, then support it with clear internal links, "
+        "blog topics, FAQ coverage, and conversion sections. Avoid using unverified trust claims such as official, licensed, legit, "
+        "or approved unless the client has proof for those statements."
+    )
+    for index, page in enumerate(core_pages, start=1):
+        keyword = page.get("primary_keyword", "") or _planner_page_keyword(page, f"Core Page {index}")
+        page_name = page.get("name", f"Core Page {index}")
+        doc.add_paragraph(f"CLUSTER {index}: {page_name}", style="Heading 3")
+        _add_label_value(doc, "Primary Target Page", page.get("slug", _planner_slug(keyword)))
+        _add_label_value(doc, "Main Keyword", keyword)
+        _add_label_value(doc, "H1 / Page Title", page.get("h1", keyword))
+        _add_simple_table(
+            doc,
+            ("Keyword", "Monthly Volume", "Competition", "Keyword Difficulty", "Intent"),
+            _v2_detailed_keyword_rows(page),
+        )
+
+    doc.add_heading("PART 2 - CONTENT LAYOUT PLAN", level=2)
+    doc.add_paragraph("Site Architecture (Silo Structure)")
+    doc.add_paragraph("Homepage (/)")
+    for page in core_pages:
+        slug = page.get("slug", _planner_slug(page.get("primary_keyword", page.get("name", "page"))))
+        doc.add_paragraph(f"{slug} [{page.get('name', '')}]", style="List Bullet")
+    doc.add_paragraph("/blog/ [Blog Hub]", style="List Bullet")
+    for category in categories[:10]:
+        doc.add_paragraph(f"/blog/category/{_slug_text(category.get('name', 'category'))}/", style="List Bullet")
+
+    for index, page in enumerate(core_pages, start=1):
+        _add_v2_detailed_page_layout(doc, index, page, target_market)
+
+    doc.add_heading("PART 3 - INTERNAL LINKING PLAN", level=2)
+    doc.add_paragraph("Use the homepage as the main hub. Link core pages to related categories and link every generated blog topic back to the most relevant target page.")
+    doc.add_heading("Internal Link Map", level=3)
+    _add_simple_table(doc, ("Source Page", "Link To", "Suggested Anchor", "Purpose"), _v2_detailed_internal_link_rows(core_pages, blogs))
+    doc.add_heading("Anchor Text Guidelines", level=3)
+    for guideline in (
+        "Use natural anchors that match the destination page topic.",
+        "Mix exact-match, partial-match, branded, and CTA-style anchors.",
+        "Avoid repeating the same anchor across every page.",
+        "Use blog posts to support core commercial pages without forcing the link.",
+    ):
+        doc.add_paragraph(guideline, style="List Bullet")
+
+    doc.add_heading("PART 4 - BLOG CONTENT CATEGORIES AND CURRENT PAGE-DERIVED TOPICS", level=2)
+    _add_simple_table(
+        doc,
+        ("#", "Topic", "Target Keyword", "Intent", "Category", "Target Core Page", "Source"),
+        _v2_detailed_blog_rows(blogs),
+    )
+    doc.add_heading("Blog Category Title And Meta Description Plan", level=3)
+    _add_simple_table(
+        doc,
+        ("Category", "Category Title", "Title Characters", "Meta Description", "Meta Characters", "Topics"),
+        _v2_detailed_blog_category_rows(blog_category_plans),
+    )
+
+    doc.add_heading("PART 5 - SUMMARY DASHBOARD", level=2)
+    _add_simple_table(
+        doc,
+        ("Plan Section", "Number of Pages or Items", "Current Role"),
+        [
+            ("Core Pages", summary.get("core_page_count", len(core_pages)), "Main SEO landing pages from keyword categories"),
+            ("Support Pages", summary.get("support_page_count", len(support_pages)), "Trust, compliance, and contact pages"),
+            ("Blog Topics", summary.get("blog_count", len(blogs)), summary.get("blog_keyword_source", "Blog support plan")),
+            ("Keyword Categories", summary.get("category_count", len(categories)), "Category groups used for core page planning"),
+            ("Total Search Volume", summary.get("total_volume", ""), "Imported Ahrefs keyword volume"),
+        ],
+    )
+    doc.add_heading("Current Core Page Mapping", level=3)
+    _add_simple_table(
+        doc,
+        ("Core Page", "URL Slug", "Primary Keyword", "H1", "Linked Blog Topics"),
+        _v2_detailed_core_mapping_rows(core_pages, blogs),
+    )
+
+    doc.add_heading("PART 6 - PRIORITY LAUNCH ORDER (First 7 Days)", level=2)
+    _add_simple_table(doc, ("Day", "Priority Work", "Output", "Notes"), _v2_detailed_launch_rows(core_pages, support_pages, blogs))
+
+    doc_io = BytesIO()
+    doc.save(doc_io)
+    doc_io.seek(0)
+
+    filename = _download_filename(f"Website Planner V2 Detailed Report {title_subject}")
+    response = make_response(doc_io.getvalue())
+    response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}.docx"
+    return response
+
+
 def _add_label_value(doc: Document, label: str, value: str) -> None:
     if not value:
         return
@@ -605,6 +734,20 @@ def _planner_page_h1(page: dict, fallback: str = "core page") -> str:
     if not isinstance(page, dict):
         return _planner_keyword(fallback)
     return _planner_keyword(str(page.get("h1") or page.get("name") or page.get("keyword") or fallback))
+
+
+def _planner_page_name(page: dict, fallback: str = "core page") -> str:
+    if not isinstance(page, dict):
+        return _planner_keyword(fallback)
+    return _planner_keyword(str(page.get("name") or page.get("h1") or page.get("keyword") or fallback))
+
+
+def _planner_page_slug(page: dict, fallback: str = "core page") -> str:
+    if isinstance(page, dict):
+        slug = str(page.get("slug", "") or "").strip()
+        if slug:
+            return slug
+    return _planner_slug(fallback)
 
 
 def _planner_heading_prompt(keyword: str, headings: list[str], target_market: str) -> str:
@@ -691,7 +834,7 @@ def _planner_core_mapping_rows(main_pages: list[dict], blogs: list[dict]) -> lis
             for blog_index, blog in enumerate(blogs)
             if _planner_page_h1(_planner_target_page(main_pages, blog.get("name", ""), blog_index)) == name
         ][:3]
-        rows.append((name, _planner_slug(keyword), keyword, "Core landing page", ", ".join(linked_topics) or "Add supporting blog topics"))
+        rows.append((name, _planner_page_slug(page, keyword), keyword, "Core landing page", ", ".join(linked_topics) or "Add supporting blog topics"))
     return rows or [("Homepage", "/", "homepage", "Primary hub", "Add supporting blog topics")]
 
 
@@ -707,6 +850,159 @@ def _planner_launch_rows(main_pages: list[dict], trust_pages: list[dict], blogs:
         ("Day 5", "Create first supporting blog topics", ", ".join(blog_names[:3]) or "First blog topics", "Link each blog to a mapped core page."),
         ("Day 6", "Add internal links and anchor text variations", "Internal link map", "Check every core page has inbound and outbound links."),
         ("Day 7", "QA metadata, indexability, tracking, and launch readiness", "Launch checklist", "Submit sitemap and monitor early performance."),
+    ]
+
+
+def _v2_detailed_keyword_rows(page: dict) -> list[tuple[str, str, str, str, str]]:
+    rows = []
+    primary = page.get("primary_keyword", "") or page.get("name", "")
+    if primary:
+        rows.append((primary, page.get("total_volume", "Research") or "Research", "TBD", "TBD", page.get("intent", "Mixed")))
+    for item in page.get("related_keywords", [])[:8]:
+        rows.append((item, "Research", "TBD", "TBD", _planner_intent(item)))
+    return rows or [("Add keyword", "Research", "TBD", "TBD", "Mixed")]
+
+
+def _add_v2_detailed_page_layout(doc: Document, index: int, page: dict, target_market: str) -> None:
+    page_name = page.get("name", f"Core Page {index}")
+    keyword = page.get("primary_keyword", page_name)
+    slug = page.get("slug", _planner_slug(keyword))
+    h1 = page.get("h1", keyword)
+    h2s = page.get("suggested_h2s", []) if isinstance(page.get("suggested_h2s", []), list) else []
+
+    doc.add_heading(f"PAGE {index}: {page_name} {slug}", level=3)
+    _add_label_value(doc, "Primary Keyword", keyword)
+    if page.get("related_keywords"):
+        _add_label_value(doc, "Secondary Keywords", ", ".join(page.get("related_keywords", [])[:8]))
+    doc.add_paragraph("Content Sections")
+    doc.add_paragraph(f"Breadcrumb: Home > {page_name}")
+
+    doc.add_heading("Hero Section", level=4)
+    _add_label_value(doc, "H1", h1)
+    doc.add_paragraph(f"Hero introduction: introduce {page_name} for {target_market or 'the target audience'} using the main keyword '{keyword}' naturally.")
+    doc.add_paragraph("CTA button: Use a short action phrase that matches the page intent.")
+
+    doc.add_heading("Promotional Banner", level=4)
+    doc.add_paragraph(f"Banner text: highlight the strongest benefit of {page_name}.")
+    doc.add_paragraph("CTA: Use a clear next-step button.")
+
+    doc.add_heading(f"{page_name} Introduction", level=4)
+    doc.add_paragraph("Explain the page purpose, what users can do here, why it matters, and how it connects to the rest of the site.")
+
+    doc.add_heading("Suggested H2 Sections", level=4)
+    section_titles = h2s[:5] or [f"Why Choose {page_name}", "Key Features", "Mobile Experience", "Safety And Support"]
+    for title in section_titles:
+        doc.add_paragraph(f"H2: {title}")
+        doc.add_paragraph(f"Section content: explain this angle with useful details, examples, proof points, and an internal link opportunity for {keyword}.")
+
+    homepage_sections = page.get("homepage_sections", []) if isinstance(page.get("homepage_sections", []), list) else []
+    if homepage_sections:
+        doc.add_heading("Core Page Sections", level=4)
+        for section in homepage_sections:
+            doc.add_paragraph(f"H2: {section.get('h2', section.get('page_name', 'Core Page Section'))}")
+            doc.add_paragraph(f"Target page: {section.get('target_slug', '')} [{section.get('page_name', '')}]")
+            doc.add_paragraph(f"Primary keyword: {section.get('primary_keyword', '')}")
+            doc.add_paragraph(section.get("summary", "Introduce the related core page and guide visitors to continue."))
+            if section.get("cta"):
+                doc.add_paragraph(f"CTA button: {section.get('cta')}")
+
+    doc.add_heading("Frequently Asked Questions", level=4)
+    doc.add_paragraph("H2: Frequently Asked Questions")
+    for question in _v2_detailed_questions(page_name, keyword):
+        doc.add_paragraph(question, style="List Bullet")
+
+    doc.add_heading("Bottom CTA Banner", level=4)
+    doc.add_paragraph(f"H2: Continue With {page_name}")
+    doc.add_paragraph("Supporting paragraph: summarize the page value and guide readers toward the next action.")
+
+
+def _v2_detailed_questions(page_name: str, keyword: str) -> list[str]:
+    topic = page_name or keyword or "this page"
+    return [
+        f"What can users find on the {topic} page?",
+        f"How does {keyword or topic} work?",
+        f"Can users access {topic} on mobile?",
+        f"What support options are available for {topic}?",
+        "What should users check before getting started?",
+    ]
+
+
+def _v2_detailed_internal_link_rows(core_pages: list[dict], blogs: list[dict]) -> list[tuple[str, str, str, str]]:
+    rows = []
+    for page in core_pages:
+        rows.append(("Homepage", page.get("name", ""), page.get("primary_keyword", page.get("name", "")), "Pass authority to a core category page"))
+    for index, page in enumerate(core_pages):
+        if len(core_pages) < 2:
+            continue
+        next_page = core_pages[(index + 1) % len(core_pages)]
+        rows.append((page.get("name", ""), next_page.get("name", ""), f"Explore {next_page.get('primary_keyword', next_page.get('name', ''))}", "Connect related core page journeys"))
+    for blog in blogs[:12]:
+        rows.append((blog.get("name", ""), blog.get("target_page", "Homepage"), blog.get("primary_keyword", blog.get("name", "")), "Support the mapped core page"))
+    return rows or [("Homepage", "Core Pages", "main pages", "Create the first internal links")]
+
+
+def _v2_detailed_blog_rows(blogs: list[dict]) -> list[tuple]:
+    rows = []
+    for index, blog in enumerate(blogs, start=1):
+        rows.append(
+            (
+                index,
+                blog.get("name", f"Blog Topic {index}"),
+                blog.get("primary_keyword", ""),
+                blog.get("intent", _planner_intent(blog.get("name", ""))),
+                blog.get("category", ""),
+                blog.get("target_page", ""),
+                blog.get("source", "Planner"),
+            )
+        )
+    return rows or [(1, "Supporting blog topic", "category guide", "Informational", "General", "Homepage", "Planner")]
+
+
+def _v2_detailed_blog_category_rows(category_plans: list[dict]) -> list[tuple]:
+    rows = []
+    for category in category_plans:
+        rows.append(
+            (
+                category.get("name", ""),
+                category.get("title", ""),
+                f"{category.get('title_characters', '')}/{category.get('title_min_characters', '')}-{category.get('title_max_characters', '')}",
+                category.get("meta_description", ""),
+                f"{category.get('meta_description_characters', '')}/{category.get('meta_description_min_characters', '')}-{category.get('meta_description_max_characters', '')}",
+                ", ".join(category.get("topics", [])[:5]) if isinstance(category.get("topics", []), list) else "",
+            )
+        )
+    return rows or [("Category", "Add category title", "50-60", "Add a 130-150 character meta description.", "130-150", "Add topics")]
+
+
+def _v2_detailed_core_mapping_rows(core_pages: list[dict], blogs: list[dict]) -> list[tuple[str, str, str, str, str]]:
+    rows = []
+    for page in core_pages:
+        page_name = page.get("name", "")
+        linked_blogs = [blog.get("name", "") for blog in blogs if blog.get("target_page") == page_name][:4]
+        rows.append(
+            (
+                page_name,
+                page.get("slug", _planner_slug(page.get("primary_keyword", page_name))),
+                page.get("primary_keyword", ""),
+                page.get("h1", ""),
+                ", ".join(linked_blogs) or "Add supporting blog topics",
+            )
+        )
+    return rows or [("Homepage", "/", "homepage", "Homepage", "Add supporting blog topics")]
+
+
+def _v2_detailed_launch_rows(core_pages: list[dict], support_pages: list[dict], blogs: list[dict]) -> list[tuple[str, str, str, str]]:
+    core_names = [page.get("name", "") for page in core_pages]
+    support_names = [page.get("name", "") for page in support_pages]
+    blog_names = [blog.get("name", "") for blog in blogs]
+    return [
+        ("Day 1", "Finalize homepage and top navigation", core_names[0] if core_names else "Homepage", "Use the homepage as the main silo hub"),
+        ("Day 2", "Build highest-volume core page", core_names[1] if len(core_names) > 1 else "Core page", "Use keyword cluster table and page layout"),
+        ("Day 3", "Build next core page", core_names[2] if len(core_names) > 2 else "Core page", "Add contextual links from homepage"),
+        ("Day 4", "Publish support pages", ", ".join(support_names[:3]) or "Support pages", "Add footer/header trust links"),
+        ("Day 5", "Publish supporting blog topics", ", ".join(blog_names[:2]) or "Blog topics", "Link each blog to its target core page"),
+        ("Day 6", "Complete remaining priority core pages", ", ".join(core_names[3:6]) or "Remaining core pages", "Check slug, H1, H2, and internal anchors"),
+        ("Day 7", "QA, metadata, indexing, and analytics", "Launch checklist", "Review noindex, canonicals, schema, and Search Console submission"),
     ]
 
 

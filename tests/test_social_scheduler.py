@@ -287,6 +287,67 @@ def test_generated_social_post_generates_review_draft(monkeypatch):
     assert "21/240 characters" in html
 
 
+def test_generated_social_post_adds_matchup_reaction_lines(monkeypatch):
+    monkeypatch.setattr(
+        social_media_controller,
+        "list_social_profiles",
+        lambda: [
+            {
+                "id": 7,
+                "brand_name": "Example Brand",
+                "social_type": "facebook",
+                "account_name": "Example Page",
+                "platform_account_id": "",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        social_media_controller,
+        "get_social_profile",
+        lambda profile_id: {
+            "id": profile_id,
+            "brand_name": "Example Brand",
+            "social_type": "facebook",
+            "account_name": "Example Page",
+            "platform_account_id": "",
+            "profile_url": "",
+        },
+    )
+    monkeypatch.setattr(social_media_controller, "get_brand_context", lambda brand: "Saved brand context.")
+    monkeypatch.setattr(social_media_controller, "get_provider", lambda: object())
+    monkeypatch.setattr(social_media_controller, "build_web_research_context", lambda query, progress_callback=None: f"Research for {query}")
+    monkeypatch.setattr(social_media_controller, "social_post_character_limit_for_platform", lambda platform: 240)
+    monkeypatch.setattr(
+        social_media_controller,
+        "generate_social_media_post",
+        lambda *args, **kwargs: {
+            "post_content": "Match night is here. Who are you backing?",
+            "image_description": "Matchup graphic.",
+            "tags": ["#MatchDay"],
+            "character_count": 41,
+            "character_limit": 240,
+        },
+    )
+    monkeypatch.setattr(social_media_controller, "record_generation", lambda **kwargs: 42)
+
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post(
+        "/generated-social-post",
+        data={
+            "social_profile_id": "7",
+            "post_keyword": "Golden State Warriors vs Boston Celtics",
+            "post_link": "",
+        },
+    )
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "React \U0001f49f for Team #GoldenStateWarriors" in html
+    assert "React \U0001f44d for Team #BostonCeltics" in html
+    assert "Added matchup reaction lines for the vs keyword." in html
+
+
 def test_generated_social_post_confirm_updates_history(monkeypatch):
     recorded = {}
     monkeypatch.setattr(social_media_controller, "list_social_profiles", lambda: [])

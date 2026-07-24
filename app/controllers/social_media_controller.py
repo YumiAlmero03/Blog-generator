@@ -1,4 +1,5 @@
 import json
+import re
 from html.parser import HTMLParser
 
 from flask import render_template, request
@@ -172,13 +173,19 @@ def _handle_generate_social_post_page(state: dict) -> None:
             max_characters=state["character_limit"],
             progress_callback=progress,
         )
-        state["generated_content"] = result.get("post_content", "")
+        state["generated_content"] = _apply_matchup_reaction_lines(
+            result.get("post_content", ""),
+            state["post_keyword"],
+            state["character_limit"],
+        )
         state["image_description"] = result.get("image_description", "")
         state["tags"] = result.get("tags", [])
         state["tags_text"] = ", ".join(state["tags"])
-        state["character_count"] = result.get("character_count", len(state["generated_content"]))
+        state["character_count"] = len(state["generated_content"])
         state["character_limit"] = result.get("character_limit", state["character_limit"])
         state["web_search_used"] = bool(research_context)
+        if _matchup_teams(state["post_keyword"]):
+            append_generation_log(state["generation_log"], "status", "Added matchup reaction lines for the vs keyword.")
         state["history_id"] = str(_record_social_post_generation(state, profile, confirmed=False))
         progress("Generation complete. Review and confirm before posting.")
         clear_generation_status(request.form.get("generation_status_token", ""))
@@ -269,6 +276,51 @@ def _record_social_post_generation(state: dict, profile: dict, confirmed: bool, 
         content=state["generated_content"],
         history_id=state["history_id"],
     )
+
+
+def _apply_matchup_reaction_lines(content: str, keyword: str, max_characters: int = 0) -> str:
+    teams = _matchup_teams(keyword)
+    cleaned_content = (content or "").strip()
+    if not teams:
+        return cleaned_content
+    team_1, team_2 = teams
+    reaction_lines = f"React \U0001f49f for Team #{_team_hashtag(team_1)}\nReact \U0001f44d for Team #{_team_hashtag(team_2)}"
+    if reaction_lines in cleaned_content:
+        return cleaned_content
+    separator = "\n\n" if cleaned_content else ""
+    candidate = f"{cleaned_content}{separator}{reaction_lines}"
+    limit = _int_or_zero(max_characters)
+    if not limit or len(candidate) <= limit:
+        return candidate
+
+    allowed_content_length = limit - len(reaction_lines) - len(separator)
+    if allowed_content_length <= 0:
+        return reaction_lines[:limit] if limit else reaction_lines
+    trimmed = cleaned_content[:allowed_content_length].rstrip()
+    trimmed = re.sub(r"\s+\S*$", "", trimmed).strip() or cleaned_content[:allowed_content_length].rstrip()
+    return f"{trimmed}{separator}{reaction_lines}"
+
+
+def _matchup_teams(keyword: str) -> tuple[str, str] | None:
+    match = re.search(r"^\s*(.+?)\s+vs\.?\s+(.+?)\s*$", str(keyword or "").strip(), flags=re.IGNORECASE)
+    if not match:
+        return None
+    team_1 = _clean_matchup_team(match.group(1))
+    team_2 = _clean_matchup_team(match.group(2))
+    if not team_1 or not team_2:
+        return None
+    return team_1, team_2
+
+
+def _clean_matchup_team(value: str) -> str:
+    cleaned = re.sub(r"\s+", " ", str(value or "")).strip(" -:|")
+    cleaned = re.sub(r"\b(live|prediction|preview|odds|score|stream|highlights|today|tonight)\b", "", cleaned, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", cleaned).strip(" -:|")
+
+
+def _team_hashtag(team: str) -> str:
+    hashtag = re.sub(r"[^A-Za-z0-9]+", "", team.title())
+    return hashtag or "Team"
 
 
 def _selected_social_profile(state: dict) -> dict | None:

@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% set active_page = "website-planner-v2" %}
+
+{% block title %}Website Planner V2{% endblock %}
+{% block eyebrow %}Keyword Architecture{% endblock %}
+{% block hero_title %}Website Planner V2{% endblock %}
+{% block hero_text %}Upload an Ahrefs CSV and group the Keyword column into core pages, support pages, blog topics, categories, and a wrap-up site plan.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" class="grid gap-4 lg:grid-cols-3 lg:items-end">
+        <textarea name="generation_log_json" class="hidden-form lg:col-span-3" aria-hidden="true">{{ generation_log_json | e }}</textarea>
+        <div>
+          <label for="planner_client" class="mb-2 block text-sm font-bold text-sand-900">Client</label>
+          <input id="planner_client" name="planner_client" type="text" value="{{ planner_client }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="planner_domain" class="mb-2 block text-sm font-bold text-sand-900">Domain</label>
+          <input id="planner_domain" name="planner_domain" type="text" value="{{ planner_domain }}" placeholder="https://example.com" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="ahrefs_csv_file" class="mb-2 block text-sm font-bold text-sand-900">Ahrefs CSV</label>
+          <input id="ahrefs_csv_file" name="ahrefs_csv_file" type="file" accept=".csv,text/csv" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-sand-100 file:px-4 file:py-2 file:text-sm file:font-bold file:text-sand-800 focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="planner_target_market" class="mb-2 block text-sm font-bold text-sand-900">Target Market</label>
+          <input id="planner_target_market" name="planner_target_market" type="text" value="{{ planner_target_market }}" placeholder="Philippines" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="planner_language" class="mb-2 block text-sm font-bold text-sand-900">Language</label>
+          <input id="planner_language" name="planner_language" type="text" value="{{ planner_language }}" placeholder="English" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="planner_site_type" class="mb-2 block text-sm font-bold text-sand-900">Site Type</label>
+          <input id="planner_site_type" name="planner_site_type" type="text" value="{{ planner_site_type }}" placeholder="Informational / Affiliate Lead Gen" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="blog_count" class="mb-2 block text-sm font-bold text-sand-900">Blog Keyword Generator</label>
+          <input id="blog_count" name="blog_count" type="number" min="6" max="100" value="{{ blog_count }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="google_trends_geo" class="mb-2 block text-sm font-bold text-sand-900">Google Trends Geo</label>
+          <input id="google_trends_geo" name="google_trends_geo" type="text" value="{{ google_trends_geo }}" placeholder="PH" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 uppercase text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <label class="flex min-h-12 items-center gap-3 rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm font-bold text-sand-800">
+          <input name="use_google_trends" type="checkbox" value="1" {% if use_google_trends %}checked{% endif %} class="h-4 w-4 rounded border-sand-300 text-sand-700 focus:ring-sand-500" />
+          Use Google Trends for Blog Plan
+        </label>
+        <div class="lg:col-span-3">
+          <label for="category_suggestions" class="mb-2 block text-sm font-bold text-sand-900">Category Suggestions</label>
+          <textarea id="category_suggestions" name="category_suggestions" rows="4" placeholder="Slots&#10;Sports Betting&#10;Casino Games&#10;Promotions" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ category_suggestions }}</textarea>
+          <p class="mt-2 text-xs font-bold leading-5 text-sand-600">One category per line or comma separated. These are used for core page category suggestions and varied Blog Plan ideas.</p>
+        </div>
+        <div class="lg:col-span-3">
+          <button type="submit" class="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700 sm:w-auto">Create V2 Plan</button>
+        </div>
+      </form>
+
+      {% include "_generation_log.html" %}
+    </section>
+
+    {% if plan %}
+      <section class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Wrap-Up Plan</p>
+            <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ plan.summary.keyword_count }} keyword(s) grouped</h2>
+            {% if plan.source_filename %}
+              <p class="mt-2 max-w-3xl break-words text-sm font-semibold text-sand-600">Source: {{ plan.source_filename }}</p>
+            {% endif %}
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center text-xs font-bold text-sand-700 sm:grid-cols-5">
+            <div class="rounded-2xl bg-sand-100 px-3 py-3">{{ plan.summary.core_page_count }} Core</div>
+            <div class="rounded-2xl bg-sand-100 px-3 py-3">{{ plan.summary.support_page_count }} Support</div>
+            <div class="rounded-2xl bg-sand-100 px-3 py-3">{{ plan.summary.blog_count }} Blogs</div>
+            <div class="rounded-2xl bg-sand-100 px-3 py-3">{{ plan.summary.category_count }} Categories</div>
+            <div class="rounded-2xl bg-sand-100 px-3 py-3">{{ "{:,}".format(plan.summary.total_volume) }} Volume</div>
+          </div>
+        </div>
+        <p class="mt-4 rounded-2xl bg-sand-50 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Blog Keyword Generator: {{ plan.summary.blog_keyword_source }}</p>
+
+        <div class="mt-6 grid gap-3">
+          {% for item in plan.wrap_up %}
+            <div class="rounded-2xl bg-sand-50 px-4 py-3 text-sm font-bold leading-6 text-sand-800">{{ item }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mt-5 flex flex-wrap gap-3">
+          {% for action, label in [
+            ("/website-planner-v2/download-report", "Download report (.docx)"),
+            ("/website-planner-v2/download-detailed-report", "Download detailed report (.docx)")
+          ] %}
+            <form method="post" action="{{ action }}">
+              <input type="hidden" name="planner_client" value="{{ planner_client }}" />
+              <input type="hidden" name="planner_domain" value="{{ planner_domain }}" />
+              <input type="hidden" name="planner_target_market" value="{{ planner_target_market }}" />
+              <input type="hidden" name="planner_language" value="{{ planner_language }}" />
+              <input type="hidden" name="planner_site_type" value="{{ planner_site_type }}" />
+              <input type="hidden" name="source_filename" value="{{ plan.source_filename }}" />
+              <textarea name="plan_json" class="hidden">{{ plan_json }}</textarea>
+              <button type="submit" class="inline-flex min-h-12 w-full items-center justify-center rounded-full {% if loop.index == 1 %}bg-sand-950 hover:bg-sand-800{% else %}bg-moss-700 hover:bg-moss-800{% endif %} px-6 py-3 text-sm font-bold text-white shadow-soft transition sm:w-auto">{{ label }}</button>
+            </form>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+        <h2 class="font-display text-2xl font-bold text-sand-950">Keyword Categories</h2>
+        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {% for category in plan.categories %}
+            <article class="rounded-[8px] border border-sand-200 bg-white p-4">
+              <div class="flex items-start justify-between gap-3">
+                <h3 class="break-words text-base font-extrabold text-sand-950">{{ category.index }}. {{ category.name }}</h3>
+                <span class="shrink-0 rounded-full bg-sand-100 px-3 py-1 text-xs font-bold text-sand-700">{{ category.keyword_count }}</span>
+              </div>
+              <p class="mt-2 text-xs font-bold uppercase tracking-[0.1em] text-sand-500">{{ "{:,}".format(category.total_volume) }} volume</p>
+              {% if category.top_keywords %}
+                <p class="mt-3 break-words text-sm leading-6 text-sand-700">{{ category.top_keywords | join(", ") }}</p>
+              {% else %}
+                <p class="mt-3 text-sm leading-6 text-sand-500">Reserved category for future keyword expansion.</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+        <h2 class="font-display text-2xl font-bold text-sand-950">Core Page Clusters</h2>
+        <div class="mt-4 grid gap-4">
+          {% for page in plan.core_pages %}
+            <article class="rounded-[8px] border border-sand-200 bg-white p-4">
+              <div class="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
+                <div>
+                  <p class="text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Page {{ page.index }}</p>
+                  <h3 class="mt-1 break-words text-lg font-extrabold text-sand-950">{{ page.name }}</h3>
+                  <p class="mt-2 break-words text-sm font-bold text-sand-700">{{ page.slug }}</p>
+                  <p class="mt-3 break-words text-sm leading-6 text-sand-700"><strong>Primary:</strong> {{ page.primary_keyword }}</p>
+                  <p class="mt-1 text-sm leading-6 text-sand-700"><strong>Intent:</strong> {{ page.intent }}</p>
+                  <p class="mt-1 text-sm leading-6 text-sand-700"><strong>Cluster Volume:</strong> {{ "{:,}".format(page.total_volume) }}</p>
+                </div>
+                <div class="grid gap-3">
+                  <div class="rounded-2xl bg-sand-50 px-4 py-3">
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] text-sand-500">H1</p>
+                    <p class="mt-1 break-words text-sm font-bold text-sand-900">{{ page.h1 }}</p>
+                  </div>
+                  <div class="rounded-2xl bg-sand-50 px-4 py-3">
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Suggested H2s</p>
+                    <ul class="mt-2 grid gap-1 text-sm leading-6 text-sand-700">
+                      {% for h2 in page.suggested_h2s %}
+                        <li class="break-words">{{ h2 }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% if page.related_keywords %}
+                    <div class="rounded-2xl bg-sand-50 px-4 py-3">
+                      <p class="text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Related Keywords</p>
+                      <p class="mt-2 break-words text-sm leading-6 text-sand-700">{{ page.related_keywords | join(", ") }}</p>
+                    </div>
+                  {% endif %}
+                  {% if page.homepage_sections %}
+                    <div class="rounded-2xl bg-sand-50 px-4 py-3">
+                      <p class="text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Homepage Sections For Core Pages</p>
+                      <div class="mt-3 grid gap-2">
+                        {% for section in page.homepage_sections %}
+                          <div class="rounded-[8px] border border-sand-200 bg-white px-3 py-2">
+                            <p class="break-words text-sm font-bold text-sand-950">{{ section.h2 }}</p>
+                            <p class="mt-1 break-words text-xs font-semibold leading-5 text-sand-600">{{ section.primary_keyword }} | {{ section.target_slug }}</p>
+                            <p class="mt-1 break-words text-xs leading-5 text-sand-700">{{ section.summary }}</p>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="grid gap-6 xl:grid-cols-2">
+        <div class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+          <h2 class="font-display text-2xl font-bold text-sand-950">Support Pages</h2>
+          <div class="mt-4 grid gap-3">
+            {% for page in plan.support_pages %}
+              <div class="rounded-[8px] border border-sand-200 bg-white px-4 py-3">
+                <p class="break-words text-sm font-extrabold text-sand-950">{{ page.index }}. {{ page.name }}</p>
+                <p class="mt-1 break-words text-xs font-bold text-sand-600">{{ page.slug }} | {{ page.intent }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+          <h2 class="font-display text-2xl font-bold text-sand-950">Blog Plan</h2>
+          <div class="mt-4 grid gap-3">
+            {% for blog in plan.blogs %}
+              <div class="rounded-[8px] border border-sand-200 bg-white px-4 py-3">
+                <p class="break-words text-sm font-extrabold text-sand-950">{{ blog.index }}. {{ blog.name }}</p>
+                <p class="mt-1 break-words text-xs font-bold text-sand-600">{{ blog.category }} | {{ blog.intent }} | {{ "{:,}".format(blog.volume) }} volume | {{ blog.source }}</p>
+                <p class="mt-2 break-words text-sm leading-6 text-sand-700"><strong>Keyword:</strong> {{ blog.primary_keyword }}</p>
+                <p class="mt-1 break-words text-sm leading-6 text-sand-700"><strong>Link to:</strong> {{ blog.target_page }} {{ blog.target_slug }}</p>
+                {% if blog.trend_url %}
+                  <a href="{{ blog.trend_url }}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex text-xs font-bold uppercase tracking-[0.1em] text-sand-700 underline decoration-sand-300 underline-offset-4">Google Trends</a>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+        <h2 class="font-display text-2xl font-bold text-sand-950">Blog Category Titles And Meta Descriptions</h2>
+        <div class="mt-4 grid gap-3 md:grid-cols-2">
+          {% for category in plan.blog_category_plans %}
+            <article class="rounded-[8px] border border-sand-200 bg-white p-4">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <h3 class="break-words text-base font-extrabold text-sand-950">{{ category.index }}. {{ category.name }}</h3>
+                <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold text-sand-700">{{ category.blog_count }} blogs</span>
+              </div>
+              <div class="mt-3 rounded-2xl bg-sand-50 px-4 py-3">
+                <p class="text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Category Title {{ category.title_characters }}/{{ category.title_min_characters }}-{{ category.title_max_characters }}</p>
+                <p class="mt-1 break-words text-sm font-bold leading-6 text-sand-900">{{ category.title }}</p>
+              </div>
+              <div class="mt-3 rounded-2xl bg-sand-50 px-4 py-3">
+                <p class="text-xs font-bold uppercase tracking-[0.12em] text-sand-500">Meta Description {{ category.meta_description_characters }}/{{ category.meta_description_min_characters }}-{{ category.meta_description_max_characters }}</p>
+                <p class="mt-1 break-words text-sm leading-6 text-sand-700">{{ category.meta_description }}</p>
+              </div>
+              {% if category.topics %}
+                <p class="mt-3 break-words text-xs font-semibold leading-5 text-sand-600">Topics: {{ category.topics | join(", ") }}</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}

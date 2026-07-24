@@ -9,7 +9,7 @@ from flask import Response, redirect, render_template, request, url_for
 from urllib.parse import urlparse
 
 from app.controllers.helpers import base_template_context
-from app.services.document_service import build_docx_response, build_gsc_summary_report_response, build_website_planner_report_response, extract_docx_website_reference
+from app.services.document_service import build_docx_response, build_gsc_summary_report_response, build_website_planner_report_response, build_website_planner_v2_detailed_report_response, extract_docx_website_reference
 from app.services.indexnow_service import (
     DEFAULT_INDEXNOW_ENDPOINT,
     GOOGLE_INDEXING_ENDPOINT,
@@ -43,7 +43,7 @@ from app.services.generation_status_service import publish_generation_prompt, pu
 from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.website_page_discovery_service import discover_website_pages
 from app.services.website_index_scheduler import submit_website_index_urls_to_indexnow, trigger_website_index_batch
-from app.services.website_planner_service import DEFAULT_KEYWORD_CATEGORIES, build_website_plan, get_main_pages_setting, get_trust_pages_setting, parse_keyword_categories
+from app.services.website_planner_service import DEFAULT_KEYWORD_CATEGORIES, build_keyword_website_plan_v2, build_website_plan, default_keyword_categories_text, enrich_keyword_website_plan_v2_with_ai, get_main_pages_setting, get_trust_pages_setting, parse_ahrefs_keyword_csv, parse_keyword_categories
 from database import get_brand_context, get_brand_record, get_setting, list_backlinks, list_brand_names, list_brand_records, set_setting
 from database import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 from logger import logger
@@ -216,6 +216,89 @@ def website_planner():
     return render_template("website_planner.html", **base_template_context(), **state)
 
 
+def website_planner_v2():
+    state = {
+        "planner_client": "",
+        "planner_domain": "",
+        "planner_target_market": "Philippines",
+        "planner_language": "English",
+        "planner_site_type": "",
+        "blog_count": 10,
+        "use_google_trends": True,
+        "google_trends_geo": "PH",
+        "category_suggestions": default_keyword_categories_text(),
+        "source_filename": "",
+        "keywords": [],
+        "plan": None,
+        "plan_json": "",
+        "generation_log": [],
+        "generation_log_json": "[]",
+        "error": None,
+    }
+    if request.method == "POST":
+        for key in ("planner_client", "planner_domain", "planner_target_market", "planner_language", "planner_site_type", "google_trends_geo", "category_suggestions"):
+            state[key] = request.form.get(key, "").strip()
+        state["blog_count"] = _planner_count(request.form.get("blog_count", "10"), 10)
+        state["use_google_trends"] = request.form.get("use_google_trends") == "1"
+        state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+        state["generation_log_json"] = generation_log_json(state["generation_log"])
+        append_generation_log(state["generation_log"], "status", "Website Planner V2: Reading Ahrefs CSV.")
+        upload = request.files.get("ahrefs_csv_file")
+        if not upload or not upload.filename:
+            state["error"] = "Upload an Ahrefs CSV file."
+            append_generation_log(state["generation_log"], "error", state["error"])
+        else:
+            try:
+                state["source_filename"] = upload.filename
+                state["keywords"] = parse_ahrefs_keyword_csv(upload.read())
+                append_generation_log(state["generation_log"], "status", f"Imported {len(state['keywords'])} keyword(s) from {upload.filename}.")
+                state["plan"] = build_keyword_website_plan_v2(
+                    state["keywords"],
+                    source_filename=upload.filename,
+                    blog_count=state["blog_count"],
+                    use_google_trends=state["use_google_trends"],
+                    google_trends_geo=state["google_trends_geo"],
+                    brand_names=_merge_planner_categories(list_brand_names(), [state["planner_client"]]),
+                    category_suggestions=state["category_suggestions"],
+                )
+                append_generation_log(state["generation_log"], "status", f"Blog Keyword Generator source: {state['plan']['summary']['blog_keyword_source']}.")
+                try:
+                    append_generation_log(state["generation_log"], "status", "Generating stronger H1, H2, title, and meta description suggestions with AI.")
+                    state["plan"] = enrich_keyword_website_plan_v2_with_ai(
+                        get_provider(),
+                        state["plan"],
+                        {
+                            "client": state["planner_client"],
+                            "domain": state["planner_domain"],
+                            "target_market": state["planner_target_market"],
+                            "language": state["planner_language"],
+                            "site_type": state["planner_site_type"],
+                        },
+                    )
+                    append_generation_log(state["generation_log"], "status", "AI content suggestions added.")
+                except Exception as exc:
+                    logger.exception("website planner v2 AI heading enrichment failed")
+                    append_generation_log(state["generation_log"], "warning", str(exc) or "AI heading suggestions failed. Using planner fallback headings.")
+                state["plan_json"] = json.dumps(state["plan"], ensure_ascii=True)
+                append_generation_log(
+                    state["generation_log"],
+                    "status",
+                    (
+                        "Grouped keywords into "
+                        f"{state['plan']['summary']['core_page_count']} core page(s), "
+                        f"{state['plan']['summary']['support_page_count']} support page(s), "
+                        f"{state['plan']['summary']['category_count']} categor(ies), and "
+                        f"{state['plan']['summary']['blog_count']} blog topic(s)."
+                    ),
+                )
+            except Exception as exc:
+                logger.exception("website planner v2 failed")
+                state["error"] = str(exc) or "Could not create Website Planner V2."
+                append_generation_log(state["generation_log"], "error", state["error"])
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
+    return render_template("website_planner_v2.html", **base_template_context(), **state)
+
+
 def download_website_planner_report():
     plan = _json_dict(request.form.get("plan_json", ""))
     if not plan:
@@ -231,6 +314,39 @@ def download_website_planner_report():
         "date": "",
     }
     return build_website_planner_report_response(metadata, plan)
+
+
+def download_website_planner_v2_report():
+    plan = _json_dict(request.form.get("plan_json", ""))
+    if not plan:
+        return redirect(url_for("web.website_planner_v2"))
+    metadata = {
+        "client": request.form.get("planner_client", "").strip(),
+        "domain": request.form.get("planner_domain", "").strip(),
+        "target_market": request.form.get("planner_target_market", "").strip(),
+        "language": request.form.get("planner_language", "").strip(),
+        "site_type": request.form.get("planner_site_type", "").strip(),
+        "reference_content": "",
+        "reference_filename": request.form.get("source_filename", "").strip(),
+        "date": "",
+    }
+    return build_website_planner_report_response(metadata, _website_planner_v2_report_plan(plan))
+
+
+def download_website_planner_v2_detailed_report():
+    plan = _json_dict(request.form.get("plan_json", ""))
+    if not plan:
+        return redirect(url_for("web.website_planner_v2"))
+    metadata = {
+        "client": request.form.get("planner_client", "").strip(),
+        "domain": request.form.get("planner_domain", "").strip(),
+        "target_market": request.form.get("planner_target_market", "").strip(),
+        "language": request.form.get("planner_language", "").strip(),
+        "site_type": request.form.get("planner_site_type", "").strip(),
+        "reference_filename": request.form.get("source_filename", "").strip(),
+        "date": "",
+    }
+    return build_website_planner_v2_detailed_report_response(metadata, plan)
 
 
 def keyword_suggestions():
@@ -684,6 +800,57 @@ def _json_dict(raw: str) -> dict:
         return parsed if isinstance(parsed, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _website_planner_v2_report_plan(plan: dict) -> dict:
+    core_pages = plan.get("core_pages", []) if isinstance(plan.get("core_pages", []), list) else []
+    support_pages = plan.get("support_pages", []) if isinstance(plan.get("support_pages", []), list) else []
+    blogs = plan.get("blogs", []) if isinstance(plan.get("blogs", []), list) else []
+    summary = plan.get("summary", {}) if isinstance(plan.get("summary", {}), dict) else {}
+    return {
+        "main_pages": [
+            {
+                "index": page.get("index", index),
+                "name": page.get("name", ""),
+                "keyword": page.get("primary_keyword", ""),
+                "h1": page.get("h1", ""),
+                "headings": page.get("suggested_h2s", []),
+                "slug": page.get("slug", ""),
+            }
+            for index, page in enumerate(core_pages, start=1)
+            if isinstance(page, dict)
+        ],
+        "trust_pages": [
+            {
+                "index": page.get("index", index),
+                "name": page.get("name", ""),
+                "keyword": page.get("primary_keyword", ""),
+                "h1": page.get("h1", ""),
+                "slug": page.get("slug", ""),
+            }
+            for index, page in enumerate(support_pages, start=1)
+            if isinstance(page, dict)
+        ],
+        "blogs": [
+            {
+                "index": blog.get("index", index),
+                "name": blog.get("name", ""),
+                "keyword": blog.get("primary_keyword", ""),
+                "source": blog.get("source", "Planner"),
+                "target_page": blog.get("target_page", ""),
+                "target_slug": blog.get("target_slug", ""),
+            }
+            for index, blog in enumerate(blogs, start=1)
+            if isinstance(blog, dict)
+        ],
+        "summary": {
+            "main_pages": summary.get("core_page_count", len(core_pages)),
+            "trust_pages": summary.get("support_page_count", len(support_pages)),
+            "blogs": summary.get("blog_count", len(blogs)),
+            "total": summary.get("core_page_count", len(core_pages)) + summary.get("support_page_count", len(support_pages)) + summary.get("blog_count", len(blogs)),
+            "blog_keyword_source": summary.get("blog_keyword_source", ""),
+        },
+    }
 
 
 def _json_list_of_dicts(raw: str) -> list[dict]:
