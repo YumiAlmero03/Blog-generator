@@ -33,6 +33,7 @@ def test_social_scheduler_page_renders_saved_profiles(monkeypatch):
     html = response.get_data(as_text=True)
     assert response.status_code == 200
     assert "Social Scheduler" in html
+    assert '<option value="telegram"' in html
     assert "Example Brand" in html
     assert "@example" in html
     assert "Instagram" in html
@@ -57,14 +58,14 @@ def test_social_scheduler_saves_profile(monkeypatch):
         "/social-scheduler",
         data={
             "brand_name": "Example Brand",
-            "social_type": "linkedin",
-            "account_name": "Example Page",
-            "platform_account_id": "linkedin-org-123",
-            "profile_url": "https://linkedin.com/company/example",
-            "api_key": "linkedin-api-key",
-            "api_secret": "linkedin-api-secret",
-            "access_token": "linkedin-access-token",
-            "refresh_token": "linkedin-refresh-token",
+            "social_type": "telegram",
+            "account_name": "@example_channel",
+            "platform_account_id": "telegram-channel-123",
+            "profile_url": "https://t.me/example_channel",
+            "api_key": "telegram-api-key",
+            "api_secret": "telegram-api-secret",
+            "access_token": "telegram-access-token",
+            "refresh_token": "telegram-refresh-token",
             "posts_per_day": "3",
             "is_active": "1",
             "notes": "Business updates.",
@@ -74,13 +75,13 @@ def test_social_scheduler_saves_profile(monkeypatch):
     html = response.get_data(as_text=True)
     assert response.status_code == 200
     assert saved["brand_name"] == "Example Brand"
-    assert saved["social_type"] == "linkedin"
-    assert saved["account_name"] == "Example Page"
-    assert saved["platform_account_id"] == "linkedin-org-123"
-    assert saved["api_key"] == "linkedin-api-key"
-    assert saved["api_secret"] == "linkedin-api-secret"
-    assert saved["access_token"] == "linkedin-access-token"
-    assert saved["refresh_token"] == "linkedin-refresh-token"
+    assert saved["social_type"] == "telegram"
+    assert saved["account_name"] == "@example_channel"
+    assert saved["platform_account_id"] == "telegram-channel-123"
+    assert saved["api_key"] == "telegram-api-key"
+    assert saved["api_secret"] == "telegram-api-secret"
+    assert saved["access_token"] == "telegram-access-token"
+    assert saved["refresh_token"] == "telegram-refresh-token"
     assert saved["posts_per_day"] == 3
     assert saved["is_active"] is True
     assert "Social account saved." in html

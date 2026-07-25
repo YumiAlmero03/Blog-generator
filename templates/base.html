@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: "class",
         theme: {
           extend: {
             colors: {
@@ -55,11 +56,29 @@
         }
       };
     </script>
+    <script>
+      (() => {
+        try {
+          const savedTheme = localStorage.getItem("appTheme");
+          const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (error) {}
+      })();
+    </script>
     {% block head_extras %}{% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/app.css') }}" />
   </head>
   <body class="min-h-screen bg-[linear-gradient(180deg,#fbf7f2_0%,#f4efe7_52%,#f8f2ea_100%)] font-sans text-sand-900">
     {% block overlay %}{% endblock %}
+
+    <button
+      type="button"
+      class="fixed right-4 top-4 z-[80] inline-flex min-h-10 items-center justify-center rounded-full border border-sand-200 bg-white/90 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-700 shadow-soft backdrop-blur-md transition hover:bg-sand-100"
+      data-theme-toggle
+      aria-pressed="false"
+    >Dark</button>
 
     <div class="min-h-screen min-w-0 overflow-x-clip lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
       {% block shell_header %}

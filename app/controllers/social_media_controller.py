@@ -36,6 +36,7 @@ SOCIAL_PLATFORM_OPTIONS = (
     ("facebook", "Facebook"),
     ("instagram", "Instagram"),
     ("linkedin", "LinkedIn"),
+    ("telegram", "Telegram"),
     ("twitter", "Twitter / X"),
     ("tiktok", "TikTok"),
     ("youtube", "YouTube"),

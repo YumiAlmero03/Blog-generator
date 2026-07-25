@@ -45,6 +45,11 @@ form,
   --text-l: 1.25rem;
   --text-2xl: 2rem;
   --h-weight:700;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 @layer base {
@@ -97,6 +102,103 @@ code {
 
 table {
   max-width: 100%;
+}
+
+html.dark body {
+  background: #11100e !important;
+  color: #f7eee4 !important;
+}
+
+html.dark [class*="bg-white"] {
+  background-color: rgba(31, 27, 23, 0.94) !important;
+}
+
+html.dark [class*="bg-sand-50"],
+html.dark [class*="bg-sand-100"] {
+  background-color: rgba(48, 40, 33, 0.92) !important;
+}
+
+html.dark [class*="bg-sand-200"] {
+  background-color: rgba(64, 52, 42, 0.92) !important;
+}
+
+html.dark [class*="bg-moss-100"] {
+  background-color: rgba(47, 62, 39, 0.78) !important;
+}
+
+html.dark [class*="bg-sand-600"],
+html.dark [class*="bg-sand-700"],
+html.dark [class*="bg-sand-800"],
+html.dark [class*="bg-sand-900"],
+html.dark [class*="bg-sand-950"] {
+  background-color: #c39369 !important;
+  color: #17120f !important;
+}
+
+html.dark [class*="text-sand-950"],
+html.dark [class*="text-sand-900"],
+html.dark [class*="text-sand-800"] {
+  color: #fdf8f3 !important;
+}
+
+html.dark [class*="text-sand-700"],
+html.dark [class*="text-sand-600"] {
+  color: #ead8c3 !important;
+}
+
+html.dark [class*="text-sand-500"],
+html.dark [class*="text-sand-400"] {
+  color: #d8b999 !important;
+}
+
+html.dark [class*="text-moss-700"],
+html.dark [class*="text-moss-800"],
+html.dark [class*="text-green-700"],
+html.dark [class*="text-emerald-700"] {
+  color: #d8f0c8 !important;
+}
+
+html.dark [class*="border-sand-100"],
+html.dark [class*="border-sand-200"],
+html.dark [class*="border-sand-300"],
+html.dark [class*="divide-sand-100"] > :not([hidden]) ~ :not([hidden]),
+html.dark [class*="divide-sand-200"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(216, 185, 153, 0.28) !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea,
+html.dark iframe {
+  background-color: rgba(24, 21, 18, 0.96) !important;
+  border-color: rgba(216, 185, 153, 0.32) !important;
+  color: #fdf8f3 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: rgba(234, 216, 195, 0.58) !important;
+}
+
+html.dark table,
+html.dark thead,
+html.dark tbody,
+html.dark tr {
+  color: #f7eee4 !important;
+}
+
+html.dark a:not([class*="bg-"]) {
+  color: #d8f0c8;
+}
+
+html.dark [data-theme-toggle] {
+  background-color: rgba(247, 238, 228, 0.12) !important;
+  border-color: rgba(234, 216, 195, 0.3) !important;
+  color: #fdf8f3 !important;
+}
+
+html.dark .shadow-soft {
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.34) !important;
 }
 
 .ql-toolbar,

@@ -15,6 +15,7 @@ SOCIAL_POST_CHARACTER_LIMITS = {
     "instagram": 2200,
     "linkedin": 3000,
     "pinterest": 500,
+    "telegram": 4096,
     "tiktok": 4000,
     "twitter": 280,
     "twitter/x": 280,

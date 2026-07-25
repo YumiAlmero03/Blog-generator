@@ -1,6 +1,6 @@
 from flask import Blueprint, send_from_directory
 
-from app.controllers import background_job_controller, backlink_blog_controller, backlink_controller, blog_controller, blog_rework_controller, brand_controller, brand_medium_controller, checklist_controller, dashboard_controller, image_controller, news_controller, page_controller, posting_planner_controller, settings_controller, social_media_controller, tier2_blog_controller, tool_controller
+from app.controllers import background_job_controller, backlink_blog_controller, backlink_controller, blog_controller, blog_rework_controller, brand_controller, brand_medium_controller, checklist_controller, dashboard_controller, image_controller, news_controller, page_controller, posting_planner_controller, settings_controller, social_media_controller, tier2_blog_controller, tool_controller, weekly_planner_controller
 from app.views import generation_events_view
 from app.services.image_service import UPLOAD_ROOT
 
@@ -19,6 +19,7 @@ web.add_url_rule("/website-planner/download-report", view_func=tool_controller.d
 web.add_url_rule("/website-planner-v2/download-report", view_func=tool_controller.download_website_planner_v2_report, methods=["POST"])
 web.add_url_rule("/website-planner-v2/download-detailed-report", view_func=tool_controller.download_website_planner_v2_detailed_report, methods=["POST"])
 web.add_url_rule("/posting-planner", view_func=posting_planner_controller.posting_planner, methods=["GET", "POST"])
+web.add_url_rule("/weekly-planner", view_func=weekly_planner_controller.weekly_planner, methods=["GET"])
 web.add_url_rule("/brand-medium-table", view_func=brand_medium_controller.brand_medium_table, methods=["GET", "POST"])
 web.add_url_rule("/generation-history", view_func=dashboard_controller.generation_history, methods=["GET"])
 web.add_url_rule("/generation-history/<int:history_id>", view_func=dashboard_controller.generation_history_detail, methods=["GET", "POST"])

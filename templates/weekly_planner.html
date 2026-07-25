@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% set active_page = "weekly-planner" %}
+
+{% block title %}Weekly Planner{% endblock %}
+{% block eyebrow %}Content Schedule{% endblock %}
+{% block hero_title %}Weekly Planner{% endblock %}
+{% block hero_text %}Plan weekly content tasks, keep today visible first, and move work between days as priorities change.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6" data-weekly-planner data-today="{{ today }}">
+    <section class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Today</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950" data-today-title>Tasks For Today</h2>
+        </div>
+        <span class="rounded-full bg-moss-100 px-4 py-2 text-sm font-bold text-moss-700" data-today-count>0 tasks</span>
+      </div>
+
+      <div class="mt-5 grid gap-3" data-today-list>
+        <div class="rounded-[8px] border border-dashed border-sand-300 bg-sand-50 px-4 py-5 text-sm font-bold text-sand-500">No tasks for today yet.</div>
+      </div>
+    </section>
+
+    <section class="rounded-[24px] border border-sand-200/70 bg-white/85 p-5 shadow-soft backdrop-blur-md sm:p-7">
+      <form class="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_auto]" data-task-form>
+        <div>
+          <label for="weeklyTaskTitle" class="mb-2 block text-sm font-bold text-sand-900">Task</label>
+          <input id="weeklyTaskTitle" name="task" type="text" placeholder="Write homepage outline" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        </div>
+        <div>
+          <label for="weeklyTaskDay" class="mb-2 block text-sm font-bold text-sand-900">Day</label>
+          <select id="weeklyTaskDay" name="day" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+            {% for day in days %}
+              <option value="{{ day.key }}" {% if day.is_today %}selected{% endif %}>{{ day.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button type="submit" class="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700 lg:w-auto">Add Task</button>
+        </div>
+      </form>
+
+      <div class="mt-6 grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+        {% for day in days %}
+          <section class="min-w-0 rounded-[8px] border {% if day.is_today %}border-moss-500 bg-moss-100/35{% else %}border-sand-200 bg-white{% endif %} p-4" data-day-column="{{ day.key }}">
+            <div class="flex min-h-12 items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 class="break-words text-base font-extrabold text-sand-950">{{ day.label }}</h3>
+                <p class="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-sand-500">{{ day.date_label }}</p>
+              </div>
+              {% if day.is_today %}
+                <span class="shrink-0 rounded-full bg-moss-700 px-3 py-1 text-xs font-bold text-white">Today</span>
+              {% endif %}
+            </div>
+            <div class="mt-4 grid min-h-[180px] content-start gap-3 rounded-[8px] border border-dashed border-sand-200 bg-sand-50/70 p-3" data-task-list="{{ day.key }}"></div>
+          </section>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (() => {
+      const root = document.querySelector("[data-weekly-planner]");
+      if (!root) return;
+
+      const storageKey = "weeklyPlannerTasks:v1";
+      const todayKey = root.dataset.today;
+      const form = root.querySelector("[data-task-form]");
+      const taskInput = root.querySelector("#weeklyTaskTitle");
+      const dayInput = root.querySelector("#weeklyTaskDay");
+      const todayList = root.querySelector("[data-today-list]");
+      const todayCount = root.querySelector("[data-today-count]");
+      const lists = Array.from(root.querySelectorAll("[data-task-list]"));
+      let draggedId = "";
+
+      const fallbackTasks = [
+        { id: crypto.randomUUID(), day: todayKey, title: "Review priority pages" },
+        { id: crypto.randomUUID(), day: todayKey, title: "Prepare content brief" },
+        { id: crypto.randomUUID(), day: dayInput.value, title: "Check pending generators" }
+      ];
+
+      const loadTasks = () => {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(storageKey) || "[]");
+          return Array.isArray(parsed) && parsed.length ? parsed : fallbackTasks;
+        } catch (error) {
+          return fallbackTasks;
+        }
+      };
+
+      let tasks = loadTasks();
+
+      const saveTasks = () => {
+        localStorage.setItem(storageKey, JSON.stringify(tasks));
+      };
+
+      const editTask = (task) => {
+        const updatedTitle = window.prompt("Edit task", task.title);
+        const cleanedTitle = updatedTitle ? updatedTitle.trim() : "";
+        if (!cleanedTitle || cleanedTitle === task.title) return;
+        task.title = cleanedTitle;
+        saveTasks();
+        render();
+      };
+
+      const taskCard = (task, compact = false) => {
+        const card = document.createElement("article");
+        card.className = compact
+          ? "flex items-start justify-between gap-3 rounded-[8px] border border-sand-200 bg-white px-4 py-3 text-sm font-bold text-sand-900 shadow-sm"
+          : "group flex items-start justify-between gap-3 rounded-[8px] border border-sand-200 bg-white px-3 py-3 shadow-sm transition hover:border-sand-400";
+
+        const title = document.createElement("span");
+        title.className = "min-w-0 flex-1 cursor-text break-words leading-6";
+        title.title = "Double-click to edit";
+        title.textContent = task.title;
+        title.addEventListener("dblclick", () => editTask(task));
+
+        const editButton = document.createElement("button");
+        editButton.type = "button";
+        editButton.className = "shrink-0 rounded-full bg-sand-100 px-3 py-1 text-xs font-bold text-sand-700 transition hover:bg-sand-200";
+        editButton.dataset.editTask = task.id;
+        editButton.textContent = "Edit";
+        editButton.addEventListener("click", () => editTask(task));
+
+        card.append(title, editButton);
+        card.addEventListener("dblclick", (event) => {
+          if (event.target.closest("button")) return;
+          editTask(task);
+        });
+        if (!compact) {
+          card.draggable = true;
+          card.dataset.taskId = task.id;
+          card.addEventListener("dragstart", () => {
+            draggedId = task.id;
+            card.classList.add("opacity-50");
+          });
+          card.addEventListener("dragend", () => {
+            draggedId = "";
+            card.classList.remove("opacity-50");
+          });
+        }
+        return card;
+      };
+
+      const emptyCard = (text) => {
+        const card = document.createElement("div");
+        card.className = "rounded-[8px] border border-dashed border-sand-300 bg-sand-50 px-4 py-5 text-sm font-bold text-sand-500";
+        card.textContent = text;
+        return card;
+      };
+
+      const render = () => {
+        lists.forEach((list) => {
+          list.innerHTML = "";
+          const dayTasks = tasks.filter((task) => task.day === list.dataset.taskList);
+          if (!dayTasks.length) {
+            list.appendChild(emptyCard("No tasks"));
+            return;
+          }
+          dayTasks.forEach((task) => list.appendChild(taskCard(task)));
+        });
+
+        todayList.innerHTML = "";
+        const todaysTasks = tasks.filter((task) => task.day === todayKey);
+        todayCount.textContent = `${todaysTasks.length} ${todaysTasks.length === 1 ? "task" : "tasks"}`;
+        if (!todaysTasks.length) {
+          todayList.appendChild(emptyCard("No tasks for today yet."));
+          return;
+        }
+        todaysTasks.forEach((task) => todayList.appendChild(taskCard(task, true)));
+      };
+
+      lists.forEach((list) => {
+        list.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          list.classList.add("border-sand-400", "bg-sand-100");
+        });
+        list.addEventListener("dragleave", () => {
+          list.classList.remove("border-sand-400", "bg-sand-100");
+        });
+        list.addEventListener("drop", (event) => {
+          event.preventDefault();
+          list.classList.remove("border-sand-400", "bg-sand-100");
+          const task = tasks.find((item) => item.id === draggedId);
+          if (!task) return;
+          task.day = list.dataset.taskList;
+          saveTasks();
+          render();
+        });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const title = taskInput.value.trim();
+        if (!title) return;
+        tasks.unshift({ id: crypto.randomUUID(), day: dayInput.value, title });
+        taskInput.value = "";
+        saveTasks();
+        render();
+      });
+
+      saveTasks();
+      render();
+    })();
+  </script>
+{% endblock %}
