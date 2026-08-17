@@ -161,18 +161,17 @@ def build_website_plan(
 
 
 def parse_ahrefs_keyword_csv(file_bytes: bytes | str) -> list[dict]:
-    if isinstance(file_bytes, bytes):
-        text = file_bytes.decode("utf-8-sig", errors="replace")
-    else:
-        text = str(file_bytes or "")
-    reader = csv.DictReader(io.StringIO(text))
-    if not reader.fieldnames or "Keyword" not in reader.fieldnames:
+    text = _decode_keyword_csv_text(file_bytes)
+    reader = csv.DictReader(io.StringIO(text), dialect=_sniff_keyword_csv_dialect(text))
+    field_map = {_normalize_csv_header(field): field for field in (reader.fieldnames or [])}
+    keyword_field = field_map.get("keyword")
+    if not keyword_field:
         raise ValueError("Upload an Ahrefs CSV with a Keyword column.")
 
     rows = []
     seen = set()
     for index, row in enumerate(reader, start=1):
-        keyword = _clean_text(row.get("Keyword", ""))
+        keyword = _clean_text(row.get(keyword_field, ""))
         normalized = keyword.casefold()
         if not keyword or normalized in seen:
             continue
@@ -181,14 +180,53 @@ def parse_ahrefs_keyword_csv(file_bytes: bytes | str) -> list[dict]:
             {
                 "index": index,
                 "keyword": keyword,
-                "volume": _int_value(row.get("Volume", "")),
-                "difficulty": row.get("Difficulty", ""),
-                "parent_keyword": _clean_text(row.get("Parent Keyword", "")),
-                "intents": _clean_text(row.get("Intents", "")),
-                "category": _clean_text(row.get("Category", "")),
+                "volume": _int_value(_csv_value(row, field_map, "volume")),
+                "difficulty": _csv_first_value(row, field_map, "keyword difficulty", "difficulty"),
+                "global_volume": _int_value(_csv_value(row, field_map, "global volume")),
+                "traffic_potential": _int_value(_csv_value(row, field_map, "traffic potential")),
+                "parent_keyword": _clean_text(_csv_value(row, field_map, "parent keyword")),
+                "intents": _clean_text(_csv_value(row, field_map, "intents")),
+                "category": _clean_text(_csv_value(row, field_map, "category")),
             }
         )
     return rows
+
+
+def _decode_keyword_csv_text(file_bytes: bytes | str) -> str:
+    if not isinstance(file_bytes, bytes):
+        return str(file_bytes or "")
+    for encoding in ("utf-8-sig", "utf-16", "utf-16-le", "utf-16-be"):
+        try:
+            text = file_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        if "\x00" not in text[:1000]:
+            return text
+    return file_bytes.decode("utf-8-sig", errors="replace").replace("\x00", "")
+
+
+def _sniff_keyword_csv_dialect(text: str):
+    sample = (text or "")[:8192]
+    try:
+        return csv.Sniffer().sniff(sample, delimiters=",\t;")
+    except csv.Error:
+        return csv.excel_tab if "\t" in sample and sample.count("\t") >= sample.count(",") else csv.excel
+
+
+def _normalize_csv_header(value: str) -> str:
+    return " ".join(str(value or "").replace("\ufeff", "").strip().casefold().split())
+
+
+def _csv_value(row: dict, field_map: dict[str, str], normalized_field: str) -> str:
+    return row.get(field_map.get(normalized_field, ""), "")
+
+
+def _csv_first_value(row: dict, field_map: dict[str, str], *normalized_fields: str) -> str:
+    for field in normalized_fields:
+        value = _clean_text(_csv_value(row, field_map, field))
+        if value:
+            return value
+    return ""
 
 
 def build_keyword_website_plan_v2(
@@ -461,6 +499,7 @@ def _v2_page_item(index: int, page_name: str, primary_keyword: str, keywords: li
         "slug": _v2_page_slug(page_name, primary_keyword or page_name),
         "primary_keyword": primary_keyword,
         "related_keywords": related,
+        "keyword_rows": _sorted_keyword_rows(keywords)[:12],
         "keyword_count": len(keywords),
         "total_volume": total_volume,
         "intent": _intent_from_keywords(keywords),

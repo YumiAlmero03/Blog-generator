@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+{% set active_page = "folder-image-optimizer" %}
+
+{% block title %}Folder Image Optimizer{% endblock %}
+{% block eyebrow %}Image Workflow{% endblock %}
+{% block hero_title %}Folder Image Optimizer{% endblock %}
+{% block hero_text %}Optimize every supported image from a server folder path or from a folder selected in your browser.{% endblock %}
+
+{% block overlay %}
+  <div class="loading-overlay" data-loading-overlay>
+    <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[22px] bg-white/95 px-7 py-7 text-center shadow-2xl">
+      <div class="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-4 border-sand-200 border-t-sand-600"></div>
+      <div class="text-base font-bold text-sand-700" data-loading-text>Optimizing images...</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ success }}</div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" data-loading-message="Optimizing images..." class="grid gap-4">
+        <div>
+          <label for="folder_path" class="mb-2 block text-sm font-bold text-sand-900">Folder Path</label>
+          <input id="folder_path" name="folder_path" type="text" value="{{ folder_path }}" placeholder="/Users/lanie/Downloads/images" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          <p class="mt-2 text-xs font-bold leading-5 text-sand-600">Use this when the app can access the folder directly.</p>
+        </div>
+
+        <div>
+          <label for="output_folder" class="mb-2 block text-sm font-bold text-sand-900">Output Folder</label>
+          <input id="output_folder" name="output_folder" type="text" value="{{ output_folder }}" placeholder="optimized-images" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          <p class="mt-2 text-xs font-bold leading-5 text-sand-600">Leave blank to create an optimized-images folder inside the source folder.</p>
+        </div>
+
+        <div class="rounded-[22px] border border-dashed border-sand-300 bg-sand-50/80 p-4">
+          <label for="folder_files" class="mb-2 block text-sm font-bold text-sand-900">Select Folder</label>
+          <input id="folder_files" name="folder_files" type="file" webkitdirectory directory multiple accept=".png,.jpg,.jpeg,.webp,.avif,image/png,image/jpeg,image/webp,image/avif" class="block w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm font-bold text-sand-800 file:mr-4 file:rounded-full file:border-0 file:bg-sand-600 file:px-4 file:py-2 file:text-sm file:font-bold file:text-sand-50 hover:file:bg-sand-700" />
+          <p class="mt-2 text-xs font-bold leading-5 text-sand-600">Best for folders outside the app folder or when Docker cannot see the Mac path.</p>
+          <div class="mt-4 hidden rounded-[18px] border border-sand-200 bg-white p-3" data-folder-preview-panel>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-600">Selected Images</p>
+              <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold text-sand-700" data-folder-preview-count></span>
+            </div>
+            <div class="mt-3 grid max-h-[360px] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3" data-folder-preview-grid></div>
+            <p class="mt-3 hidden text-xs font-bold leading-5 text-sand-600" data-folder-preview-note></p>
+          </div>
+        </div>
+
+        <button type="button" data-pagespeed-folder-preset class="mb-1 inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-moss-500 bg-moss-100 px-4 py-2.5 text-sm font-bold text-moss-700 transition hover:bg-white">PageSpeed Delivery Preset</button>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="output_format" class="mb-2 block text-sm font-bold text-sand-900">Output Format</label>
+            <select id="output_format" name="output_format" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="webp" {% if output_format == 'webp' %}selected{% endif %}>WEBP</option>
+              <option value="jpg" {% if output_format == 'jpg' %}selected{% endif %}>JPG</option>
+              <option value="png" {% if output_format == 'png' %}selected{% endif %}>PNG</option>
+              <option value="avif" {% if output_format == 'avif' %}selected{% endif %}>AVIF</option>
+            </select>
+          </div>
+          <div>
+            <label for="image_quality" class="mb-2 block text-sm font-bold text-sand-900">Quality</label>
+            <input id="image_quality" name="image_quality" type="number" min="35" max="100" value="{{ image_quality }}" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="max_width" class="mb-2 block text-sm font-bold text-sand-900">Max Width</label>
+            <input id="max_width" name="max_width" type="number" min="0" max="10000" value="{{ max_width }}" placeholder="1600" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+          <div>
+            <label for="max_height" class="mb-2 block text-sm font-bold text-sand-900">Max Height</label>
+            <input id="max_height" name="max_height" type="number" min="0" max="10000" value="{{ max_height }}" placeholder="Leave blank" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </div>
+        </div>
+        <p class="-mt-2 rounded-2xl bg-sand-100 px-4 py-3 text-xs font-bold leading-5 text-sand-600">Images larger than these limits are resized down with the same aspect ratio. Leave both blank to keep original dimensions.</p>
+
+        <label class="flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800">
+          <input name="recursive" type="checkbox" value="1" {% if recursive %}checked{% endif %} class="mt-1 h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500" />
+          <span>Include subfolders</span>
+        </label>
+
+        <label class="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-900">
+          <input name="overwrite_original" type="checkbox" value="1" {% if overwrite_original %}checked{% endif %} class="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500" />
+          <span>Overwrite original files when using Folder Path</span>
+        </label>
+
+        <div class="flex flex-wrap gap-3">
+          <button type="submit" name="action" value="server_folder" data-loading-message="Optimizing folder path..." class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Optimize Folder Path</button>
+          <button type="submit" name="action" value="upload_folder" data-loading-message="Uploading and optimizing selected folder..." class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-moss-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-moss-700">Optimize Selected Folder</button>
+        </div>
+      </form>
+
+      <div class="mt-6 rounded-[22px] border border-sand-200 bg-sand-50/80 p-4">
+        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-600">Folders Seen</p>
+        {% if seen_folders %}
+          <div class="mt-3 grid gap-2">
+            {% for folder in seen_folders[:8] %}
+              <button type="button" data-folder-path="{{ folder }}" class="min-w-0 rounded-2xl bg-white px-3 py-2 text-left text-xs font-bold text-sand-700 ring-1 ring-sand-200 transition hover:bg-sand-100">{{ folder }}</button>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="mt-3 text-sm leading-6 text-sand-700">No folders recorded yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Results</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Optimized Images</h2>
+        </div>
+        {% if result %}
+          <span class="rounded-full bg-moss-100 px-4 py-2 text-sm font-bold text-moss-700">{{ result.optimized_count }}/{{ result.total_count }} optimized</span>
+        {% endif %}
+      </div>
+
+      {% if result %}
+        <div class="mt-5 grid gap-3 text-sm font-bold text-sand-800 md:grid-cols-3">
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">Original: {{ result.original_total_label }}</div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">Optimized: {{ result.optimized_total_label }}</div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">Saved: {{ result.saved_total_label }}</div>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">
+          <span class="break-words">Output: {{ result.output_folder }}</span>
+          {% if result.run_id %}
+            <a href="{{ result.zip_url or ('/folder-image-optimizer/download/' ~ result.run_id) }}" download class="inline-flex min-h-10 items-center justify-center rounded-full bg-sand-700 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-white transition hover:bg-sand-800">Download Zip File</a>
+          {% endif %}
+        </div>
+        {% if result.seen_folders %}
+          <div class="mt-4 rounded-2xl bg-sand-100 px-4 py-3">
+            <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">Folders from this run</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              {% for folder in result.seen_folders %}
+                <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-sand-700 ring-1 ring-sand-200">{{ folder }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if result["items"] %}
+          <div class="mt-5 overflow-x-auto rounded-[22px] border border-sand-200 bg-white">
+            <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+              <thead class="bg-sand-100/80 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">
+                <tr>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3">Image</th>
+                  <th class="px-4 py-3">Output</th>
+                  <th class="px-4 py-3">Size</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-sand-100">
+                {% for item in result["items"] %}
+                  <tr>
+                    <td class="px-4 py-3">
+                      {% if item.status == "optimized" %}
+                        <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Optimized</span>
+                      {% else %}
+                        <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Error</span>
+                      {% endif %}
+                    </td>
+                    <td class="break-words px-4 py-3 text-sand-700">{{ item.source }}{% if item.message %}<p class="mt-1 text-xs font-bold text-red-700">{{ item.message }}</p>{% endif %}</td>
+                    <td class="break-words px-4 py-3 text-sand-700">
+                      {{ item.output }}
+                      {% if item.output_url %}
+                        <a href="{{ item.output_url }}" download class="mt-2 inline-flex rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-700 transition hover:bg-sand-200">Download</a>
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-sand-700">{{ item.original_size_label or "n/a" }} → {{ item.optimized_size_label or "n/a" }}{% if item.saved_size_label %}<br><span class="text-xs font-bold text-moss-700">Saved {{ item.saved_size_label }}</span>{% endif %}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="mt-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">No supported images were found in that folder.</p>
+        {% endif %}
+      {% else %}
+        <div class="mt-6 rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          Enter a folder path or select a folder, then optimize PNG, JPG, JPEG, WEBP, or AVIF images.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Generation History</p>
+        <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Folder Optimizer Runs</h2>
+      </div>
+      {% if optimizer_history %}
+        <span class="rounded-full bg-sand-100 px-4 py-2 text-sm font-bold text-sand-700">{{ optimizer_history|length }} recent</span>
+      {% endif %}
+    </div>
+
+    {% if optimizer_history %}
+      <div class="mt-5 overflow-x-auto rounded-[22px] border border-sand-200 bg-white">
+        <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+          <thead class="bg-sand-100/80 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">
+            <tr>
+              <th class="px-4 py-3">Date</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Mode</th>
+              <th class="px-4 py-3">Source</th>
+              <th class="px-4 py-3">Output</th>
+              <th class="px-4 py-3">Images</th>
+              <th class="px-4 py-3">Saved</th>
+              <th class="px-4 py-3">Message</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-sand-100">
+            {% for item in optimizer_history %}
+              <tr>
+                <td class="px-4 py-3 text-sand-700">{{ item.created_at }}</td>
+                <td class="px-4 py-3">
+                  {% if item.status == "success" %}
+                    <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Success</span>
+                  {% else %}
+                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Error</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sand-700">{{ item.mode|replace("_", " ")|title }}</td>
+                <td class="px-4 py-3 text-sand-700">{{ item.source_folder or "n/a" }}</td>
+                <td class="px-4 py-3 text-sand-700">{{ item.output_folder or "n/a" }}</td>
+                <td class="px-4 py-3 text-sand-700">{{ item.optimized_count }}/{{ item.total_count }}</td>
+                <td class="px-4 py-3 text-sand-700">{{ item.saved_total_label or "n/a" }}</td>
+                <td class="px-4 py-3 text-sand-700">{{ item.message }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="mt-5 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">No folder optimizer history yet.</p>
+    {% endif %}
+  </section>
+
+  <script>
+    const folderFileInput = document.getElementById("folder_files");
+    const folderPreviewPanel = document.querySelector("[data-folder-preview-panel]");
+    const folderPreviewGrid = document.querySelector("[data-folder-preview-grid]");
+    const folderPreviewCount = document.querySelector("[data-folder-preview-count]");
+    const folderPreviewNote = document.querySelector("[data-folder-preview-note]");
+    let folderPreviewUrls = [];
+    const folderPreviewLimit = 60;
+    const supportedImageTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/avif"]);
+
+    function clearFolderPreview() {
+      folderPreviewUrls.forEach(function (url) {
+        URL.revokeObjectURL(url);
+      });
+      folderPreviewUrls = [];
+      if (folderPreviewGrid) {
+        folderPreviewGrid.innerHTML = "";
+      }
+      if (folderPreviewPanel) {
+        folderPreviewPanel.classList.add("hidden");
+      }
+      if (folderPreviewNote) {
+        folderPreviewNote.classList.add("hidden");
+        folderPreviewNote.textContent = "";
+      }
+    }
+
+    function imageFileSizeLabel(size) {
+      let value = Number(size || 0);
+      const units = ["B", "KB", "MB", "GB"];
+      for (let index = 0; index < units.length; index += 1) {
+        if (value < 1024 || index === units.length - 1) {
+          return units[index] === "B" ? Math.round(value) + " " + units[index] : value.toFixed(1) + " " + units[index];
+        }
+        value = value / 1024;
+      }
+      return "0 B";
+    }
+
+    function isSupportedPreviewImage(file) {
+      const name = (file.name || "").toLowerCase();
+      return supportedImageTypes.has(file.type) || /\.(png|jpe?g|webp|avif)$/.test(name);
+    }
+
+    function renderFolderPreview() {
+      clearFolderPreview();
+      if (!folderFileInput || !folderPreviewPanel || !folderPreviewGrid || !folderPreviewCount) {
+        return;
+      }
+      const files = Array.prototype.slice.call(folderFileInput.files || []).filter(isSupportedPreviewImage);
+      if (!files.length) {
+        return;
+      }
+      folderPreviewPanel.classList.remove("hidden");
+      folderPreviewCount.textContent = files.length + " image" + (files.length === 1 ? "" : "s");
+      files.slice(0, folderPreviewLimit).forEach(function (file) {
+        const previewUrl = URL.createObjectURL(file);
+        folderPreviewUrls.push(previewUrl);
+        const path = file.webkitRelativePath || file.name;
+        const item = document.createElement("div");
+        item.className = "min-w-0 rounded-2xl border border-sand-200 bg-sand-50 p-2";
+        const image = document.createElement("img");
+        image.src = previewUrl;
+        image.alt = "";
+        image.className = "aspect-square w-full rounded-[8px] bg-white object-cover";
+        const name = document.createElement("p");
+        name.className = "mt-2 truncate text-xs font-extrabold text-sand-900";
+        name.title = path;
+        name.textContent = path.split("/").pop() || file.name;
+        const relative = document.createElement("p");
+        relative.className = "mt-1 truncate text-[11px] font-bold text-sand-600";
+        relative.title = path;
+        relative.textContent = path;
+        const size = document.createElement("p");
+        size.className = "mt-1 text-[11px] font-bold text-sand-500";
+        size.textContent = imageFileSizeLabel(file.size);
+        item.append(image, name, relative, size);
+        folderPreviewGrid.appendChild(item);
+      });
+      if (files.length > folderPreviewLimit && folderPreviewNote) {
+        folderPreviewNote.textContent = "Showing first " + folderPreviewLimit + " images. All " + files.length + " selected images will be optimized.";
+        folderPreviewNote.classList.remove("hidden");
+      }
+    }
+
+    if (folderFileInput) {
+      folderFileInput.addEventListener("change", renderFolderPreview);
+    }
+
+    const pageSpeedFolderPreset = document.querySelector("[data-pagespeed-folder-preset]");
+    if (pageSpeedFolderPreset) {
+      pageSpeedFolderPreset.addEventListener("click", function () {
+        const format = document.getElementById("output_format");
+        const quality = document.getElementById("image_quality");
+        const maxWidth = document.getElementById("max_width");
+        const maxHeight = document.getElementById("max_height");
+        const recursive = document.querySelector("input[name='recursive']");
+        if (format) {
+          format.value = "webp";
+        }
+        if (quality) {
+          quality.value = "75";
+        }
+        if (maxWidth) {
+          maxWidth.value = "1600";
+        }
+        if (maxHeight) {
+          maxHeight.value = "";
+        }
+        if (recursive) {
+          recursive.checked = true;
+        }
+      });
+    }
+
+    document.addEventListener("click", function (event) {
+      const button = event.target.closest("[data-folder-path]");
+      if (!button) {
+        return;
+      }
+      const input = document.getElementById("folder_path");
+      if (input) {
+        input.value = button.dataset.folderPath || "";
+        input.focus();
+      }
+    });
+  </script>
+{% endblock %}

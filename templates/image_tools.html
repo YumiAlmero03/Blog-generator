@@ -29,6 +29,8 @@
         <input type="hidden" id="watermark_y" name="watermark_y" value="{{ watermark_y }}" />
         <input type="hidden" id="watermark_rotation" name="watermark_rotation" value="{{ watermark_rotation }}" />
 
+        <button type="button" id="pageSpeedImagePreset" class="mb-4 inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-moss-500 bg-moss-100 px-4 py-2.5 text-sm font-bold text-moss-700 transition hover:bg-white">PageSpeed Delivery Preset</button>
+
         <label class="mb-4 flex items-center gap-3 rounded-2xl border border-sand-200 bg-white px-4 py-3" for="use_watermark">
           <input id="use_watermark" name="use_watermark" type="checkbox" value="1" class="h-4 w-4 rounded border-sand-400 text-sand-600 focus:ring-sand-500" {% if use_watermark %}checked{% endif %} />
           <span class="text-sm font-semibold text-sand-900">Add watermark</span>

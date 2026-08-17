@@ -100,12 +100,12 @@ class PageKeywordParser(HTMLParser):
             self.heading_parts.append(text)
 
 
-def discover_website_pages(raw_url: str, limit: int = 50) -> WebsitePageDiscoveryResult:
+def discover_website_pages(raw_url: str, limit: int = 50, allow_private: bool = False) -> WebsitePageDiscoveryResult:
     base_url = _normalize_base_url(raw_url)
     limit = max(1, min(MAX_PAGE_URLS, int(limit or 50)))
     result = WebsitePageDiscoveryResult(base_url=base_url)
 
-    sitemap_urls = _discover_sitemap_urls(base_url, result)
+    sitemap_urls = _discover_sitemap_urls(base_url, result, allow_private=allow_private)
     seen_sitemaps: set[str] = set()
     pending_sitemaps = list(sitemap_urls)
     page_urls: list[str] = []
@@ -117,7 +117,7 @@ def discover_website_pages(raw_url: str, limit: int = 50) -> WebsitePageDiscover
             continue
         seen_sitemaps.add(sitemap_url)
         try:
-            sitemap_page_urls, nested_sitemaps = _read_sitemap(sitemap_url)
+            sitemap_page_urls, nested_sitemaps = _read_sitemap(sitemap_url, allow_private=allow_private)
             result.sitemaps.append(
                 {
                     "url": sitemap_url,
@@ -144,29 +144,29 @@ def discover_website_pages(raw_url: str, limit: int = 50) -> WebsitePageDiscover
                     break
 
     if not page_urls:
-        page_urls = _discover_homepage_links(base_url, MAX_PAGE_URLS, result)
+        page_urls = _discover_homepage_links(base_url, MAX_PAGE_URLS, result, allow_private=allow_private)
 
     result.pages = _sort_first_layer_pages(base_url, page_urls)[:limit]
-    result.page_items = _build_page_items(result.pages, result)
+    result.page_items = _build_page_items(result.pages, result, allow_private=allow_private)
     return result
 
 
-def _build_page_items(page_urls: list[str], result: WebsitePageDiscoveryResult) -> list[dict]:
+def _build_page_items(page_urls: list[str], result: WebsitePageDiscoveryResult, allow_private: bool = False) -> list[dict]:
     page_items = []
     for page_url in page_urls:
         page_items.append(
             {
                 "url": page_url,
-                "keywords": extract_page_keywords(page_url, result),
+                "keywords": extract_page_keywords(page_url, result, allow_private=allow_private),
             }
         )
     return page_items
 
 
-def extract_page_keywords(page_url: str, result: WebsitePageDiscoveryResult | None = None) -> list[str]:
+def extract_page_keywords(page_url: str, result: WebsitePageDiscoveryResult | None = None, allow_private: bool = False) -> list[str]:
     fallback_keywords = _keywords_from_url(page_url)
     try:
-        response = fetch_url(page_url)
+        response = _fetch_discovery_url(page_url, allow_private=allow_private)
     except Exception as exc:
         if result is not None:
             result.errors.append(f"{page_url}: keyword fetch failed: {exc}")
@@ -188,11 +188,11 @@ def extract_page_keywords(page_url: str, result: WebsitePageDiscoveryResult | No
     return _dedupe_keywords(candidates)[:10]
 
 
-def _discover_sitemap_urls(base_url: str, result: WebsitePageDiscoveryResult) -> list[str]:
+def _discover_sitemap_urls(base_url: str, result: WebsitePageDiscoveryResult, allow_private: bool = False) -> list[str]:
     robots_url = urljoin(base_url, "/robots.txt")
     sitemap_urls: list[str] = []
     try:
-        robots = fetch_url(robots_url)
+        robots = _fetch_discovery_url(robots_url, allow_private=allow_private)
         for line in robots.text.splitlines():
             if line.lower().startswith("sitemap:"):
                 sitemap_url = line.split(":", 1)[1].strip()
@@ -205,8 +205,8 @@ def _discover_sitemap_urls(base_url: str, result: WebsitePageDiscoveryResult) ->
     return _unique_urls(sitemap_urls)
 
 
-def _read_sitemap(sitemap_url: str) -> tuple[list[str], list[str]]:
-    response = fetch_url(sitemap_url)
+def _read_sitemap(sitemap_url: str, allow_private: bool = False) -> tuple[list[str], list[str]]:
+    response = _fetch_discovery_url(sitemap_url, allow_private=allow_private)
     if not 200 <= response.status_code < 400:
         raise ValueError(f"HTTP {response.status_code}")
     return _parse_sitemap_xml(response.text, sitemap_url)
@@ -236,9 +236,9 @@ def _parent_hint(root) -> str:
     return _local_name(root.tag)
 
 
-def _discover_homepage_links(base_url: str, limit: int, result: WebsitePageDiscoveryResult) -> list[str]:
+def _discover_homepage_links(base_url: str, limit: int, result: WebsitePageDiscoveryResult, allow_private: bool = False) -> list[str]:
     try:
-        response = fetch_url(base_url)
+        response = _fetch_discovery_url(base_url, allow_private=allow_private)
     except Exception as exc:
         result.errors.append(f"{base_url}: {exc}")
         return []
@@ -267,6 +267,12 @@ def _normalize_base_url(raw_url: str) -> str:
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError("Use a valid website URL.")
     return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def _fetch_discovery_url(url: str, allow_private: bool = False):
+    if allow_private:
+        return fetch_url(url, allow_private=True)
+    return fetch_url(url)
 
 
 def _normalize_discovered_url(url: str) -> str:

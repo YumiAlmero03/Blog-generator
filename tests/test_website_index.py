@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from database.common import get_connection
 from app import create_app
-from database.website_index import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, upsert_website_index_urls
+from database.website_index import delete_website_index_url, delete_website_index_urls, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, upsert_website_index_urls
 from app.controllers.tool_controller import _website_index_dashboard_sort_key
 
 
@@ -274,6 +274,35 @@ def test_delete_website_index_url_removes_only_exact_url():
             )
 
 
+def test_delete_website_index_urls_removes_bulk_exact_urls():
+    delete_urls = [
+        "https://bulk-delete-url-test.example/page-one",
+        "https://bulk-delete-url-test.example/page-two",
+    ]
+    keep_url = "https://bulk-delete-url-test.example/page-three"
+
+    try:
+        upsert_website_index_urls([*delete_urls, keep_url])
+
+        assert delete_website_index_urls([delete_urls[0], delete_urls[1], delete_urls[0]]) == 2
+
+        with get_connection() as connection:
+            remaining = {
+                row["url"]
+                for row in connection.execute(
+                    "SELECT url FROM website_index_urls WHERE url IN (?, ?, ?)",
+                    (*delete_urls, keep_url),
+                ).fetchall()
+            }
+        assert remaining == {keep_url}
+    finally:
+        with get_connection() as connection:
+            connection.execute(
+                "DELETE FROM website_index_urls WHERE url IN (?, ?, ?)",
+                (*delete_urls, keep_url),
+            )
+
+
 def test_website_index_dashboard_can_remove_specific_url():
     delete_url = "https://dashboard-delete-url-test.example/page"
     keep_url = "https://dashboard-delete-url-test.example/other-page"
@@ -307,6 +336,47 @@ def test_website_index_dashboard_can_remove_specific_url():
             connection.execute(
                 "DELETE FROM website_index_urls WHERE url IN (?, ?)",
                 (delete_url, keep_url),
+            )
+
+
+def test_website_index_page_can_bulk_remove_url_list():
+    delete_urls = [
+        "https://website-index-bulk-remove.example/page-one",
+        "https://website-index-bulk-remove.example/page-two",
+    ]
+    keep_url = "https://website-index-bulk-remove.example/page-three"
+
+    try:
+        upsert_website_index_urls([*delete_urls, keep_url])
+        app = create_app()
+        app.testing = True
+
+        response = app.test_client().post(
+            "/website-index",
+            data={
+                "action": "bulk_remove_urls",
+                "url_list": "\n".join(delete_urls),
+            },
+        )
+        html = response.get_data(as_text=True)
+
+        assert response.status_code == 200
+        assert "Removed 2 saved URL(s) from Website Index." in html
+        assert "Remove URL List" in html
+        with get_connection() as connection:
+            remaining = {
+                row["url"]
+                for row in connection.execute(
+                    "SELECT url FROM website_index_urls WHERE url IN (?, ?, ?)",
+                    (*delete_urls, keep_url),
+                ).fetchall()
+            }
+        assert remaining == {keep_url}
+    finally:
+        with get_connection() as connection:
+            connection.execute(
+                "DELETE FROM website_index_urls WHERE url IN (?, ?, ?)",
+                (*delete_urls, keep_url),
             )
 
 

@@ -137,17 +137,17 @@ class PageSeoParser(HTMLParser):
                 return
 
 
-def run_seo_audit(raw_url: str, verify_ssl: bool = True) -> dict:
+def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = False) -> dict:
     url = _normalize_url(raw_url)
-    page = fetch_url(url, verify_ssl=verify_ssl)
+    page = fetch_url(url, verify_ssl=verify_ssl, allow_private=allow_private)
     parser = PageSeoParser()
     parser.feed(page.text)
 
     parsed_url = urlparse(page.url)
     base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-    robots_result = _fetch_optional_text(urljoin(base_url, "/robots.txt"), verify_ssl=page.ssl_verified)
-    sitemap_result = _check_sitemaps(base_url, robots_result.get("text", ""), verify_ssl=page.ssl_verified)
-    link_report = _build_link_report(parser.links, page.url, base_url, verify_ssl=page.ssl_verified)
+    robots_result = _fetch_optional_text(urljoin(base_url, "/robots.txt"), verify_ssl=page.ssl_verified, allow_private=allow_private)
+    sitemap_result = _check_sitemaps(base_url, robots_result.get("text", ""), verify_ssl=page.ssl_verified, allow_private=allow_private)
+    link_report = _build_link_report(parser.links, page.url, base_url, verify_ssl=page.ssl_verified, allow_private=allow_private)
     scrape_report = _build_scrape_report(parser, link_report)
     checks = _build_checks(parser, page, sitemap_result, robots_result, link_report)
     score = _score_checks(checks)
@@ -189,8 +189,8 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True) -> dict:
     }
 
 
-def fetch_url(url: str, verify_ssl: bool = True) -> FetchResult:
-    _validate_public_http_url(url)
+def fetch_url(url: str, verify_ssl: bool = True, allow_private: bool = False, _tried_docker_host: bool = False) -> FetchResult:
+    _validate_public_http_url(url, allow_private=allow_private)
     request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"})
     ssl_context = SSL_CONTEXT if verify_ssl else UNVERIFIED_SSL_CONTEXT
     try:
@@ -215,9 +215,22 @@ def fetch_url(url: str, verify_ssl: bool = True) -> FetchResult:
             ssl_verified=verify_ssl,
         )
     except URLError as exc:
+        docker_host_url = _docker_host_fallback_url(url)
+        if allow_private and docker_host_url and not _tried_docker_host:
+            try:
+                result = fetch_url(
+                    docker_host_url,
+                    verify_ssl=verify_ssl,
+                    allow_private=allow_private,
+                    _tried_docker_host=True,
+                )
+                result.url = url
+                return result
+            except Exception:
+                pass
         if verify_ssl and _is_ssl_certificate_error(exc):
             try:
-                result = fetch_url(url, verify_ssl=False)
+                result = fetch_url(url, verify_ssl=False, allow_private=allow_private)
                 result.ssl_warning = _ssl_error_message(exc)
                 return result
             except Exception as fallback_exc:
@@ -227,6 +240,16 @@ def fetch_url(url: str, verify_ssl: bool = True) -> FetchResult:
         if _is_ssl_certificate_error(exc):
             raise ValueError(_ssl_error_message(exc)) from exc
         raise ValueError(f"Could not reach that website: {exc.reason}") from exc
+
+
+def _docker_host_fallback_url(url: str) -> str:
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").casefold()
+    if hostname not in {"localhost", "127.0.0.1", "0.0.0.0"}:
+        return ""
+    port = f":{parsed.port}" if parsed.port else ""
+    netloc = f"host.docker.internal{port}"
+    return parsed._replace(netloc=netloc).geturl()
 
 
 def _is_ssl_certificate_error(exc: URLError) -> bool:
@@ -263,12 +286,15 @@ def _normalize_url(raw_url: str) -> str:
     return cleaned
 
 
-def _validate_public_http_url(url: str):
+def _validate_public_http_url(url: str, allow_private: bool = False):
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError("Use a valid http or https website URL.")
 
     hostname = parsed.hostname or ""
+    if allow_private:
+        return
+
     if hostname in {"localhost", "0.0.0.0"}:
         raise ValueError("Local/private addresses cannot be checked from this page.")
 
@@ -283,9 +309,9 @@ def _validate_public_http_url(url: str):
             raise ValueError("Local/private addresses cannot be checked from this page.")
 
 
-def _fetch_optional_text(url: str, verify_ssl: bool = True) -> dict:
+def _fetch_optional_text(url: str, verify_ssl: bool = True, allow_private: bool = False) -> dict:
     try:
-        result = fetch_url(url, verify_ssl=verify_ssl)
+        result = fetch_url(url, verify_ssl=verify_ssl, allow_private=allow_private)
     except Exception:
         return {"found": False, "url": url, "status_code": None, "text": ""}
     return {
@@ -304,7 +330,7 @@ def _sitemap_urls_from_robots(robots_text: str) -> list[str]:
     return sitemap_urls
 
 
-def _check_sitemaps(base_url: str, robots_text: str, verify_ssl: bool = True) -> dict:
+def _check_sitemaps(base_url: str, robots_text: str, verify_ssl: bool = True, allow_private: bool = False) -> dict:
     sitemap_urls = _sitemap_urls_from_robots(robots_text)
 
     sitemap_urls.extend(urljoin(base_url, path) for path in COMMON_SITEMAP_PATHS)
@@ -317,7 +343,7 @@ def _check_sitemaps(base_url: str, robots_text: str, verify_ssl: bool = True) ->
 
     sitemaps = []
     for sitemap_url in unique_sitemap_urls[:6]:
-        result = _fetch_optional_text(sitemap_url, verify_ssl=verify_ssl)
+        result = _fetch_optional_text(sitemap_url, verify_ssl=verify_ssl, allow_private=allow_private)
         text = result.get("text", "")
         is_xml_sitemap = "<urlset" in text.lower() or "<sitemapindex" in text.lower()
         sitemaps.append(
@@ -411,8 +437,14 @@ def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict
         _check(
             "Sample link health",
             "pass" if link_report["broken_sample_count"] == 0 else "warn",
-            f"{link_report['broken_sample_count']} broken/unreachable link(s), including {link_report['not_found_count']} 404 link(s), in {len(link_report['sample_checks'])} checked link(s)",
-            "Review broken links and update or remove URLs that no longer resolve.",
+            (
+                f"{link_report['broken_sample_count']} broken/unreachable link(s): "
+                f"{link_report['not_found_count']} 404, "
+                f"{link_report['unreachable_count']} unreachable, "
+                f"{link_report['broken_count']} other HTTP error(s), "
+                f"{link_report['redirect_count']} redirect(s), in {len(link_report['sample_checks'])} checked link(s)"
+            ),
+            "Review the detailed link health list, then update, remove, or replace URLs that no longer resolve.",
             5,
         ),
     ]
@@ -457,7 +489,7 @@ def _word_count(text: str) -> int:
     return len(re.findall(r"\b[\w'-]+\b", text or ""))
 
 
-def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bool = True) -> dict:
+def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bool = True, allow_private: bool = False) -> dict:
     parsed_base = urlparse(base_url)
     normalized_links = []
     for link in links:
@@ -485,8 +517,13 @@ def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bo
         seen.add(item["url"])
         if len(sample_checks) >= LINK_HEALTH_CHECK_LIMIT:
             break
-        sample_checks.append(_check_link_url(item["url"], item["type"], verify_ssl=verify_ssl))
+        checked_link = _check_link_url(item["url"], item["type"], verify_ssl=verify_ssl, allow_private=allow_private)
+        checked_link["text"] = item.get("text", "")
+        sample_checks.append(checked_link)
     not_found_links = [item for item in sample_checks if item.get("status_code") == 404]
+    broken_links = [item for item in sample_checks if item.get("status") == "broken" and item.get("status_code") != 404]
+    unreachable_links = [item for item in sample_checks if item.get("status") == "unreachable"]
+    redirect_links = [item for item in sample_checks if item.get("redirected")]
 
     return {
         "total_count": len(normalized_links),
@@ -498,6 +535,12 @@ def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bo
         "checked_count": len(sample_checks),
         "not_found_count": len(not_found_links),
         "not_found_links": not_found_links,
+        "broken_count": len(broken_links),
+        "broken_links": broken_links,
+        "unreachable_count": len(unreachable_links),
+        "unreachable_links": unreachable_links,
+        "redirect_count": len(redirect_links),
+        "redirect_links": redirect_links,
     }
 
 
@@ -531,17 +574,20 @@ def _build_scrape_report(parser: PageSeoParser, link_report: dict) -> dict:
     }
 
 
-def _check_link_url(url: str, link_type: str, verify_ssl: bool = True) -> dict:
+def _check_link_url(url: str, link_type: str, verify_ssl: bool = True, allow_private: bool = False) -> dict:
+    final_url = url
     try:
-        _validate_public_http_url(url)
+        _validate_public_http_url(url, allow_private=allow_private)
         request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,*/*"}, method="HEAD")
         ssl_context = SSL_CONTEXT if verify_ssl else UNVERIFIED_SSL_CONTEXT
         with urlopen(request, timeout=6, context=ssl_context) as response:
             status_code = getattr(response, "status", 200)
+            final_url = response.geturl() or url
     except HTTPError as exc:
         status_code = exc.code
+        final_url = exc.geturl() or url
     except Exception:
-        return {"url": url, "type": link_type, "status_code": None, "status": "unreachable"}
+        return {"url": url, "final_url": url, "type": link_type, "status_code": None, "status": "unreachable", "redirected": False}
 
     if 200 <= status_code < 400:
         status = "ok"
@@ -549,7 +595,20 @@ def _check_link_url(url: str, link_type: str, verify_ssl: bool = True) -> dict:
         status = "broken"
     else:
         status = "warning"
-    return {"url": url, "type": link_type, "status_code": status_code, "status": status}
+    redirected = _without_fragment(url) != _without_fragment(final_url)
+    return {
+        "url": url,
+        "final_url": final_url,
+        "type": link_type,
+        "status_code": status_code,
+        "status": status,
+        "redirected": redirected,
+    }
+
+
+def _without_fragment(url: str) -> str:
+    parsed = urlparse(url or "")
+    return parsed._replace(fragment="").geturl()
 
 
 def _generate_ai_summary(parser: PageSeoParser, checks: list[dict], score: int, url: str, scrape_report: dict) -> dict:

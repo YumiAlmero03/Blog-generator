@@ -69,15 +69,35 @@ def test_build_website_plan_filters_brand_names_from_blog_keywords():
 
 def test_parse_ahrefs_keyword_csv_uses_keyword_column_and_deduplicates():
     rows = parse_ahrefs_keyword_csv(
-        "Keyword,Volume,Difficulty,Parent Keyword,Intents,Category\n"
-        "gperya,12000,20,gperya,Navigational,Brand\n"
-        "gperya,9000,20,gperya,Navigational,Brand\n"
-        "gperya app,5000,12,gperya app,Transactional,App\n"
+        "Keyword,Volume,Global Volume,Traffic Potential,Keyword Difficulty,Parent Keyword,Intents,Category\n"
+        "gperya,12000,18000,22000,20,gperya,\"Navigational, Branded\",Brand\n"
+        "gperya,9000,12000,14000,20,gperya,Navigational,Brand\n"
+        "gperya app,5000,7000,8500,12,gperya app,Transactional,App\n"
     )
 
     assert [row["keyword"] for row in rows] == ["gperya", "gperya app"]
     assert rows[0]["volume"] == 12000
+    assert rows[0]["global_volume"] == 18000
+    assert rows[0]["traffic_potential"] == 22000
+    assert rows[0]["difficulty"] == "20"
+    assert rows[0]["intents"] == "Navigational, Branded"
     assert rows[1]["category"] == "App"
+
+
+def test_parse_ahrefs_keyword_csv_accepts_utf16_tab_export():
+    csv_text = (
+        '"#"\t"Keyword"\t"Country"\t"Difficulty"\t"Volume"\t"Parent Keyword"\t"Intents"\t"Category"\n'
+        '"1"\t"free online games"\t"ph"\t"93"\t"5600"\t"crazy games"\t"Informational"\t"Browser games"\n'
+        '"2"\t"play free online games"\t"ph"\t"91"\t"3800"\t"crazy games"\t"Informational"\t"Casual games"\n'
+    )
+
+    rows = parse_ahrefs_keyword_csv(csv_text.encode("utf-16"))
+
+    assert [row["keyword"] for row in rows] == ["free online games", "play free online games"]
+    assert rows[0]["volume"] == 5600
+    assert rows[0]["difficulty"] == "93"
+    assert rows[0]["parent_keyword"] == "crazy games"
+    assert rows[1]["category"] == "Casual games"
 
 
 def test_build_keyword_website_plan_v2_meets_minimum_plan_counts():
@@ -449,6 +469,24 @@ def test_website_planner_v2_download_detailed_report_matches_reference_sections(
                 "h1": "Gperya Online Casino Philippines",
                 "suggested_h2s": ["Games And Betting Options", "Promos And Payments"],
                 "related_keywords": ["gperya login", "gperya app"],
+                "keyword_rows": [
+                    {
+                        "keyword": "gperya com",
+                        "volume": 12000,
+                        "global_volume": 18000,
+                        "traffic_potential": 22000,
+                        "difficulty": "20",
+                        "intents": "Navigational, Branded",
+                    },
+                    {
+                        "keyword": "gperya login",
+                        "volume": 7000,
+                        "global_volume": 9000,
+                        "traffic_potential": 11000,
+                        "difficulty": "10",
+                        "intents": "Navigational",
+                    },
+                ],
                 "homepage_sections": [
                     {
                         "page_name": "Sports Betting Hub",
@@ -470,6 +508,16 @@ def test_website_planner_v2_download_detailed_report_matches_reference_sections(
                 "h1": "Sports Betting Guide",
                 "suggested_h2s": ["Markets To Cover"],
                 "related_keywords": [],
+                "keyword_rows": [
+                    {
+                        "keyword": "sports betting",
+                        "volume": 2100,
+                        "global_volume": 4200,
+                        "traffic_potential": 6200,
+                        "difficulty": "16",
+                        "intents": "Commercial, Transactional",
+                    }
+                ],
                 "total_volume": 0,
                 "intent": "Transactional",
             },
@@ -527,6 +575,15 @@ def test_website_planner_v2_download_detailed_report_matches_reference_sections(
         "SEO Master Plan - Gperya",
         "PART 1 - KEYWORD PLAN",
         "CLUSTER 1: Homepage",
+        "Monthly Volume",
+        "Global Volume",
+        "Traffic Potential",
+        "Keyword Difficulty",
+        "Intents",
+        "18000",
+        "22000",
+        "Navigational, Branded",
+        "Commercial, Transactional",
         "PART 2 - CONTENT LAYOUT PLAN",
         "Site Architecture",
         "PAGE 2: Sports Betting Hub /sports-betting/",
@@ -538,6 +595,17 @@ def test_website_planner_v2_download_detailed_report_matches_reference_sections(
         "Explore Sports Betting Hub",
         "Frequently Asked Questions",
         "PART 3 - INTERNAL LINKING PLAN",
+        "Target page: / [Homepage]",
+        "Primary keyword: gperya com",
+        "Homepage Blog Section",
+        "/about-us/ [About Us]",
+        "/blog/category/slots/ [Slots Blog Category]",
+        "Target page: /sports-betting/ [Sports Betting Hub]",
+        "Primary keyword: sports betting",
+        "CTA button: Explore Sports Betting Hub",
+        "/ [Homepage]",
+        "/blog/ [Blog Hub]",
+        "/blog/category/sports-betting/ [Category Hub]",
         "Anchor Text Guidelines",
         "PART 4 - BLOG CONTENT CATEGORIES AND CURRENT PAGE-DERIVED TOPICS",
         "Blog Category Title And Meta Description Plan",

@@ -9,7 +9,7 @@ from flask import Response, redirect, render_template, request, url_for
 from urllib.parse import urlparse
 
 from app.controllers.helpers import base_template_context
-from app.services.document_service import build_docx_response, build_gsc_summary_report_response, build_website_planner_report_response, build_website_planner_v2_detailed_report_response, extract_docx_website_reference
+from app.services.document_service import build_docx_response, build_gsc_summary_report_response, build_seo_checker_report_response, build_website_planner_report_response, build_website_planner_v2_detailed_report_response, extract_docx_website_reference
 from app.services.indexnow_service import (
     DEFAULT_INDEXNOW_ENDPOINT,
     GOOGLE_INDEXING_ENDPOINT,
@@ -45,7 +45,7 @@ from app.services.website_page_discovery_service import discover_website_pages
 from app.services.website_index_scheduler import submit_website_index_urls_to_indexnow, trigger_website_index_batch
 from app.services.website_planner_service import DEFAULT_KEYWORD_CATEGORIES, build_keyword_website_plan_v2, build_website_plan, default_keyword_categories_text, enrich_keyword_website_plan_v2_with_ai, get_main_pages_setting, get_trust_pages_setting, parse_ahrefs_keyword_csv, parse_keyword_categories
 from database import get_brand_context, get_brand_record, get_setting, list_backlinks, list_brand_names, list_brand_records, set_setting
-from database import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
+from database import delete_website_index_url, delete_website_index_urls, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 from logger import logger
 
 
@@ -1026,6 +1026,7 @@ def seo_checker():
     state = {
         "url": "",
         "ignore_ssl_errors": False,
+        "allow_private_urls": False,
         "limit": 10,
         "result": None,
         "error": None,
@@ -1036,6 +1037,7 @@ def seo_checker():
     if request.method == "POST":
         state["url"] = request.form.get("url", "").strip()
         state["ignore_ssl_errors"] = request.form.get("ignore_ssl_errors") == "1"
+        state["allow_private_urls"] = request.form.get("allow_private_urls") == "1" or _is_local_dev_url(state["url"])
         state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
         state["generation_log_json"] = generation_log_json(state["generation_log"])
         try:
@@ -1048,6 +1050,7 @@ def seo_checker():
                 state["url"],
                 limit=state["limit"],
                 verify_ssl=not state["ignore_ssl_errors"],
+                allow_private=state["allow_private_urls"],
                 progress_callback=progress,
             )
             publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker: Check complete.")
@@ -1061,9 +1064,17 @@ def seo_checker():
     return render_template("seo_checker.html", **base_template_context(), **state)
 
 
-def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True, progress_callback=None) -> dict:
+def download_seo_checker_report():
+    result = _json_dict(request.form.get("result_json", ""))
+    if not result:
+        return redirect(url_for("web.seo_checker"))
+    return build_seo_checker_report_response(result)
+
+
+def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True, allow_private: bool = False, progress_callback=None) -> dict:
+    allow_private = allow_private or _is_local_dev_url(raw_url)
     _publish_seo_progress(progress_callback, "Listing pages...")
-    discovery = discover_website_pages(raw_url, limit=limit)
+    discovery = discover_website_pages(raw_url, limit=limit, allow_private=allow_private)
     page_urls = discovery.pages[:limit] or [discovery.base_url]
     page_results = []
     checked_pages = []
@@ -1074,7 +1085,7 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
     for index, page_url in enumerate(page_urls, start=1):
         _publish_seo_progress(progress_callback, f"Checking page {index}/{total_pages}: {page_url}")
         try:
-            audit = run_seo_audit(page_url, verify_ssl=verify_ssl)
+            audit = run_seo_audit(page_url, verify_ssl=verify_ssl, allow_private=allow_private)
             page_results.append(
                 {
                     "index": index,
@@ -1134,6 +1145,11 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
         int(item.get("stats", {}).get("links", {}).get("checked_count", 0) or 0)
         for item in checked_results
     )
+    redirect_link_count = sum(
+        int(item.get("stats", {}).get("links", {}).get("redirect_count", 0) or 0)
+        for item in checked_results
+    )
+    link_health_details = _site_link_health_details(page_results)
     return {
         "mode": "site",
         "source_url": raw_url,
@@ -1153,8 +1169,33 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
             "issue_count": issue_count,
             "not_found_link_count": not_found_link_count,
             "checked_link_count": checked_link_count,
+            "redirect_link_count": redirect_link_count,
+            "broken_link_count": len(link_health_details["broken_links"]),
+            "unreachable_link_count": len(link_health_details["unreachable_links"]),
         },
+        "link_health_details": link_health_details,
     }
+
+
+def _site_link_health_details(page_results: list[dict]) -> dict:
+    details = {
+        "not_found_links": [],
+        "broken_links": [],
+        "unreachable_links": [],
+        "redirect_links": [],
+        "sample_checks": [],
+    }
+    for page in page_results:
+        if page.get("status") != "checked" or not page.get("result"):
+            continue
+        source_page = page.get("url", "")
+        link_report = page.get("result", {}).get("stats", {}).get("links", {}) or {}
+        for key in details:
+            for link in link_report.get(key, []) or []:
+                enriched = dict(link)
+                enriched["source_page"] = source_page
+                details[key].append(enriched)
+    return details
 
 
 def _seo_grade(score: int) -> str:
@@ -1189,6 +1230,16 @@ def _publish_seo_progress(progress_callback, message: str) -> None:
         progress_callback(message)
     except Exception:
         logger.exception("SEO checker progress callback failed")
+
+
+def _is_local_dev_url(raw_url: str) -> bool:
+    cleaned = (raw_url or "").strip()
+    if not cleaned:
+        return False
+    if not cleaned.lower().startswith(("http://", "https://")):
+        cleaned = f"http://{cleaned}"
+    parsed = urlparse(cleaned)
+    return (parsed.hostname or "").casefold() in {"localhost", "127.0.0.1", "0.0.0.0"}
 
 
 def website_index_dashboard():
@@ -1515,7 +1566,7 @@ def indexnow():
 
         urls = extract_urls(state["url_list"], file_text)
         state["parsed_count"] = len(urls)
-        if urls:
+        if urls and action != "bulk_remove_urls":
             saved_url_list = "\n".join(dict.fromkeys(urls))
             set_setting("indexnow_url_list", saved_url_list)
             upsert_website_index_urls(urls)
@@ -1523,7 +1574,11 @@ def indexnow():
         try:
             action_started_at = time.perf_counter()
             logger.info("Website Index action started: action=%s parsed_urls=%d", action, len(urls))
-            if action == "save_urls":
+            if action == "bulk_remove_urls":
+                deleted_count = delete_website_index_urls(urls)
+                state["success"] = f"Removed {deleted_count} saved URL(s) from Website Index."
+                state["url_list"] = "" if deleted_count else state["url_list"]
+            elif action == "save_urls":
                 state["success"] = "URL list saved."
             elif action == "google":
                 state["google_result"] = submit_google_indexing_urls(

@@ -546,6 +546,71 @@ def build_website_planner_report_response(metadata: dict, plan: dict):
     return response
 
 
+def build_seo_checker_report_response(result: dict):
+    result = result or {}
+    mode = result.get("mode", "single")
+    title_subject = result.get("base_url") or result.get("url") or result.get("source_url") or "Website SEO Checker"
+    title = f"Website SEO Checker Report - {title_subject}"
+    doc = Document()
+    title_para = doc.add_paragraph(title, style="Heading 1")
+    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    if mode == "site":
+        summary = result.get("summary", {}) or {}
+        doc.add_heading("Summary Dashboard", level=2)
+        _add_simple_table(
+            doc,
+            ("Metric", "Value"),
+            [
+                ("Base URL", result.get("base_url", "")),
+                ("Average Grade", summary.get("average_grade", "")),
+                ("Average Score", f"{summary.get('average_score', 0)}/100"),
+                ("Pages Listed", summary.get("discovered_count", 0)),
+                ("Pages Checked", summary.get("checked_count", 0)),
+                ("Warning/Fix Items", summary.get("issue_count", 0)),
+                ("Checked Links", summary.get("checked_link_count", 0)),
+                ("404 Links", summary.get("not_found_link_count", 0)),
+                ("Redirecting Links", summary.get("redirect_link_count", 0)),
+            ],
+        )
+        _add_seo_page_scores(doc, result.get("pages", []))
+        _add_seo_link_health(doc, result.get("link_health_details", {}) or {})
+        _add_seo_page_issues(doc, result.get("pages", []))
+    else:
+        doc.add_heading("Summary Dashboard", level=2)
+        stats = result.get("stats", {}) or {}
+        links = stats.get("links", {}) or {}
+        _add_simple_table(
+            doc,
+            ("Metric", "Value"),
+            [
+                ("URL", result.get("url", "")),
+                ("Grade", result.get("grade", "")),
+                ("Score", f"{result.get('score', 0)}/100"),
+                ("Status Code", result.get("status_code", "")),
+                ("Title", stats.get("title", "")),
+                ("Meta Description", stats.get("meta_description", "")),
+                ("Word Count", stats.get("word_count", 0)),
+                ("Missing Alt Text", stats.get("missing_alt_count", 0)),
+                ("Checked Links", links.get("checked_count", 0)),
+                ("404 Links", links.get("not_found_count", 0)),
+                ("Redirecting Links", links.get("redirect_count", 0)),
+            ],
+        )
+        _add_seo_link_health(doc, links)
+        _add_seo_checks(doc, result.get("checks", []))
+
+    doc_io = BytesIO()
+    doc.save(doc_io)
+    doc_io.seek(0)
+
+    filename = _download_filename(title)
+    response = make_response(doc_io.getvalue())
+    response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}.docx"
+    return response
+
+
 def build_website_planner_v2_detailed_report_response(metadata: dict, plan: dict):
     doc = Document()
     client = (metadata or {}).get("client", "").strip()
@@ -597,7 +662,7 @@ def build_website_planner_v2_detailed_report_response(metadata: dict, plan: dict
         _add_label_value(doc, "H1 / Page Title", page.get("h1", keyword))
         _add_simple_table(
             doc,
-            ("Keyword", "Monthly Volume", "Competition", "Keyword Difficulty", "Intent"),
+            ("Keyword", "Monthly Volume", "Global Volume", "Traffic Potential", "Keyword Difficulty", "Intents"),
             _v2_detailed_keyword_rows(page),
         )
 
@@ -617,7 +682,7 @@ def build_website_planner_v2_detailed_report_response(metadata: dict, plan: dict
     doc.add_heading("PART 3 - INTERNAL LINKING PLAN", level=2)
     doc.add_paragraph("Use the homepage as the main hub. Link core pages to related categories and link every generated blog topic back to the most relevant target page.")
     doc.add_heading("Internal Link Map", level=3)
-    _add_simple_table(doc, ("Source Page", "Link To", "Suggested Anchor", "Purpose"), _v2_detailed_internal_link_rows(core_pages, blogs))
+    _add_v2_detailed_internal_link_map(doc, core_pages, support_pages, blogs)
     doc.add_heading("Anchor Text Guidelines", level=3)
     for guideline in (
         "Use natural anchors that match the destination page topic.",
@@ -697,6 +762,95 @@ def _add_step_prompt(doc: Document, steps: list[str]) -> None:
     doc.add_paragraph("Step-by-step prompt:", style="Heading 3")
     for step in steps:
         doc.add_paragraph(step, style="List Number")
+
+
+def _add_seo_page_scores(doc: Document, pages: list[dict]) -> None:
+    rows = []
+    for page in pages or []:
+        if page.get("status") == "checked" and page.get("result"):
+            rows.append(
+                (
+                    page.get("url", ""),
+                    page.get("result", {}).get("grade", ""),
+                    f"{page.get('result', {}).get('score', 0)}/100",
+                    page.get("result", {}).get("stats", {}).get("title", ""),
+                )
+            )
+        else:
+            rows.append((page.get("url", ""), "Error", "", page.get("error", "")))
+    if rows:
+        doc.add_heading("Page Scores", level=2)
+        _add_simple_table(doc, ("Page", "Grade", "Score", "Title / Error"), rows)
+
+
+def _add_seo_page_issues(doc: Document, pages: list[dict]) -> None:
+    rows = []
+    for page in pages or []:
+        if page.get("status") != "checked" or not page.get("result"):
+            continue
+        for check in page.get("result", {}).get("checks", []):
+            if check.get("status") in {"warn", "fail"}:
+                rows.append(
+                    (
+                        page.get("url", ""),
+                        check.get("name", ""),
+                        check.get("status", "").title(),
+                        check.get("detail", ""),
+                        check.get("recommendation", ""),
+                    )
+                )
+    if rows:
+        doc.add_heading("Warnings And Fix Items", level=2)
+        _add_simple_table(doc, ("Page", "Check", "Status", "Detail", "Recommendation"), rows)
+
+
+def _add_seo_checks(doc: Document, checks: list[dict]) -> None:
+    rows = [
+        (
+            check.get("name", ""),
+            check.get("status", "").title(),
+            check.get("detail", ""),
+            check.get("recommendation", ""),
+        )
+        for check in checks or []
+    ]
+    if rows:
+        doc.add_heading("Checks", level=2)
+        _add_simple_table(doc, ("Check", "Status", "Detail", "Recommendation"), rows)
+
+
+def _add_seo_link_health(doc: Document, links: dict) -> None:
+    links = links or {}
+    issue_groups = (
+        ("404 Links", links.get("not_found_links", []) or []),
+        ("Unreachable Links", links.get("unreachable_links", []) or []),
+        ("Other Broken HTTP Links", links.get("broken_links", []) or []),
+        ("Redirecting Links", links.get("redirect_links", []) or []),
+    )
+    added_heading = False
+    for heading, items in issue_groups:
+        if not items:
+            continue
+        if not added_heading:
+            doc.add_heading("Detailed Link Health", level=2)
+            added_heading = True
+        doc.add_heading(heading, level=3)
+        rows = []
+        for item in items:
+            rows.append(
+                (
+                    item.get("source_page", ""),
+                    item.get("url", ""),
+                    item.get("status_code") or "n/a",
+                    item.get("final_url", ""),
+                    item.get("text", "") or "No anchor text",
+                    item.get("type", ""),
+                )
+            )
+        _add_simple_table(doc, ("Found On Page", "Link URL", "HTTP", "Final URL", "Anchor", "Type"), rows)
+    if not added_heading:
+        doc.add_heading("Detailed Link Health", level=2)
+        doc.add_paragraph("No broken, unreachable, 404, or redirecting links were found in the sampled links.")
 
 
 def _add_simple_table(doc: Document, headers: tuple[str, ...], rows: list[tuple] | list[list] | list[dict]) -> None:
@@ -853,14 +1007,68 @@ def _planner_launch_rows(main_pages: list[dict], trust_pages: list[dict], blogs:
     ]
 
 
-def _v2_detailed_keyword_rows(page: dict) -> list[tuple[str, str, str, str, str]]:
+def _v2_detailed_keyword_rows(page: dict) -> list[tuple[str, str, str, str, str, str]]:
     rows = []
     primary = page.get("primary_keyword", "") or page.get("name", "")
-    if primary:
-        rows.append((primary, page.get("total_volume", "Research") or "Research", "TBD", "TBD", page.get("intent", "Mixed")))
+    keyword_rows = page.get("keyword_rows", []) if isinstance(page.get("keyword_rows", []), list) else []
+    seen = set()
+
+    for item in keyword_rows:
+        keyword = item.get("keyword", "")
+        if not keyword:
+            continue
+        seen.add(keyword.casefold())
+        rows.append(_v2_detailed_keyword_row(item))
+
+    if primary and primary.casefold() not in seen:
+        rows.insert(
+            0,
+            (
+                primary,
+                _metric_value(page.get("total_volume", "")),
+                _metric_value(page.get("global_volume", "")),
+                _metric_value(page.get("traffic_potential", "")),
+                _metric_value(page.get("difficulty", "")),
+                _clean_intents(page.get("intent", "")) or "Research",
+            ),
+        )
+
     for item in page.get("related_keywords", [])[:8]:
-        rows.append((item, "Research", "TBD", "TBD", _planner_intent(item)))
-    return rows or [("Add keyword", "Research", "TBD", "TBD", "Mixed")]
+        if str(item).casefold() in seen:
+            continue
+        rows.append((item, "Research", "Research", "Research", "Research", _planner_intent(item)))
+
+    return rows or [("Add keyword", "Research", "Research", "Research", "Research", "Research")]
+
+
+def _v2_detailed_keyword_row(item: dict) -> tuple[str, str, str, str, str, str]:
+    return (
+        item.get("keyword", ""),
+        _metric_value(item.get("volume", "")),
+        _metric_value(item.get("global_volume", "")),
+        _metric_value(item.get("traffic_potential", "")),
+        _metric_value(item.get("difficulty", "")),
+        _clean_intents(item.get("intents", "")) or _planner_intent(item.get("keyword", "")),
+    )
+
+
+def _metric_value(value) -> str:
+    if value is None or value == "":
+        return "Research"
+    return str(value)
+
+
+def _clean_intents(value: str) -> str:
+    cleaned = str(value or "").replace("|", ",").replace(";", ",")
+    parts = []
+    seen = set()
+    for part in re.split(r",|\n", cleaned):
+        item = " ".join(part.strip().split())
+        key = item.casefold()
+        if item and key not in seen:
+            seen.add(key)
+            parts.append(item)
+    return ", ".join(parts)
 
 
 def _add_v2_detailed_page_layout(doc: Document, index: int, page: dict, target_market: str) -> None:
@@ -939,6 +1147,194 @@ def _v2_detailed_internal_link_rows(core_pages: list[dict], blogs: list[dict]) -
     for blog in blogs[:12]:
         rows.append((blog.get("name", ""), blog.get("target_page", "Homepage"), blog.get("primary_keyword", blog.get("name", "")), "Support the mapped core page"))
     return rows or [("Homepage", "Core Pages", "main pages", "Create the first internal links")]
+
+
+def _add_v2_detailed_internal_link_map(doc: Document, core_pages: list[dict], support_pages: list[dict], blogs: list[dict]) -> None:
+    target_pages = list(core_pages)
+    if not target_pages:
+        _add_simple_table(doc, ("Source Page", "Link To", "Suggested Anchor", "Purpose"), _v2_detailed_internal_link_rows(core_pages, blogs))
+        return
+
+    for index, page in enumerate(target_pages, start=1):
+        page_name = page.get("name", f"Core Page {index}")
+        keyword = page.get("primary_keyword", page_name)
+        slug = page.get("slug", _planner_slug(keyword))
+
+        doc.add_paragraph(f"Target page: {slug} [{page_name}]", style="Heading 4")
+        doc.add_paragraph(f"Primary keyword: {keyword}")
+        doc.add_paragraph(_v2_internal_link_description(page, keyword))
+        doc.add_paragraph(f"CTA button: {_v2_internal_link_cta(page)}")
+
+        if _v2_is_homepage(page):
+            _add_simple_table(
+                doc,
+                ("Homepage Section", "Link To", "Suggested Anchor", "Purpose"),
+                _v2_homepage_outbound_link_rows(core_pages, support_pages),
+            )
+            doc.add_paragraph("Homepage Blog Section", style="Heading 4")
+            _add_simple_table(
+                doc,
+                ("Homepage Section", "Link To", "Suggested Anchor", "Purpose"),
+                _v2_homepage_blog_section_rows(blogs),
+            )
+        else:
+            _add_simple_table(
+                doc,
+                ("Linking Page", "Suggested Anchor", "Placement", "Purpose"),
+                _v2_internal_link_source_rows(page, core_pages, blogs, minimum_links=3),
+            )
+
+
+def _v2_homepage_outbound_link_rows(core_pages: list[dict], support_pages: list[dict]) -> list[tuple[str, str, str, str]]:
+    rows = []
+    all_pages = [
+        page
+        for page in [*core_pages, *support_pages]
+        if not _v2_is_homepage(page)
+    ]
+    for page in all_pages:
+        page_name = page.get("name", "Page")
+        keyword = page.get("primary_keyword", page_name)
+        slug = page.get("slug", _planner_slug(keyword))
+        rows.append(
+            (
+                f"{page_name} section",
+                f"{slug} [{page_name}]",
+                keyword,
+                "Send homepage users to the matching core or support page.",
+            )
+        )
+    return rows or [("Core pages section", "Add core page URLs", "main pages", "Link homepage to every non-blog page.")]
+
+
+def _v2_homepage_blog_section_rows(blogs: list[dict]) -> list[tuple[str, str, str, str]]:
+    category_names = _unique_text([blog.get("category", "") for blog in blogs if blog.get("category", "")])
+    rows = [("Latest articles section", "/blog/ [Blog Hub]", "Read latest guides", "Create a homepage entry point to the blog hub.")]
+    for category in category_names[:6]:
+        rows.append(
+            (
+                f"{category} articles",
+                f"/blog/category/{_slug_text(category)}/ [{category} Blog Category]",
+                f"{category} guides",
+                "Link to a blog category hub instead of individual blog posts.",
+            )
+        )
+    return rows
+
+
+def _v2_internal_link_source_rows(target_page: dict, core_pages: list[dict], blogs: list[dict], minimum_links: int = 3) -> list[tuple[str, str, str, str]]:
+    target_name = target_page.get("name", "")
+    target_keyword = target_page.get("primary_keyword", target_name)
+    target_slug = target_page.get("slug", _planner_slug(target_keyword))
+    source_rows = []
+    seen_sources = set()
+
+    for source in _v2_internal_link_sources(target_page, core_pages, blogs):
+        source_name = source.get("name", "Homepage")
+        source_slug = source.get("slug", _planner_slug(source_name))
+        source_key = (source_slug or source_name).casefold()
+        if not source_key or source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
+        source_rows.append(
+            (
+                f"{source_slug} [{source_name}]",
+                _v2_internal_anchor(target_keyword, source_name),
+                _v2_internal_placement(source_name, target_name),
+                f"Guide users to {target_slug} after they learn about {target_keyword}.",
+            )
+        )
+        if len(source_rows) >= minimum_links:
+            break
+
+    fallback_sources = (
+        ("Blog Hub", "/blog/"),
+        ("Category Hub", f"/blog/category/{_slug_text(target_keyword)}/"),
+        ("Related Guides Hub", f"/blog/tag/{_slug_text(target_keyword)}/"),
+    )
+    fallback_index = 0
+    while len(source_rows) < minimum_links:
+        fallback_name, fallback_slug = fallback_sources[min(fallback_index, len(fallback_sources) - 1)]
+        fallback_index += 1
+        source_rows.append(
+            (
+                f"{fallback_slug} [{fallback_name}]",
+                _v2_internal_anchor(target_keyword, fallback_name),
+                "Intro or related resources block",
+                f"Add another crawlable path to {target_slug}.",
+            )
+        )
+
+    return source_rows
+
+
+def _v2_internal_link_sources(target_page: dict, core_pages: list[dict], blogs: list[dict]) -> list[dict]:
+    target_name = (target_page.get("name", "") or "").casefold()
+    target_slug = (target_page.get("slug", "") or "").casefold()
+    sources = []
+
+    homepage = next((page for page in core_pages if _v2_is_homepage(page)), None)
+    if homepage:
+        sources.append(homepage)
+
+    for page in core_pages:
+        if page is target_page:
+            continue
+        name = (page.get("name", "") or "").casefold()
+        slug = (page.get("slug", "") or "").casefold()
+        if name == target_name or slug == target_slug:
+            continue
+        sources.append(page)
+
+    for blog in blogs:
+        if (blog.get("target_page", "") or "").casefold() == target_name:
+            sources.append(
+                {
+                    "name": blog.get("name", "Supporting Blog"),
+                    "slug": f"/blog/{_slug_text(blog.get('name', 'supporting-blog'))}/",
+                }
+            )
+
+    return sources
+
+
+def _v2_internal_link_description(page: dict, keyword: str) -> str:
+    page_name = page.get("name", keyword)
+    intent = page.get("intent", "Mixed")
+    minimum_label = "one related page" if _v2_is_homepage(page) else "at least three related pages"
+    return (
+        f"Use this page as the main destination for {keyword}. Add contextual links from {minimum_label} "
+        f"so users and crawlers can reach the {page_name} cluster from multiple paths. Search intent: {intent}."
+    )
+
+
+def _v2_internal_link_cta(page: dict) -> str:
+    page_name = page.get("name", "This Page")
+    keyword = page.get("primary_keyword", page_name)
+    if any(term in keyword.casefold() for term in ("login", "register", "signup", "sign up", "download")):
+        return f"Go To {page_name}"
+    if any(term in keyword.casefold() for term in ("bonus", "promo", "promotion")):
+        return "View Current Promos"
+    return f"Explore {page_name}"
+
+
+def _v2_internal_anchor(keyword: str, source_name: str) -> str:
+    if source_name.casefold() in {"homepage", "home", "home page"}:
+        return keyword
+    return f"Explore {keyword}"
+
+
+def _v2_internal_placement(source_name: str, target_name: str) -> str:
+    if source_name.casefold() in {"homepage", "home", "home page"}:
+        return f"Homepage section for {target_name}"
+    return "Relevant H2 section or bottom CTA block"
+
+
+def _v2_is_homepage(page: dict) -> bool:
+    name = (page.get("name", "") or "").strip().casefold()
+    slug = (page.get("slug", "") or "").strip()
+    keyword = (page.get("primary_keyword", "") or "").strip().casefold()
+    return slug == "/" or name in {"home", "homepage", "home page"} or keyword in {"home", "homepage", "home page"}
 
 
 def _v2_detailed_blog_rows(blogs: list[dict]) -> list[tuple]:

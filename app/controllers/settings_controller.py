@@ -1,6 +1,6 @@
-from flask import render_template, request
+from flask import redirect, render_template, request, url_for
 
-from database import get_setting, set_setting
+from database import delete_find_replace_rule, get_find_replace_rule, get_setting, list_find_replace_rules, save_find_replace_rule, set_setting
 
 from app.controllers.helpers import base_template_context
 from app.services.locale_settings import (
@@ -159,6 +159,53 @@ def banned_words():
     return render_template("banned_words.html", **base_template_context(), **state)
 
 
+def find_replace_settings():
+    editing_rule = None
+    edit_id = _parse_int(request.args.get("edit", ""))
+    if edit_id:
+        editing_rule = get_find_replace_rule(edit_id)
+
+    state = {
+        "rules": list_find_replace_rules(),
+        "editing_rule": editing_rule,
+        "find_text": editing_rule["find_text"] if editing_rule else "",
+        "replace_text": editing_rule["replace_text"] if editing_rule else "",
+        "notes": editing_rule["notes"] if editing_rule else "",
+        "is_active": bool(editing_rule["is_active"]) if editing_rule else True,
+        "success": None,
+        "error": None,
+    }
+
+    if request.method == "POST":
+        action = request.form.get("action", "save")
+        rule_id = _parse_int(request.form.get("rule_id", ""))
+
+        if action == "delete" and rule_id:
+            delete_find_replace_rule(rule_id)
+            return redirect(url_for("web.find_replace_settings"))
+
+        state["find_text"] = request.form.get("find_text", "").strip()
+        state["replace_text"] = request.form.get("replace_text", "").strip()
+        state["notes"] = request.form.get("notes", "").strip()
+        state["is_active"] = request.form.get("is_active") == "1"
+
+        try:
+            saved_id = save_find_replace_rule(
+                state["find_text"],
+                state["replace_text"],
+                notes=state["notes"],
+                is_active=state["is_active"],
+                rule_id=rule_id,
+            )
+            state["success"] = "Find and replace rule saved."
+            state["editing_rule"] = get_find_replace_rule(saved_id)
+            state["rules"] = list_find_replace_rules()
+        except ValueError as exc:
+            state["error"] = str(exc)
+
+    return render_template("find_replace_settings.html", **base_template_context(), **state)
+
+
 def _load_banned_words_file_terms() -> list[str]:
     from word_bank import WORD_BANK_FILE
 
@@ -203,3 +250,11 @@ def _normalize_ollama_max_results(value: str) -> int:
         return max(1, min(10, int(value)))
     except (TypeError, ValueError):
         return get_ollama_web_search_max_results()
+
+
+def _parse_int(value: str) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None

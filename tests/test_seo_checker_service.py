@@ -1,4 +1,10 @@
+import json
+from io import BytesIO
 from dataclasses import dataclass
+from urllib.error import URLError
+
+import pytest
+from docx import Document
 
 from app import create_app
 from app.controllers import tool_controller
@@ -55,7 +61,7 @@ def test_page_seo_parser_collects_core_seo_fields():
 
 
 def test_link_report_tracks_404_links(monkeypatch):
-    def fake_check_link_url(url, link_type, verify_ssl=True):
+    def fake_check_link_url(url, link_type, verify_ssl=True, allow_private=False):
         status_code = 404 if url.endswith("/missing") else 200
         status = "broken" if status_code == 404 else "ok"
         return {"url": url, "type": link_type, "status_code": status_code, "status": status}
@@ -74,7 +80,53 @@ def test_link_report_tracks_404_links(monkeypatch):
     assert report["checked_count"] == 2
     assert report["broken_sample_count"] == 1
     assert report["not_found_count"] == 1
+    assert report["broken_count"] == 0
     assert report["not_found_links"][0]["url"] == "https://example.com/missing"
+    assert report["not_found_links"][0]["text"] == "Missing page"
+
+
+def test_link_report_tracks_redirecting_links(monkeypatch):
+    def fake_check_link_url(url, link_type, verify_ssl=True, allow_private=False):
+        if url.endswith("/old"):
+            return {
+                "url": url,
+                "final_url": "https://example.com/new",
+                "type": link_type,
+                "status_code": 200,
+                "status": "ok",
+                "redirected": True,
+            }
+        return {
+            "url": url,
+            "final_url": url,
+            "type": link_type,
+            "status_code": 200,
+            "status": "ok",
+            "redirected": False,
+        }
+
+    monkeypatch.setattr(seo_checker_service, "_check_link_url", fake_check_link_url)
+
+    report = seo_checker_service._build_link_report(
+        [
+            {"href": "/old", "text": "Old page"},
+            {"href": "/current", "text": "Current page"},
+        ],
+        page_url="https://example.com/page",
+        base_url="https://example.com",
+    )
+
+    assert report["checked_count"] == 2
+    assert report["redirect_count"] == 1
+    assert report["redirect_links"][0]["url"] == "https://example.com/old"
+    assert report["redirect_links"][0]["final_url"] == "https://example.com/new"
+
+
+def test_local_urls_are_allowed_only_when_enabled():
+    with pytest.raises(ValueError, match="Local/private"):
+        seo_checker_service._validate_public_http_url("http://localhost:3000")
+
+    assert seo_checker_service._validate_public_http_url("http://localhost:3000", allow_private=True) is None
 
 
 @dataclass
@@ -91,7 +143,7 @@ def test_seo_checker_lists_pages_then_checks_each_page(monkeypatch):
     monkeypatch.setattr(
         tool_controller,
         "discover_website_pages",
-        lambda url, limit: FakeDiscoveryResult(
+        lambda url, limit, allow_private=False: FakeDiscoveryResult(
             base_url="https://example.com",
             pages=["https://example.com/a", "https://example.com/b"],
             errors=[],
@@ -99,7 +151,7 @@ def test_seo_checker_lists_pages_then_checks_each_page(monkeypatch):
         ),
     )
 
-    def fake_run_seo_audit(url, verify_ssl=True):
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False):
         calls.append(url)
         return {
             "url": url,
@@ -121,6 +173,38 @@ def test_seo_checker_lists_pages_then_checks_each_page(monkeypatch):
                 "word_count": 500,
                 "h1_count": 1,
                 "missing_alt_count": 0,
+                "links": {
+                    "checked_count": 1,
+                    "not_found_count": 1 if url.endswith("/a") else 0,
+                    "not_found_links": [
+                        {
+                            "url": f"{url}/missing",
+                            "final_url": f"{url}/missing",
+                            "type": "internal",
+                            "status_code": 404,
+                            "status": "broken",
+                            "redirected": False,
+                            "text": "Missing link",
+                        }
+                    ] if url.endswith("/a") else [],
+                    "broken_count": 0,
+                    "broken_links": [],
+                    "unreachable_count": 0,
+                    "unreachable_links": [],
+                    "redirect_count": 1,
+                    "redirect_links": [
+                        {
+                            "url": f"{url}/old",
+                            "final_url": f"{url}/new",
+                            "type": "internal",
+                            "status_code": 200,
+                            "status": "ok",
+                            "redirected": True,
+                            "text": "Old link",
+                        }
+                    ],
+                    "sample_checks": [],
+                },
             },
         }
 
@@ -138,6 +222,13 @@ def test_seo_checker_lists_pages_then_checks_each_page(monkeypatch):
     assert response.status_code == 200
     assert calls == ["https://example.com/a", "https://example.com/b"]
     assert "Listed Pages" in html
+    assert "2 redirecting links" in html
+    assert "Sample Link Health Details" in html
+    assert "https://example.com/a/missing" in html
+    assert "Missing link" in html
+    assert "Found On Page" in html
+    assert "https://example.com/a/old" in html
+    assert "https://example.com/a/new" in html
     assert "Checked Pages" in html
     assert "Page Checks" in html
     assert html.index("Listed Pages") < html.index("Page Checks")
@@ -151,7 +242,7 @@ def test_site_seo_checks_publish_current_page_progress(monkeypatch):
     monkeypatch.setattr(
         tool_controller,
         "discover_website_pages",
-        lambda url, limit: FakeDiscoveryResult(
+        lambda url, limit, allow_private=False: FakeDiscoveryResult(
             base_url="https://example.com",
             pages=["https://example.com/a", "https://example.com/b"],
             errors=[],
@@ -159,7 +250,7 @@ def test_site_seo_checks_publish_current_page_progress(monkeypatch):
         ),
     )
 
-    def fake_run_seo_audit(url, verify_ssl=True):
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False):
         return {
             "url": url,
             "score": 90,
@@ -183,3 +274,199 @@ def test_site_seo_checks_publish_current_page_progress(monkeypatch):
         {"index": 1, "url": "https://example.com/a", "status": "checked", "score": 90, "grade": "A", "error": ""},
         {"index": 2, "url": "https://example.com/b", "status": "checked", "score": 90, "grade": "A", "error": ""},
     ]
+
+
+def test_seo_checker_passes_allow_private_urls(monkeypatch):
+    flags = {"discovery": None, "audit": []}
+
+    def fake_discover_website_pages(url, limit, allow_private=False):
+        flags["discovery"] = allow_private
+        return FakeDiscoveryResult(
+            base_url="http://localhost:3000",
+            pages=["http://localhost:3000/"],
+            errors=[],
+            sitemaps=[],
+        )
+
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False):
+        flags["audit"].append(allow_private)
+        return {
+            "url": url,
+            "score": 90,
+            "grade": "A",
+            "checks": [],
+            "ai_summary": {"summary": "", "priority_actions": [], "source": "Rules"},
+            "stats": {"title": "", "word_count": 0, "h1_count": 0, "missing_alt_count": 0, "links": {}},
+        }
+
+    monkeypatch.setattr(tool_controller, "discover_website_pages", fake_discover_website_pages)
+    monkeypatch.setattr(tool_controller, "run_seo_audit", fake_run_seo_audit)
+
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post(
+        "/seo-checker",
+        data={"url": "http://localhost:3000", "limit": "1", "allow_private_urls": "1"},
+    )
+
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert flags["discovery"] is True
+    assert flags["audit"] == [True]
+    assert "Allow local/private URLs" in html
+
+
+def test_seo_checker_auto_allows_localhost_ports(monkeypatch):
+    flags = {"discovery": None, "audit": []}
+
+    def fake_discover_website_pages(url, limit, allow_private=False):
+        flags["discovery"] = allow_private
+        return FakeDiscoveryResult(
+            base_url="http://localhost:3001",
+            pages=["http://localhost:3001/"],
+            errors=[],
+            sitemaps=[],
+        )
+
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False):
+        flags["audit"].append(allow_private)
+        return {
+            "url": url,
+            "score": 90,
+            "grade": "A",
+            "checks": [],
+            "ai_summary": {"summary": "", "priority_actions": [], "source": "Rules"},
+            "stats": {"title": "", "word_count": 0, "h1_count": 0, "missing_alt_count": 0, "links": {}},
+        }
+
+    monkeypatch.setattr(tool_controller, "discover_website_pages", fake_discover_website_pages)
+    monkeypatch.setattr(tool_controller, "run_seo_audit", fake_run_seo_audit)
+
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post(
+        "/seo-checker",
+        data={"url": "http://localhost:3001", "limit": "1"},
+    )
+
+    assert response.status_code == 200
+    assert flags["discovery"] is True
+    assert flags["audit"] == [True]
+
+
+def test_fetch_url_retries_localhost_through_docker_host(monkeypatch):
+    requested_urls = []
+
+    class FakeHeaders:
+        def get(self, key, default=""):
+            return "text/html" if key.lower() == "content-type" else default
+
+        def get_content_charset(self):
+            return "utf-8"
+
+    class FakeResponse:
+        status = 200
+        headers = FakeHeaders()
+
+        def __init__(self, url):
+            self.url = url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def geturl(self):
+            return self.url
+
+        def read(self, limit):
+            return b"<html><title>Local app</title><body><h1>Local app</h1></body></html>"
+
+    def fake_urlopen(request, timeout=None, context=None):
+        requested_urls.append(request.full_url)
+        if request.full_url == "http://localhost:3001/":
+            raise URLError(ConnectionRefusedError("refused"))
+        return FakeResponse(request.full_url)
+
+    monkeypatch.setattr(seo_checker_service, "urlopen", fake_urlopen)
+
+    result = seo_checker_service.fetch_url("http://localhost:3001/", allow_private=True)
+
+    assert requested_urls == ["http://localhost:3001/", "http://host.docker.internal:3001/"]
+    assert result.url == "http://localhost:3001/"
+    assert "Local app" in result.text
+
+
+def test_seo_checker_download_report_returns_docx():
+    result = {
+        "mode": "site",
+        "base_url": "https://example.com",
+        "summary": {
+            "average_grade": "B",
+            "average_score": 82,
+            "discovered_count": 2,
+            "checked_count": 2,
+            "issue_count": 1,
+            "checked_link_count": 4,
+            "not_found_link_count": 1,
+            "redirect_link_count": 1,
+        },
+        "pages": [
+            {
+                "url": "https://example.com/a",
+                "status": "checked",
+                "result": {
+                    "grade": "B",
+                    "score": 82,
+                    "stats": {"title": "Page A"},
+                    "checks": [
+                        {
+                            "name": "Sample link health",
+                            "status": "warn",
+                            "detail": "1 404",
+                            "recommendation": "Fix missing link.",
+                        }
+                    ],
+                },
+            }
+        ],
+        "link_health_details": {
+            "not_found_links": [
+                {
+                    "source_page": "https://example.com/a",
+                    "url": "https://example.com/missing",
+                    "final_url": "https://example.com/missing",
+                    "status_code": 404,
+                    "text": "Missing link",
+                    "type": "internal",
+                }
+            ],
+            "redirect_links": [
+                {
+                    "source_page": "https://example.com/a",
+                    "url": "https://example.com/old",
+                    "final_url": "https://example.com/new",
+                    "status_code": 200,
+                    "text": "Old link",
+                    "type": "internal",
+                }
+            ],
+        },
+    }
+
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post("/seo-checker/download-report", data={"result_json": json.dumps(result)})
+
+    assert response.status_code == 200
+    assert response.headers["Content-Type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    doc = Document(BytesIO(response.data))
+    text = "\n".join(paragraph.text for paragraph in doc.paragraphs)
+    table_text = "\n".join(cell.text for table in doc.tables for row in table.rows for cell in row.cells)
+    combined = f"{text}\n{table_text}"
+    assert "Website SEO Checker Report" in combined
+    assert "Detailed Link Health" in combined
+    assert "https://example.com/missing" in combined
+    assert "Missing link" in combined

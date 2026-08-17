@@ -18,7 +18,7 @@ from database import (
     save_social_profile,
 )
 from generators.content_generator import count_html_words
-from generators.social_media_generator import generate_neutral_blog_article, generate_social_media_post
+from generators.social_media_generator import generate_neutral_blog_article, generate_social_bios, generate_social_media_post
 from logger import logger
 
 from app.controllers.helpers import base_template_context
@@ -34,6 +34,7 @@ from app.services.social_publish_service import publish_facebook_page_post
 
 SOCIAL_PLATFORM_OPTIONS = (
     ("facebook", "Facebook"),
+    ("google_business", "Google Business"),
     ("instagram", "Instagram"),
     ("linkedin", "LinkedIn"),
     ("telegram", "Telegram"),
@@ -96,6 +97,74 @@ def generated_social_post():
     state["platform_labels"] = dict(SOCIAL_PLATFORM_OPTIONS)
     state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("generated_social_post.html", **base_template_context(), **state)
+
+
+def bio_generator():
+    state = {
+        "brand": "",
+        "platform": "instagram",
+        "notes": "",
+        "bio_options": [],
+        "character_limit": 0,
+        "history_id": "",
+        "success": None,
+        "error": None,
+    }
+    if request.method == "POST":
+        state["brand"] = request.form.get("brand", "").strip()
+        state["platform"] = request.form.get("platform", "instagram").strip() or "instagram"
+        state["notes"] = request.form.get("notes", "").strip()
+        valid_platforms = {value for value, _label in SOCIAL_PLATFORM_OPTIONS}
+        if state["platform"] not in valid_platforms:
+            state["platform"] = "other"
+        if not state["brand"]:
+            state["error"] = "Select or enter a brand."
+        else:
+            try:
+                result = generate_social_bios(
+                    get_provider(),
+                    brand_name=state["brand"],
+                    social_type=state["platform"],
+                    brand_context=get_brand_context(state["brand"]),
+                    notes=state["notes"],
+                    count=5,
+                )
+                state["bio_options"] = result.get("bios", [])
+                state["character_limit"] = result.get("character_limit", 0)
+                state["history_id"] = str(
+                    record_generation(
+                        content_type="Social Bio",
+                        title=f"{_platform_label(state['platform'])} bios for {state['brand']}",
+                        primary_keyword=state["brand"],
+                        medium_name=_platform_label(state["platform"]),
+                        word_count=0,
+                        meta_description="",
+                        tags="social bio",
+                        prompt_inputs={
+                            "brand": state["brand"],
+                            "platform": state["platform"],
+                            "notes": state["notes"],
+                            "character_limit": state["character_limit"],
+                        },
+                        content="\n\n".join(item.get("text", "") for item in state["bio_options"]),
+                        quality_report={},
+                    )
+                )
+                state["success"] = "Bio options generated."
+            except Exception as exc:
+                logger.exception("bio generator failed")
+                state["error"] = generation_error_message(
+                    "Could not generate bios. Check logs/app.log for details.",
+                    exc,
+                )
+    return render_template(
+        "bio_generator.html",
+        **base_template_context(),
+        **state,
+        brand_names=list_brand_names(),
+        platform_options=SOCIAL_PLATFORM_OPTIONS,
+        platform_labels=dict(SOCIAL_PLATFORM_OPTIONS),
+    )
 
 
 def _default_generated_social_post_state() -> dict:
@@ -181,7 +250,7 @@ def _handle_generate_social_post_page(state: dict) -> None:
         )
         state["image_description"] = result.get("image_description", "")
         state["tags"] = result.get("tags", [])
-        state["tags_text"] = ", ".join(state["tags"])
+        state["tags_text"] = " ".join(state["tags"])
         state["character_count"] = len(state["generated_content"])
         state["character_limit"] = result.get("character_limit", state["character_limit"])
         state["web_search_used"] = bool(research_context)
@@ -534,7 +603,7 @@ def _social_post_progress_callback(token: str, log_entries: list[dict] | None = 
 def _split_tags(value: str) -> list[str]:
     tags = []
     seen = set()
-    for item in str(value or "").replace("\n", ",").split(","):
+    for item in re.split(r"[\s,]+", str(value or "")):
         cleaned = item.strip()
         normalized = cleaned.lower()
         if cleaned and normalized not in seen:

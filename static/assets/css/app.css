@@ -104,6 +104,13 @@ table {
   max-width: 100%;
 }
 
+table th,
+table td {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
 html.dark body {
   background: #11100e !important;
   color: #f7eee4 !important;

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% set active_page = "bulk-image-downloader" %}
+
+{% block title %}Bulk Image Downloader{% endblock %}
+{% block eyebrow %}Image Search{% endblock %}
+{% block hero_title %}Bulk Image Downloader{% endblock %}
+{% block hero_text %}List icons or featured images, search Google Images, then save the best result into your Image Bank.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      {% if error %}
+        <div class="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ success }}</div>
+      {% endif %}
+
+      <form method="post" class="grid gap-4">
+        <div>
+          <label for="image_requests" class="mb-2 block text-sm font-bold text-sand-900">Icons / Featured Images</label>
+          <textarea id="image_requests" name="image_requests" rows="9" placeholder="casino chips icon&#10;mobile app featured image&#10;football match hero image" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ image_requests }}</textarea>
+          <p class="mt-2 text-xs font-bold leading-5 text-sand-600">One item per line. Commas also work.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button type="submit" name="action" value="search" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if search_groups %}Regenerate Results{% else %}Search Google Images{% endif %}</button>
+          <button type="submit" name="action" value="download_first_5" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-moss-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-moss-800">Download First 5 to Bank</button>
+          {% if search_groups %}
+            <a href="/bulk-image-downloader" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-100 px-5 py-3 text-sm font-bold text-sand-700 transition hover:bg-sand-200">Clear</a>
+          {% endif %}
+        </div>
+      </form>
+
+      <div class="mt-6 rounded-2xl border border-sand-200 bg-sand-50/80 p-4">
+        <h2 class="text-sm font-bold text-sand-950">Save Direct Image URL</h2>
+        <form method="post" class="mt-4 grid gap-3">
+          <input type="hidden" name="action" value="save" />
+          <textarea name="image_requests" class="hidden-form" aria-hidden="true">{{ image_requests }}</textarea>
+          <input name="manual_query" type="text" value="{{ manual_query }}" placeholder="Image name or keyword" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          <input name="manual_image_url" type="url" value="{{ manual_image_url }}" placeholder="https://example.com/image.jpg" class="min-h-12 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          <button type="submit" class="inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-800">Save to Image Bank</button>
+        </form>
+      </div>
+
+      {% if saved_item %}
+        <div class="mt-6 rounded-2xl border border-moss-200 bg-moss-100/70 p-4">
+          <h2 class="text-sm font-bold text-sand-950">Saved Image</h2>
+          <img src="{{ saved_item.image_url }}" alt="{{ saved_item.title or saved_item.query }}" class="mt-3 aspect-video w-full rounded-[8px] object-cover" />
+          <a href="/image-bank" class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-sand-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-sand-800">Open Image Bank</a>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Results</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Google Image Results</h2>
+        </div>
+        <a href="/image-bank" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-100 px-4 py-2.5 text-sm font-bold text-sand-700 transition hover:bg-sand-200">Image Bank</a>
+      </div>
+
+      {% if search_groups %}
+        <div class="mt-6 grid gap-6">
+          {% for group in search_groups %}
+            <div class="rounded-[22px] border border-sand-200 bg-white p-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <h3 class="break-words text-lg font-extrabold text-sand-950">{{ group.query }}</h3>
+                <a href="{{ group.google_url }}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-moss-700 underline decoration-moss-500/40 underline-offset-2">Open Google Images</a>
+              </div>
+              {% if group.results %}
+                <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {% for item in group.results %}
+                    <article class="rounded-[8px] border border-sand-200 bg-sand-50 p-3">
+                      <img src="{{ item.thumbnail_url }}" alt="{{ item.title }}" loading="lazy" referrerpolicy="no-referrer" class="aspect-video w-full rounded-[8px] bg-white object-cover" />
+                      <p class="mt-2 break-words text-xs font-bold leading-5 text-sand-600">{{ item.source }}</p>
+                      <form method="post" class="mt-3">
+                        <input type="hidden" name="action" value="save" />
+                        <textarea name="image_requests" class="hidden-form" aria-hidden="true">{{ image_requests }}</textarea>
+                        <input type="hidden" name="query" value="{{ group.query }}" />
+                        <input type="hidden" name="title" value="{{ item.title }}" />
+                        <input type="hidden" name="image_url" value="{{ item.image_url }}" />
+                        <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-moss-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-moss-800">Save to Image Bank</button>
+                      </form>
+                    </article>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="mt-4 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-700">No image URLs were found from direct sources or thumbnails. Click Regenerate Results, open Google Images, or paste a direct image URL into the box.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="mt-6 rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-10 text-center text-sm leading-6 text-sand-700">
+          Search results will appear here.
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

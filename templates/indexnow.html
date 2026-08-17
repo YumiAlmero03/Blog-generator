@@ -145,6 +145,7 @@
 
       <div class="flex flex-wrap items-center gap-3">
         <button type="submit" name="action" value="save_urls" formnovalidate class="inline-flex min-h-12 items-center justify-center rounded-full border border-sand-300 bg-white px-6 py-3 text-sm font-bold text-sand-700 transition hover:bg-sand-100">Save URL List</button>
+        <button type="submit" name="action" value="bulk_remove_urls" formnovalidate onclick="return confirm('Remove these URLs from the saved Website Index tracker?');" class="inline-flex min-h-12 items-center justify-center rounded-full bg-red-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-red-800">Remove URL List</button>
         <button type="submit" name="action" value="indexnow" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Submit to IndexNow</button>
         <button type="submit" name="action" value="google" class="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-black">Submit to Google API</button>
         <button type="submit" name="action" value="google_inspect" class="inline-flex min-h-12 items-center justify-center rounded-full bg-blue-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-950">Check Google Index</button>

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set active_page = "image-bank" %}
+
+{% block title %}Image Bank{% endblock %}
+{% block eyebrow %}Saved Images{% endblock %}
+{% block hero_title %}Image Bank{% endblock %}
+{% block hero_text %}Review saved icons and featured images, then download the best photo whenever you need it.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Library</p>
+        <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ items|length }} Saved Image{% if items|length != 1 %}s{% endif %}</h2>
+      </div>
+      <a href="/bulk-image-downloader" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-5 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Find Images</a>
+    </div>
+
+    {% if items %}
+      <div class="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        {% for item in items %}
+          <article class="rounded-[8px] border border-sand-200 bg-white p-4">
+            <a href="{{ item.image_url }}" target="_blank" rel="noopener noreferrer">
+              <img src="{{ item.image_url }}" alt="{{ item.title or item.query or item.file_name }}" loading="lazy" class="aspect-video w-full rounded-[8px] bg-sand-100 object-cover" />
+            </a>
+            <div class="mt-4">
+              <h3 class="break-words text-base font-extrabold text-sand-950">{{ item.title or item.query or item.file_name }}</h3>
+              {% if item.query %}
+                <p class="mt-1 break-words text-xs font-bold uppercase tracking-[0.1em] text-sand-500">{{ item.query }}</p>
+              {% endif %}
+              <p class="mt-2 text-sm font-bold text-sand-700">{{ item.width }} x {{ item.height }}{% if item.file_size_label %} · {{ item.file_size_label }}{% endif %}</p>
+              {% if item.source_url %}
+                <a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer" class="mt-2 block break-all text-xs font-bold leading-5 text-moss-700 underline decoration-moss-500/40 underline-offset-2">Source image</a>
+              {% endif %}
+            </div>
+            <a href="{{ item.image_url }}" download="{{ item.download_name }}" class="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-full bg-moss-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-moss-800">Download</a>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="mt-6 rounded-[22px] border-2 border-dashed border-sand-200 bg-white/60 px-6 py-12 text-center text-sm leading-6 text-sand-700">
+        No images saved yet. Use Bulk Image Downloader to search and save your first image.
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

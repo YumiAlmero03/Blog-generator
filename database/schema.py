@@ -91,6 +91,15 @@ def init_db():
                 normalized_term TEXT NOT NULL UNIQUE
             );
 
+            CREATE TABLE IF NOT EXISTS find_replace_rules (
+                id INTEGER PRIMARY KEY,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                find_text TEXT NOT NULL DEFAULT '',
+                replace_text TEXT NOT NULL DEFAULT '',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                notes TEXT NOT NULL DEFAULT ''
+            );
+
             CREATE TABLE IF NOT EXISTS backlinks (
                 id INTEGER PRIMARY KEY,
                 website_name TEXT NOT NULL DEFAULT '',
@@ -189,9 +198,47 @@ def init_db():
                 page_keywords TEXT NOT NULL DEFAULT '',
                 last_error TEXT NOT NULL DEFAULT ''
             );
+
+            CREATE TABLE IF NOT EXISTS image_bank (
+                id INTEGER PRIMARY KEY,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                query TEXT NOT NULL DEFAULT '',
+                title TEXT NOT NULL DEFAULT '',
+                source_url TEXT NOT NULL DEFAULT '',
+                file_path TEXT NOT NULL DEFAULT '',
+                file_name TEXT NOT NULL DEFAULT '',
+                file_size INTEGER NOT NULL DEFAULT 0,
+                width INTEGER NOT NULL DEFAULT 0,
+                height INTEGER NOT NULL DEFAULT 0,
+                notes TEXT NOT NULL DEFAULT ''
+            );
+
+            CREATE TABLE IF NOT EXISTS folder_image_optimizer_runs (
+                id INTEGER PRIMARY KEY,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                mode TEXT NOT NULL DEFAULT '',
+                source_folder TEXT NOT NULL DEFAULT '',
+                output_folder TEXT NOT NULL DEFAULT '',
+                output_format TEXT NOT NULL DEFAULT '',
+                quality INTEGER NOT NULL DEFAULT 0,
+                recursive INTEGER NOT NULL DEFAULT 0,
+                overwrite_original INTEGER NOT NULL DEFAULT 0,
+                total_count INTEGER NOT NULL DEFAULT 0,
+                optimized_count INTEGER NOT NULL DEFAULT 0,
+                error_count INTEGER NOT NULL DEFAULT 0,
+                saved_total_label TEXT NOT NULL DEFAULT '',
+                seen_folders TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT '',
+                message TEXT NOT NULL DEFAULT ''
+            );
             """
         )
         _ensure_column(connection, "backlinks", "account_name", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "find_replace_rules", "created_at", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "find_replace_rules", "find_text", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "find_replace_rules", "replace_text", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "find_replace_rules", "is_active", "INTEGER NOT NULL DEFAULT 1")
+        _ensure_column(connection, "find_replace_rules", "notes", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "backlinks", "blog_name", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "backlinks", "writer_name", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "backlinks", "website_type", "TEXT NOT NULL DEFAULT 'blog'")
@@ -250,6 +297,29 @@ def init_db():
         _ensure_column(connection, "website_index_urls", "yahoo_detail", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "website_index_urls", "page_keywords", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "website_index_urls", "last_error", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "image_bank", "query", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "image_bank", "title", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "image_bank", "source_url", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "image_bank", "file_path", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "image_bank", "file_name", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "image_bank", "file_size", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "image_bank", "width", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "image_bank", "height", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "image_bank", "notes", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "folder_image_optimizer_runs", "mode", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "folder_image_optimizer_runs", "source_folder", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "folder_image_optimizer_runs", "output_folder", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "folder_image_optimizer_runs", "output_format", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "folder_image_optimizer_runs", "quality", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "folder_image_optimizer_runs", "recursive", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "folder_image_optimizer_runs", "overwrite_original", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "folder_image_optimizer_runs", "total_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "folder_image_optimizer_runs", "optimized_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "folder_image_optimizer_runs", "error_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "folder_image_optimizer_runs", "saved_total_label", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "folder_image_optimizer_runs", "seen_folders", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "folder_image_optimizer_runs", "status", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "folder_image_optimizer_runs", "message", "TEXT NOT NULL DEFAULT ''")
         connection.execute(
             """
             UPDATE generation_history

@@ -33,6 +33,8 @@ def test_social_scheduler_page_renders_saved_profiles(monkeypatch):
     html = response.get_data(as_text=True)
     assert response.status_code == 200
     assert "Social Scheduler" in html
+    assert '<option value="google_business"' in html
+    assert "Google Business" in html
     assert '<option value="telegram"' in html
     assert "Example Brand" in html
     assert "@example" in html
@@ -40,6 +42,56 @@ def test_social_scheduler_page_renders_saved_profiles(monkeypatch):
     assert "...-key" in html
     assert "...cret" in html
     assert "2 target/day" in html
+
+
+def test_bio_generator_page_renders_platform_and_brand(monkeypatch):
+    monkeypatch.setattr(social_media_controller, "list_brand_names", lambda: ["Example Brand"])
+
+    app = create_app()
+    app.testing = True
+    response = app.test_client().get("/bio-generator")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Bio Generator" in html
+    assert "Google Business" in html
+    assert "Example Brand" in html
+    assert "Generate Bios" in html
+
+
+def test_bio_generator_generates_options(monkeypatch):
+    class FakeProvider:
+        def generate_json(self, prompt):
+            assert "Generate 5 profile bio options" in prompt
+            assert "Example Brand" in prompt
+            assert "instagram" in prompt
+            return '{"bios":[{"text":"Example Brand updates, tips, and simple ways to discover what matters next.","tone":"clear"},{"text":"Fresh ideas and useful updates from Example Brand.","tone":"short"}]}'
+
+    recorded = {}
+    monkeypatch.setattr(social_media_controller, "list_brand_names", lambda: ["Example Brand"])
+    monkeypatch.setattr(social_media_controller, "get_brand_context", lambda brand: "Saved brand context.")
+    monkeypatch.setattr(social_media_controller, "get_provider", lambda: FakeProvider())
+    monkeypatch.setattr(social_media_controller, "record_generation", lambda **kwargs: recorded.update(kwargs) or 55)
+
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post(
+        "/bio-generator",
+        data={
+            "brand": "Example Brand",
+            "platform": "instagram",
+            "notes": "friendly",
+        },
+    )
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Bio options generated." in html
+    assert "Example Brand updates" in html
+    assert "Copy Bio" in html
+    assert "/generation-history/55" in html
+    assert recorded["content_type"] == "Social Bio"
+    assert recorded["primary_keyword"] == "Example Brand"
 
 
 def test_social_scheduler_saves_profile(monkeypatch):
@@ -58,14 +110,14 @@ def test_social_scheduler_saves_profile(monkeypatch):
         "/social-scheduler",
         data={
             "brand_name": "Example Brand",
-            "social_type": "telegram",
-            "account_name": "@example_channel",
-            "platform_account_id": "telegram-channel-123",
-            "profile_url": "https://t.me/example_channel",
-            "api_key": "telegram-api-key",
-            "api_secret": "telegram-api-secret",
-            "access_token": "telegram-access-token",
-            "refresh_token": "telegram-refresh-token",
+            "social_type": "google_business",
+            "account_name": "Example Business Profile",
+            "platform_account_id": "google-location-123",
+            "profile_url": "https://business.google.com/example",
+            "api_key": "google-business-api-key",
+            "api_secret": "google-business-api-secret",
+            "access_token": "google-business-access-token",
+            "refresh_token": "google-business-refresh-token",
             "posts_per_day": "3",
             "is_active": "1",
             "notes": "Business updates.",
@@ -75,13 +127,13 @@ def test_social_scheduler_saves_profile(monkeypatch):
     html = response.get_data(as_text=True)
     assert response.status_code == 200
     assert saved["brand_name"] == "Example Brand"
-    assert saved["social_type"] == "telegram"
-    assert saved["account_name"] == "@example_channel"
-    assert saved["platform_account_id"] == "telegram-channel-123"
-    assert saved["api_key"] == "telegram-api-key"
-    assert saved["api_secret"] == "telegram-api-secret"
-    assert saved["access_token"] == "telegram-access-token"
-    assert saved["refresh_token"] == "telegram-refresh-token"
+    assert saved["social_type"] == "google_business"
+    assert saved["account_name"] == "Example Business Profile"
+    assert saved["platform_account_id"] == "google-location-123"
+    assert saved["api_key"] == "google-business-api-key"
+    assert saved["api_secret"] == "google-business-api-secret"
+    assert saved["access_token"] == "google-business-access-token"
+    assert saved["refresh_token"] == "google-business-refresh-token"
     assert saved["posts_per_day"] == 3
     assert saved["is_active"] is True
     assert "Social account saved." in html
@@ -262,7 +314,7 @@ def test_generated_social_post_generates_review_draft(monkeypatch):
         lambda *args, **kwargs: {
             "post_content": "Generated draft post.",
             "image_description": "Image idea.",
-            "tags": ["#Example"],
+            "tags": ["#Example", "#Launch", "#Update"],
             "character_count": 21,
             "character_limit": 240,
         },
@@ -286,6 +338,8 @@ def test_generated_social_post_generates_review_draft(monkeypatch):
     assert "Review Post" in html
     assert "/generation-history/42" in html
     assert "21/240 characters" in html
+    assert 'value="#Example #Launch #Update"' in html
+    assert "#Example, #Launch, #Update" not in html
 
 
 def test_generated_social_post_adds_matchup_reaction_lines(monkeypatch):

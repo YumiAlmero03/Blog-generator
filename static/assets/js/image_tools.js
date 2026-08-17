@@ -27,6 +27,10 @@
   const watermarkXInput = document.getElementById("watermark_x");
   const watermarkYInput = document.getElementById("watermark_y");
   const watermarkRotationInput = document.getElementById("watermark_rotation");
+  const pageSpeedImagePreset = document.getElementById("pageSpeedImagePreset");
+  const outputFormatInput = document.getElementById("output_format");
+  const imageQualityInput = document.getElementById("image_quality");
+  const optimizeImageInput = document.getElementById("optimize_image");
 
   if (!ratioInput || !pixelWidthInput || !pixelHeightInput || !cropStage || !cropImage || !cropBox || !cropScaleSlider || !cropScaleInput) {
     return;
@@ -473,6 +477,32 @@
     watermarkRotationSlider.addEventListener("input", function () {
       renderWatermark();
       updateHiddenFields();
+    });
+  }
+
+  if (pageSpeedImagePreset) {
+    pageSpeedImagePreset.addEventListener("click", function () {
+      if (ratioInput) {
+        ratioInput.value = "original";
+      }
+      if (pixelWidthInput) {
+        pixelWidthInput.value = "1600";
+      }
+      if (pixelHeightInput) {
+        pixelHeightInput.value = "";
+      }
+      if (outputFormatInput) {
+        outputFormatInput.value = "webp";
+      }
+      if (imageQualityInput) {
+        imageQualityInput.value = "75";
+      }
+      if (optimizeImageInput) {
+        optimizeImageInput.checked = true;
+      }
+      state.activeDimension = "width";
+      syncOutputDimensions("width");
+      initializeCropBox();
     });
   }
 

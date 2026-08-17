@@ -17,7 +17,7 @@
           name="url"
           type="text"
           value="{{ url }}"
-          placeholder="https://example.com"
+          placeholder="https://example.com or http://localhost:3000"
           required
           class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
         />
@@ -45,6 +45,16 @@
           />
           <span>Ignore SSL certificate errors for this check</span>
       </label>
+      <label class="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800 lg:col-span-3">
+          <input
+            type="checkbox"
+            name="allow_private_urls"
+            value="1"
+            {% if allow_private_urls %}checked{% endif %}
+            class="mt-1 h-4 w-4 rounded border-amber-300 text-amber-700 focus:ring-amber-500"
+          />
+          <span>Allow local/private URLs such as localhost, 127.0.0.1, or local dev network addresses</span>
+      </label>
     </form>
     <p id="seoCheckerStatus" class="mt-4 hidden text-sm font-bold leading-6 text-moss-700"></p>
     <p id="seoCheckerError" class="mt-3 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
@@ -64,11 +74,16 @@
           <span class="pb-2 text-2xl font-bold text-sand-700">{{ result.summary.average_score }}/100</span>
         </div>
         <p class="mt-4 break-words text-sm leading-6 text-sand-700">{{ result.base_url }}</p>
+        <form method="post" action="/seo-checker/download-report" class="mt-5">
+          <textarea name="result_json" class="hidden-form" aria-hidden="true">{{ result | tojson }}</textarea>
+          <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black">Download Report</button>
+        </form>
         <div class="mt-5 grid gap-2 text-sm font-bold text-sand-800">
           <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.discovered_count }} page{% if result.summary.discovered_count != 1 %}s{% endif %} listed</div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.checked_count }} page{% if result.summary.checked_count != 1 %}s{% endif %} checked</div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.summary.issue_count }} warning/fix item{% if result.summary.issue_count != 1 %}s{% endif %}</div>
           <div class="{% if result.summary.not_found_link_count %}rounded-2xl bg-red-50 px-4 py-3 text-red-700{% else %}rounded-2xl bg-sand-100 px-4 py-3{% endif %}">{{ result.summary.not_found_link_count or 0 }} 404 link{% if result.summary.not_found_link_count != 1 %}s{% endif %} found in {{ result.summary.checked_link_count or 0 }} checked link{% if result.summary.checked_link_count != 1 %}s{% endif %}</div>
+          <div class="{% if result.summary.redirect_link_count %}rounded-2xl bg-amber-50 px-4 py-3 text-amber-800{% else %}rounded-2xl bg-sand-100 px-4 py-3{% endif %}">{{ result.summary.redirect_link_count or 0 }} redirecting link{% if result.summary.redirect_link_count != 1 %}s{% endif %}</div>
           {% if result.summary.error_count %}
             <div class="rounded-2xl bg-red-50 px-4 py-3 text-red-700">{{ result.summary.error_count }} page check error{% if result.summary.error_count != 1 %}s{% endif %}</div>
           {% endif %}
@@ -131,6 +146,72 @@
         <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Step 2</p>
         <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Page Checks</h2>
       </div>
+      {% set link_details = result.link_health_details|default({}) %}
+      <div class="mb-5 rounded-[24px] border border-sand-200 bg-sand-50 p-5">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Sample Link Health Details</p>
+            <h3 class="mt-2 font-display text-2xl font-bold text-sand-950">Broken, Unreachable, 404 & Redirect Links</h3>
+          </div>
+          <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-sand-700 ring-1 ring-sand-200">{{ result.summary.checked_link_count or 0 }} checked</span>
+        </div>
+        <div class="mt-4 grid gap-2 text-sm font-bold text-sand-800 md:grid-cols-4">
+          <div class="{% if link_details.not_found_links %}rounded-2xl bg-red-50 px-4 py-3 text-red-700{% else %}rounded-2xl bg-white px-4 py-3{% endif %}">{{ link_details.not_found_links|default([])|length }} 404</div>
+          <div class="{% if link_details.unreachable_links %}rounded-2xl bg-red-50 px-4 py-3 text-red-700{% else %}rounded-2xl bg-white px-4 py-3{% endif %}">{{ link_details.unreachable_links|default([])|length }} unreachable</div>
+          <div class="{% if link_details.broken_links %}rounded-2xl bg-red-50 px-4 py-3 text-red-700{% else %}rounded-2xl bg-white px-4 py-3{% endif %}">{{ link_details.broken_links|default([])|length }} HTTP errors</div>
+          <div class="{% if link_details.redirect_links %}rounded-2xl bg-amber-50 px-4 py-3 text-amber-800{% else %}rounded-2xl bg-white px-4 py-3{% endif %}">{{ link_details.redirect_links|default([])|length }} redirects</div>
+        </div>
+
+        {% set problem_links = (link_details.not_found_links|default([])) + (link_details.unreachable_links|default([])) + (link_details.broken_links|default([])) %}
+        {% if problem_links or link_details.redirect_links %}
+          <div class="mt-5 overflow-x-auto rounded-[22px] border border-sand-200 bg-white">
+            <table class="min-w-full divide-y divide-sand-200 text-left text-sm">
+              <thead class="bg-sand-100/80 text-xs font-extrabold uppercase tracking-[0.08em] text-sand-700">
+                <tr>
+                  <th class="px-4 py-3">Issue</th>
+                  <th class="px-4 py-3">HTTP</th>
+                  <th class="px-4 py-3">Link URL</th>
+                  <th class="px-4 py-3">Final URL</th>
+                  <th class="px-4 py-3">Anchor</th>
+                  <th class="px-4 py-3">Found On Page</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-sand-100">
+                {% for link in problem_links %}
+                  <tr>
+                    <td class="px-4 py-3">
+                      {% if link.status_code == 404 %}
+                        <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">404</span>
+                      {% elif link.status == "unreachable" %}
+                        <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Unreachable</span>
+                      {% else %}
+                        <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Broken</span>
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.status_code or "n/a" }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.url }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.final_url or "n/a" }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.text or "No anchor text" }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.source_page }}</td>
+                  </tr>
+                {% endfor %}
+                {% for link in link_details.redirect_links|default([]) %}
+                  <tr>
+                    <td class="px-4 py-3"><span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-800">Redirect</span></td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.status_code or "n/a" }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.url }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.final_url or "n/a" }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.text or "No anchor text" }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ link.source_page }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="mt-5 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-sand-700">No broken, unreachable, 404, or redirecting links were found in the sampled links.</p>
+        {% endif %}
+      </div>
       <div class="grid gap-4">
         {% for page in result.pages %}
           <article class="rounded-[24px] border border-sand-200 bg-white p-5">
@@ -156,6 +237,16 @@
                     <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">Missing alt:</strong> {{ page.result.stats.missing_alt_count }}</div>
                   </div>
                   {% set page_links = page.result.stats.links|default({}) %}
+                  {% if page_links.redirect_count %}
+                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <p class="text-sm font-bold leading-6 text-amber-800">{{ page_links.redirect_count }} redirecting link{% if page_links.redirect_count != 1 %}s{% endif %} found</p>
+                      <ul class="mt-2 grid gap-1 text-xs leading-5 text-amber-800">
+                        {% for link in page_links.redirect_links[:5] %}
+                          <li class="break-words">{{ link.url }} → {{ link.final_url }}</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  {% endif %}
                   {% if page_links.not_found_count %}
                     <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
                       <p class="text-sm font-bold leading-6 text-red-700">{{ page_links.not_found_count }} 404 link{% if page_links.not_found_count != 1 %}s{% endif %} found</p>
@@ -208,6 +299,10 @@
           <span class="pb-2 text-2xl font-bold text-sand-700">{{ result.score }}/100</span>
         </div>
         <p class="mt-4 break-words text-sm leading-6 text-sand-700">{{ result.url }}</p>
+        <form method="post" action="/seo-checker/download-report" class="mt-5">
+          <textarea name="result_json" class="hidden-form" aria-hidden="true">{{ result | tojson }}</textarea>
+          <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black">Download Report</button>
+        </form>
         <p class="mt-3 rounded-2xl bg-sand-100 px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">No GSC or index rating included</p>
         {% if not result.stats.ssl_verified %}
           <p class="mt-3 rounded-2xl bg-amber-100 px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">SSL verification ignored</p>
@@ -265,7 +360,7 @@
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Images</dt><dd class="mt-1 text-sand-700">{{ result.stats.missing_alt_count }} missing alt text out of {{ result.stats.image_count }} images</dd></div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Canonical</dt><dd class="mt-1 break-words text-sand-700">{{ result.stats.canonical or "Missing" }}</dd></div>
           <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Social cards</dt><dd class="mt-1 text-sand-700">{{ result.stats.open_graph|length }} Open Graph tags, {{ result.stats.twitter_cards|length }} Twitter card tags</dd></div>
-          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Links</dt><dd class="mt-1 text-sand-700">{{ result.stats.links.internal_count }} internal, {{ result.stats.links.external_count }} external, {{ result.stats.links.total_count }} total, {{ result.stats.links.not_found_count or 0 }} 404</dd></div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3"><dt class="font-bold text-sand-900">Links</dt><dd class="mt-1 text-sand-700">{{ result.stats.links.internal_count }} internal, {{ result.stats.links.external_count }} external, {{ result.stats.links.total_count }} total, {{ result.stats.links.not_found_count or 0 }} 404, {{ result.stats.links.redirect_count or 0 }} redirects</dd></div>
         </dl>
       </div>
 
@@ -315,8 +410,23 @@
       </div>
 
       <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
-        <h2 class="font-display text-3xl font-bold text-sand-950">Link Health & 404s</h2>
-        <p class="mt-2 text-sm leading-6 text-sand-700">{{ result.stats.links.not_found_count or 0 }} 404 link{% if result.stats.links.not_found_count != 1 %}s{% endif %} found in {{ result.stats.links.checked_count or result.stats.links.sample_checks|length }} checked link{% if (result.stats.links.checked_count or result.stats.links.sample_checks|length) != 1 %}s{% endif %}.</p>
+        <h2 class="font-display text-3xl font-bold text-sand-950">Link Health, Redirects & 404s</h2>
+        <p class="mt-2 text-sm leading-6 text-sand-700">{{ result.stats.links.not_found_count or 0 }} 404 link{% if result.stats.links.not_found_count != 1 %}s{% endif %} and {{ result.stats.links.redirect_count or 0 }} redirecting link{% if result.stats.links.redirect_count != 1 %}s{% endif %} found in {{ result.stats.links.checked_count or result.stats.links.sample_checks|length }} checked link{% if (result.stats.links.checked_count or result.stats.links.sample_checks|length) != 1 %}s{% endif %}.</p>
+        {% if result.stats.links.redirect_links %}
+          <div class="mt-4 grid gap-2">
+            {% for link in result.stats.links.redirect_links %}
+              <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-800">Redirect</span>
+                  <span class="text-xs font-bold uppercase tracking-[0.1em] text-amber-800">{{ link.type }}</span>
+                  <span class="text-xs font-bold text-amber-800">HTTP {{ link.status_code or "n/a" }}</span>
+                </div>
+                <p class="mt-2 break-words text-sm leading-6 text-amber-800">{{ link.url }}</p>
+                <p class="mt-1 break-words text-xs font-bold leading-5 text-amber-900">Final: {{ link.final_url }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
         {% if result.stats.links.not_found_links %}
           <div class="mt-4 grid gap-2">
             {% for link in result.stats.links.not_found_links %}
@@ -326,6 +436,40 @@
                   <span class="text-xs font-bold uppercase tracking-[0.1em] text-red-700">{{ link.type }}</span>
                 </div>
                 <p class="mt-2 break-words text-sm leading-6 text-red-700">{{ link.url }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% if result.stats.links.unreachable_links %}
+          <div class="mt-4 grid gap-2">
+            {% for link in result.stats.links.unreachable_links %}
+              <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Unreachable</span>
+                  <span class="text-xs font-bold uppercase tracking-[0.1em] text-red-700">{{ link.type }}</span>
+                  <span class="text-xs font-bold text-red-700">HTTP n/a</span>
+                </div>
+                <p class="mt-2 break-words text-sm leading-6 text-red-700">{{ link.url }}</p>
+                {% if link.text %}
+                  <p class="mt-1 break-words text-xs font-bold leading-5 text-red-700">Anchor: {{ link.text }}</p>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% if result.stats.links.broken_links %}
+          <div class="mt-4 grid gap-2">
+            {% for link in result.stats.links.broken_links %}
+              <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Broken</span>
+                  <span class="text-xs font-bold uppercase tracking-[0.1em] text-red-700">{{ link.type }}</span>
+                  <span class="text-xs font-bold text-red-700">HTTP {{ link.status_code or "n/a" }}</span>
+                </div>
+                <p class="mt-2 break-words text-sm leading-6 text-red-700">{{ link.url }}</p>
+                {% if link.text %}
+                  <p class="mt-1 break-words text-xs font-bold leading-5 text-red-700">Anchor: {{ link.text }}</p>
+                {% endif %}
               </div>
             {% endfor %}
           </div>
@@ -340,13 +484,24 @@
                   <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">404</span>
                 {% elif link.status == "broken" %}
                   <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Broken</span>
+                {% elif link.status == "unreachable" %}
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Unreachable</span>
                 {% else %}
                   <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">Check</span>
                 {% endif %}
                 <span class="text-xs font-bold uppercase tracking-[0.1em] text-sand-600">{{ link.type }}</span>
                 <span class="text-xs font-bold text-sand-600">HTTP {{ link.status_code or "n/a" }}</span>
+                {% if link.redirected %}
+                  <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-800">Redirect</span>
+                {% endif %}
               </div>
               <p class="mt-2 break-words text-sm leading-6 text-sand-700">{{ link.url }}</p>
+              {% if link.redirected %}
+                <p class="mt-1 break-words text-xs font-bold leading-5 text-sand-700">Final: {{ link.final_url }}</p>
+              {% endif %}
+              {% if link.text %}
+                <p class="mt-1 break-words text-xs font-bold leading-5 text-sand-700">Anchor: {{ link.text }}</p>
+              {% endif %}
             </div>
           {% else %}
             <p class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700">No crawlable links were found on the page.</p>

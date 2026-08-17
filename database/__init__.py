@@ -19,6 +19,9 @@ from database.generation_history import (
     record_generation,
     update_generation_history_post_link,
 )
+from database.folder_image_optimizer import list_folder_image_optimizer_runs, list_folder_image_optimizer_seen_folders, save_folder_image_optimizer_run
+from database.find_replace import delete_find_replace_rule, get_find_replace_rule, list_find_replace_rules, save_find_replace_rule
+from database.image_bank import get_image_bank_item, list_image_bank_items, save_image_bank_item
 from database.keywords import get_or_create_keyword
 from database.migration import migrate_from_tinydb_json_if_needed
 from database.pages import (
@@ -37,7 +40,7 @@ from database.pages import (
 from database.schema import init_db
 from database.settings import get_setting, list_settings, set_setting
 from database.social_media import delete_social_profile, get_social_profile, list_social_profiles, save_social_profile
-from database.website_index import delete_website_index_url, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, list_website_index_site_roots, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
+from database.website_index import delete_website_index_url, delete_website_index_urls, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, list_website_index_site_roots, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 
 
 init_db()

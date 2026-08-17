@@ -12,6 +12,8 @@ MAX_SOCIAL_POST_CHARACTERS = 1000
 MAX_BLOG_MEDIUM_CHARACTERS = 6000
 SOCIAL_POST_CHARACTER_LIMITS = {
     "facebook": 63206,
+    "google_business": 1500,
+    "google business": 1500,
     "instagram": 2200,
     "linkedin": 3000,
     "pinterest": 500,
@@ -27,6 +29,23 @@ SOCIAL_POST_CHARACTER_LIMITS = {
     "tumblr": 6000,
 }
 BLOG_MEDIUM_TYPES = {"wordpress", "blogger", "tumblr"}
+SOCIAL_BIO_CHARACTER_LIMITS = {
+    "facebook": 255,
+    "google_business": 750,
+    "google business": 750,
+    "instagram": 150,
+    "linkedin": 2600,
+    "pinterest": 500,
+    "telegram": 255,
+    "tiktok": 80,
+    "twitter": 160,
+    "twitter/x": 160,
+    "x": 160,
+    "x/twitter": 160,
+    "youtube": 1000,
+    "threads": 150,
+    "reddit": 200,
+}
 GAMBLING_RELATED_TERMS = (
     "slot",
     "slots",
@@ -150,6 +169,96 @@ def generate_social_media_post(
             raise ValueError("Could not parse JSON from model output.") from exc
 
     raise ValueError(f"Generated social media post could not satisfy the {max_characters} character limit.")
+
+
+def generate_social_bios(
+    provider,
+    brand_name: str,
+    social_type: str,
+    brand_context: str = "",
+    notes: str = "",
+    count: int = 5,
+) -> dict:
+    cleaned_brand = " ".join(str(brand_name or "").split())
+    cleaned_platform = " ".join(str(social_type or "").replace("_", " ").split()) or "social media"
+    max_characters = get_social_bio_character_limit(social_type)
+    option_count = max(1, min(8, int(count or 5)))
+    prompt = f"""
+Return valid JSON only.
+
+Generate {option_count} profile bio options for this brand and platform.
+
+Brand: {cleaned_brand or "Not specified"}
+Platform: {cleaned_platform}
+Platform bio character limit: {max_characters}
+Brand context:
+{brand_context or "No saved brand context."}
+
+Extra notes:
+{notes or "No extra notes."}
+
+Rules:
+- Each bio must be natural, clear, and platform-appropriate.
+- Every bio must be {max_characters} characters or fewer.
+- Use the brand name when it reads naturally.
+- Avoid making every option sound the same.
+- Do not include labels, numbering, or quotation marks inside the bio text.
+- Return JSON in this exact shape:
+{{
+  "bios": [
+    {{"text": "Bio option text", "tone": "short tone label"}}
+  ]
+}}
+"""
+    raw = provider.generate_json(prompt)
+    try:
+        data = json.loads(extract_json_string(raw))
+    except Exception as exc:
+        logger.exception("generate_social_bios failed. Raw response: %s", raw)
+        raise ValueError("Could not parse JSON from model output.") from exc
+
+    bios = []
+    seen = set()
+    for item in data.get("bios", []) if isinstance(data, dict) else []:
+        if isinstance(item, dict):
+            text = str(item.get("text", "")).strip()
+            tone = str(item.get("tone", "")).strip() or "Bio"
+        else:
+            text = str(item or "").strip()
+            tone = "Bio"
+        if len(text) > max_characters:
+            text = _trim_to_character_limit(text, max_characters)
+        normalized = text.casefold()
+        if text and normalized not in seen:
+            seen.add(normalized)
+            bios.append({"text": text, "tone": tone, "character_count": len(text), "character_limit": max_characters})
+        if len(bios) >= option_count:
+            break
+    if not bios:
+        raise ValueError("The model did not return any usable bio options.")
+    return {"bios": bios, "character_limit": max_characters}
+
+
+def get_social_bio_character_limit(social_type: str) -> int:
+    cleaned = (social_type or "").strip().lower()
+    platform_limit = SOCIAL_BIO_CHARACTER_LIMITS.get(cleaned)
+    if platform_limit is None:
+        for key, value in SOCIAL_BIO_CHARACTER_LIMITS.items():
+            if key and key in cleaned:
+                platform_limit = value
+                break
+    return int(platform_limit or 255)
+
+
+def _trim_to_character_limit(value: str, max_characters: int) -> str:
+    cleaned = " ".join(str(value or "").split())
+    if len(cleaned) <= max_characters:
+        return cleaned
+    trimmed = cleaned[:max_characters].rstrip()
+    trimmed = re.sub(r"\s+\S*$", "", trimmed).strip()
+    if not trimmed:
+        trimmed = cleaned[:max_characters].rstrip()
+    return trimmed
 
 
 def get_social_post_character_limit(social_type: str) -> int:

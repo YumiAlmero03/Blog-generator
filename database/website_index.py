@@ -132,6 +132,26 @@ def delete_website_index_url(url: str) -> int:
         return max(0, cursor.rowcount)
 
 
+def delete_website_index_urls(urls: list[str]) -> int:
+    cleaned_urls = []
+    seen = set()
+    for url in urls or []:
+        cleaned = (url or "").strip()
+        if cleaned and cleaned not in seen:
+            seen.add(cleaned)
+            cleaned_urls.append(cleaned)
+    if not cleaned_urls:
+        return 0
+
+    placeholders = ",".join("?" for _url in cleaned_urls)
+    with get_connection() as connection:
+        cursor = connection.execute(
+            f"DELETE FROM website_index_urls WHERE url IN ({placeholders})",
+            tuple(cleaned_urls),
+        )
+        return max(0, cursor.rowcount)
+
+
 def website_index_stats() -> dict:
     with get_connection() as connection:
         row = connection.execute(
