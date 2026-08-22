@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% set active_page = "website-banned-word-checker" %}
+
+{% block title %}Website Banned Word Checker{% endblock %}
+{% block eyebrow %}Content QA{% endblock %}
+{% block hero_title %}Website Banned Word Checker{% endblock %}
+{% block hero_text %}Check one page URL against the saved banned_words.txt list and review the exact terms found in the page title, meta description, and visible content.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="post" class="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+      <div>
+        <label for="url" class="mb-2 block text-sm font-bold text-sand-900">Page URL <span class="text-red-600">*</span></label>
+        <input
+          id="url"
+          name="url"
+          type="text"
+          value="{{ url }}"
+          placeholder="https://example.com/page"
+          required
+          class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+      </div>
+      <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Check Page</button>
+
+      <label class="flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800 lg:col-span-2">
+        <input
+          type="checkbox"
+          name="ignore_ssl_errors"
+          value="1"
+          {% if ignore_ssl_errors %}checked{% endif %}
+          class="mt-1 h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500"
+        />
+        <span>Ignore SSL certificate errors for this check</span>
+      </label>
+      <label class="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800 lg:col-span-2">
+        <input
+          type="checkbox"
+          name="allow_private_urls"
+          value="1"
+          {% if allow_private_urls %}checked{% endif %}
+          class="mt-1 h-4 w-4 rounded border-amber-300 text-amber-700 focus:ring-amber-500"
+        />
+        <span>Allow local/private URLs such as localhost, 127.0.0.1, or local dev network addresses</span>
+      </label>
+    </form>
+
+    {% if error %}
+      <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+    {% endif %}
+  </section>
+
+  {% if result %}
+    <section class="mt-6 grid gap-5 lg:grid-cols-[280px_1fr]">
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Result</p>
+        <div class="mt-4 font-display text-6xl font-bold leading-none {% if result.match_count %}text-red-700{% else %}text-moss-700{% endif %}">
+          {{ result.match_count }}
+        </div>
+        <p class="mt-3 text-sm font-bold text-sand-800">banned word match{% if result.match_count != 1 %}es{% endif %}</p>
+        <div class="mt-5 grid gap-2 text-sm font-bold text-sand-800">
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.matched_term_count }} matched term{% if result.matched_term_count != 1 %}s{% endif %}</div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">{{ result.banned_word_count }} banned word{% if result.banned_word_count != 1 %}s{% endif %} checked</div>
+          <div class="rounded-2xl bg-sand-100 px-4 py-3">HTTP {{ result.status_code }}</div>
+        </div>
+        <p class="mt-5 break-words text-sm leading-6 text-sand-700">{{ result.url }}</p>
+      </div>
+
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Matches</p>
+            <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Banned Words Found</h2>
+          </div>
+          <a href="/banned-words" class="inline-flex min-h-10 items-center justify-center rounded-full bg-sand-100 px-4 py-2 text-sm font-bold text-sand-700 transition hover:bg-sand-200">Edit List</a>
+        </div>
+
+        {% if result.matches %}
+          <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+            <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+              <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+                <tr>
+                  <th class="whitespace-nowrap px-4 py-3">Term</th>
+                  <th class="whitespace-nowrap px-4 py-3">Count</th>
+                  <th class="whitespace-nowrap px-4 py-3">Sample Snippets</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-sand-100">
+                {% for match in result.matches %}
+                  <tr class="align-top">
+                    <td class="whitespace-nowrap px-4 py-3 font-bold text-red-700">{{ match.term }}</td>
+                    <td class="whitespace-nowrap px-4 py-3 font-bold text-sand-900">{{ match.count }}</td>
+                    <td class="px-4 py-3 text-sand-700">
+                      <div class="grid gap-2">
+                        {% for snippet in match.snippets %}
+                          <p class="rounded-2xl bg-sand-50 px-4 py-3 leading-6">{{ snippet }}</p>
+                        {% endfor %}
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="mt-5 rounded-[22px] border-2 border-dashed border-moss-100 bg-moss-100/60 px-5 py-10 text-center text-sm font-bold leading-6 text-moss-700">
+            No banned words were found on this page.
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

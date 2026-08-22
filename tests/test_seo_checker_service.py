@@ -60,6 +60,25 @@ def test_page_seo_parser_collects_core_seo_fields():
     assert parser.links[0]["text"] == "Internal"
 
 
+def test_page_seo_parser_collects_json_ld_schema():
+    parser = PageSeoParser()
+    parser.feed(
+        """
+        <html>
+          <head>
+            <script type="application/ld+json">
+              {"@context":"https://schema.org","@type":"Article","headline":"Example"}
+            </script>
+          </head>
+          <body><h1>Example</h1></body>
+        </html>
+        """
+    )
+
+    assert len(parser.schema_scripts) == 1
+    assert '"@type":"Article"' in parser.schema_scripts[0]
+
+
 def test_link_report_tracks_404_links(monkeypatch):
     def fake_check_link_url(url, link_type, verify_ssl=True, allow_private=False):
         status_code = 404 if url.endswith("/missing") else 200
@@ -315,6 +334,125 @@ def test_seo_checker_passes_allow_private_urls(monkeypatch):
     assert flags["discovery"] is True
     assert flags["audit"] == [True]
     assert "Allow local/private URLs" in html
+
+
+def test_seo_checker_v2_renders_internal_links_and_schema(monkeypatch):
+    monkeypatch.setattr(
+        tool_controller,
+        "discover_website_pages",
+        lambda url, limit, allow_private=False: FakeDiscoveryResult(
+            base_url="https://example.com",
+            pages=["https://example.com/a"],
+            errors=[],
+            sitemaps=[],
+        ),
+    )
+
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False):
+        return {
+            "url": url,
+            "score": 88,
+            "grade": "B",
+            "checks": [
+                {"name": "Meta title", "status": "pass", "detail": "48 characters", "recommendation": "Keep it clear."},
+                {"name": "Meta description", "status": "warn", "detail": "90 characters", "recommendation": "Expand it."},
+                {"name": "Image alt text", "status": "pass", "detail": "0 missing", "recommendation": "Maintain alt text."},
+                {"name": "Content depth", "status": "pass", "detail": "500 words found", "recommendation": "Keep useful content."},
+                {"name": "Heading structure", "status": "pass", "detail": "1 H1, 2 H2", "recommendation": "Keep structure."},
+                {"name": "Canonical URL", "status": "pass", "detail": "https://example.com/a", "recommendation": "Keep canonical."},
+                {"name": "Sitemap", "status": "pass", "detail": "Sitemap found", "recommendation": "Keep sitemap."},
+                {"name": "Robots.txt", "status": "pass", "detail": "Robots.txt found", "recommendation": "Keep robots.txt."},
+                {"name": "Social cards", "status": "pass", "detail": "2 Open Graph tags", "recommendation": "Keep social cards."},
+                {"name": "Internal links", "status": "pass", "detail": "1 internal", "recommendation": "Keep links useful."},
+                {"name": "Sample link health", "status": "warn", "detail": "1 redirect", "recommendation": "Review redirects."},
+            ],
+            "ai_summary": {"summary": "", "priority_actions": [], "source": "Rules"},
+            "stats": {
+                "title": "Page A",
+                "title_length": 6,
+                "meta_description": "A useful page description.",
+                "meta_description_length": 26,
+                "word_count": 500,
+                "h1_count": 1,
+                "h2_count": 2,
+                "canonical": "https://example.com/a",
+                "robots_url": "https://example.com/robots.txt",
+                "robots_status_code": 200,
+                "sitemaps": [{"url": "https://example.com/sitemap.xml", "found": True, "status_code": 200}],
+                "open_graph": {"og:title": "Page A", "og:description": "Social description"},
+                "twitter_cards": {"twitter:card": "summary"},
+                "missing_alt_count": 0,
+                "links": {
+                    "internal_count": 1,
+                    "external_count": 1,
+                    "checked_count": 2,
+                    "not_found_count": 0,
+                    "unreachable_count": 0,
+                    "redirect_count": 1,
+                    "sample_checks": [
+                        {
+                            "url": "https://example.com/old",
+                            "final_url": "https://example.com/new",
+                            "type": "internal",
+                            "status_code": 200,
+                            "status": "ok",
+                            "redirected": True,
+                            "text": "Old internal page",
+                        },
+                        {
+                            "url": "https://external.example/",
+                            "final_url": "https://external.example/",
+                            "type": "external",
+                            "status_code": 200,
+                            "status": "ok",
+                            "redirected": False,
+                            "text": "External",
+                        },
+                    ],
+                },
+                "schemas": [
+                    {
+                        "index": 1,
+                        "valid": True,
+                        "type": "Article",
+                        "error": "",
+                        "preview": '{"@type":"Article"}',
+                    }
+                ],
+            },
+        }
+
+    monkeypatch.setattr(tool_controller, "run_seo_audit", fake_run_seo_audit)
+
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post(
+        "/seo-checker-v2",
+        data={"url": "https://example.com", "limit": "1"},
+    )
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Website SEO Checker V2" in html
+    assert "Internal Link Table" in html
+    assert "Old internal page" in html
+    assert "https://example.com/new" in html
+    assert "Schema For Each Page" in html
+    assert "Article" in html
+    assert "Meta title" in html
+    assert "Meta description" in html
+    assert "Image alt text" in html
+    assert "Content depth" in html
+    assert "Heading structure" in html
+    assert "Canonical URL" in html
+    assert "Sitemap" in html
+    assert "Robots.txt" in html
+    assert "Social cards" in html
+    assert "Internal links" in html
+    assert "Sample link health" in html
+    assert "Social Media View" in html
+    assert "Open Graph" in html
+    assert "Twitter Cards" in html
 
 
 def test_seo_checker_auto_allows_localhost_ports(monkeypatch):

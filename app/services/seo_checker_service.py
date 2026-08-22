@@ -46,16 +46,21 @@ class PageSeoParser(HTMLParser):
         self.headings = {f"h{level}": [] for level in range(1, 7)}
         self.heading_sequence = []
         self.links = []
+        self.schema_scripts = []
         self.text_parts = []
         self._tag_stack = []
         self._heading_stack = []
         self._open_link_indexes = []
+        self._schema_script_stack = []
         self._skip_depth = 0
 
     def handle_starttag(self, tag, attrs):
         attrs_dict = {name.lower(): (value or "") for name, value in attrs}
         tag = tag.lower()
         self._tag_stack.append(tag)
+
+        if tag == "script" and "ld+json" in attrs_dict.get("type", "").lower():
+            self._schema_script_stack.append([])
 
         if tag in {"script", "style", "noscript", "svg"}:
             self._skip_depth += 1
@@ -96,6 +101,10 @@ class PageSeoParser(HTMLParser):
             self._flush_heading(tag)
         elif tag == "a" and self._open_link_indexes:
             self._open_link_indexes.pop()
+        elif tag == "script" and self._schema_script_stack:
+            schema_text = " ".join("".join(self._schema_script_stack.pop()).split()).strip()
+            if schema_text:
+                self.schema_scripts.append(schema_text)
 
         if tag in {"script", "style", "noscript", "svg"} and self._skip_depth > 0:
             self._skip_depth -= 1
@@ -103,6 +112,9 @@ class PageSeoParser(HTMLParser):
             self._tag_stack.pop()
 
     def handle_data(self, data):
+        if self._schema_script_stack:
+            self._schema_script_stack[-1].append(data)
+
         text = " ".join(data.split())
         if not text or self._skip_depth:
             return
@@ -174,6 +186,7 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = F
             "canonical": parser.canonical,
             "open_graph": parser.open_graph,
             "twitter_cards": parser.twitter_cards,
+            "schemas": _schema_reports(parser.schema_scripts),
             "robots_found": robots_result.get("found", False),
             "robots_url": robots_result.get("url", ""),
             "robots_status_code": robots_result.get("status_code"),
@@ -572,6 +585,72 @@ def _build_scrape_report(parser: PageSeoParser, link_report: dict) -> dict:
         "internal_link_total": link_report.get("internal_count", 0),
         "external_link_total": link_report.get("external_count", 0),
     }
+
+
+def _schema_reports(schema_scripts: list[str]) -> list[dict]:
+    reports = []
+    for index, raw_schema in enumerate(schema_scripts[:20], start=1):
+        raw = raw_schema or ""
+        try:
+            parsed = json.loads(raw)
+            schema_types = _schema_types(parsed)
+            reports.append(
+                {
+                    "index": index,
+                    "valid": True,
+                    "type": ", ".join(schema_types) or "Unknown",
+                    "error": "",
+                    "preview": _truncate_schema_preview(raw),
+                }
+            )
+        except Exception as exc:
+            reports.append(
+                {
+                    "index": index,
+                    "valid": False,
+                    "type": "Invalid JSON-LD",
+                    "error": str(exc),
+                    "preview": _truncate_schema_preview(raw),
+                }
+            )
+    return reports
+
+
+def _schema_types(value) -> list[str]:
+    types = []
+
+    def visit(item):
+        if isinstance(item, dict):
+            raw_type = item.get("@type")
+            if isinstance(raw_type, list):
+                types.extend(str(part) for part in raw_type if str(part).strip())
+            elif raw_type:
+                types.append(str(raw_type))
+            graph = item.get("@graph")
+            if isinstance(graph, list):
+                for graph_item in graph:
+                    visit(graph_item)
+        elif isinstance(item, list):
+            for child in item:
+                visit(child)
+
+    visit(value)
+    unique = []
+    seen = set()
+    for schema_type in types:
+        cleaned = schema_type.strip()
+        key = cleaned.casefold()
+        if cleaned and key not in seen:
+            seen.add(key)
+            unique.append(cleaned)
+    return unique[:8]
+
+
+def _truncate_schema_preview(value: str, limit: int = 600) -> str:
+    cleaned = " ".join(str(value or "").split())
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[:limit].rstrip() + "..."
 
 
 def _check_link_url(url: str, link_type: str, verify_ssl: bool = True, allow_private: bool = False) -> dict:

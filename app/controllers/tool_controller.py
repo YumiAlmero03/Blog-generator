@@ -9,6 +9,7 @@ from flask import Response, redirect, render_template, request, url_for
 from urllib.parse import urlparse
 
 from app.controllers.helpers import base_template_context
+from app.services.banned_word_checker_service import check_website_banned_words
 from app.services.document_service import build_docx_response, build_gsc_summary_report_response, build_seo_checker_report_response, build_website_planner_report_response, build_website_planner_v2_detailed_report_response, extract_docx_website_reference
 from app.services.indexnow_service import (
     DEFAULT_INDEXNOW_ENDPOINT,
@@ -51,10 +52,38 @@ from logger import logger
 
 WEBSITE_INDEX_CHECK_LIMIT = 50
 WEBSITE_PAGES_PER_PAGE = 50
+SEO_CHECKER_V2_INTERNAL_LINK_LIMIT = 300
+SEO_CHECKER_V2_SCHEMA_LIMIT = 200
 
 
 def text_tools():
     return render_template("text_tools.html", **base_template_context())
+
+
+def website_banned_word_checker():
+    state = {
+        "url": "",
+        "ignore_ssl_errors": False,
+        "allow_private_urls": False,
+        "result": None,
+        "error": None,
+    }
+
+    if request.method == "POST":
+        state["url"] = request.form.get("url", "").strip()
+        state["ignore_ssl_errors"] = request.form.get("ignore_ssl_errors") == "1"
+        state["allow_private_urls"] = request.form.get("allow_private_urls") == "1" or _is_local_dev_url(state["url"])
+        try:
+            state["result"] = check_website_banned_words(
+                state["url"],
+                verify_ssl=not state["ignore_ssl_errors"],
+                allow_private=state["allow_private_urls"],
+            )
+        except Exception as exc:
+            logger.exception("website banned word checker failed")
+            state["error"] = str(exc) or "Could not check that page."
+
+    return render_template("website_banned_word_checker.html", **base_template_context(), **state)
 
 
 def test_page():
@@ -1064,6 +1093,48 @@ def seo_checker():
     return render_template("seo_checker.html", **base_template_context(), **state)
 
 
+def seo_checker_v2():
+    state = {
+        "url": "",
+        "ignore_ssl_errors": False,
+        "allow_private_urls": False,
+        "limit": 10,
+        "result": None,
+        "error": None,
+        "generation_log": [],
+        "generation_log_json": "[]",
+    }
+
+    if request.method == "POST":
+        state["url"] = request.form.get("url", "").strip()
+        state["ignore_ssl_errors"] = request.form.get("ignore_ssl_errors") == "1"
+        state["allow_private_urls"] = request.form.get("allow_private_urls") == "1" or _is_local_dev_url(state["url"])
+        state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
+        state["generation_log_json"] = generation_log_json(state["generation_log"])
+        try:
+            state["limit"] = max(1, min(100, int(request.form.get("limit", "10"))))
+        except ValueError:
+            state["limit"] = 10
+        try:
+            progress = _seo_checker_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
+            state["result"] = _run_site_seo_checks(
+                state["url"],
+                limit=state["limit"],
+                verify_ssl=not state["ignore_ssl_errors"],
+                allow_private=state["allow_private_urls"],
+                progress_callback=progress,
+            )
+            publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker V2: Check complete.")
+            append_generation_log(state["generation_log"], "status", "Check complete.")
+        except Exception as exc:
+            logger.exception("seo_checker_v2 action failed")
+            append_generation_log(state["generation_log"], "error", str(exc) or "SEO check failed.")
+            state["error"] = str(exc) or "Could not complete the SEO check."
+
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
+    return render_template("seo_checker_v2.html", **base_template_context(), **state)
+
+
 def download_seo_checker_report():
     result = _json_dict(request.form.get("result_json", ""))
     if not result:
@@ -1150,6 +1221,8 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
         for item in checked_results
     )
     link_health_details = _site_link_health_details(page_results)
+    internal_link_details = _site_internal_link_details(page_results)
+    schema_details = _site_schema_details(page_results)
     return {
         "mode": "site",
         "source_url": raw_url,
@@ -1172,8 +1245,14 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
             "redirect_link_count": redirect_link_count,
             "broken_link_count": len(link_health_details["broken_links"]),
             "unreachable_link_count": len(link_health_details["unreachable_links"]),
+            "internal_link_count": internal_link_details["total_count"],
+            "schema_count": schema_details["total_count"],
+            "valid_schema_count": schema_details["valid_count"],
+            "invalid_schema_count": schema_details["invalid_count"],
         },
         "link_health_details": link_health_details,
+        "internal_link_details": internal_link_details,
+        "schema_details": schema_details,
     }
 
 
@@ -1196,6 +1275,91 @@ def _site_link_health_details(page_results: list[dict]) -> dict:
                 enriched["source_page"] = source_page
                 details[key].append(enriched)
     return details
+
+
+def _site_internal_link_details(page_results: list[dict]) -> dict:
+    rows = []
+    total_count = 0
+    for page in page_results:
+        if page.get("status") != "checked" or not page.get("result"):
+            continue
+        source_page = page.get("url", "")
+        link_report = page.get("result", {}).get("stats", {}).get("links", {}) or {}
+        for link in link_report.get("sample_checks", []) or []:
+            if link.get("type") != "internal":
+                continue
+            total_count += 1
+            if len(rows) >= SEO_CHECKER_V2_INTERNAL_LINK_LIMIT:
+                continue
+            rows.append(
+                {
+                    "anchor_text": link.get("text", "") or "No anchor text",
+                    "redirect_link": link.get("final_url") or link.get("url", ""),
+                    "original_link": link.get("url", ""),
+                    "link_page_location": source_page,
+                    "error_message": _internal_link_status_message(link),
+                    "status_code": link.get("status_code"),
+                    "status": link.get("status", ""),
+                    "redirected": bool(link.get("redirected")),
+                }
+            )
+    return {
+        "rows": rows,
+        "total_count": total_count,
+        "display_count": len(rows),
+        "truncated": total_count > len(rows),
+        "limit": SEO_CHECKER_V2_INTERNAL_LINK_LIMIT,
+    }
+
+
+def _internal_link_status_message(link: dict) -> str:
+    status_code = link.get("status_code")
+    if status_code is None:
+        return "Unreachable"
+    if link.get("redirected"):
+        return f"HTTP {status_code} redirect"
+    if link.get("status") == "broken":
+        return f"HTTP {status_code} error"
+    return f"HTTP {status_code}"
+
+
+def _site_schema_details(page_results: list[dict]) -> dict:
+    rows = []
+    total_count = 0
+    valid_count = 0
+    invalid_count = 0
+    for page in page_results:
+        if page.get("status") != "checked" or not page.get("result"):
+            continue
+        source_page = page.get("url", "")
+        schemas = page.get("result", {}).get("stats", {}).get("schemas", []) or []
+        for schema in schemas:
+            total_count += 1
+            if schema.get("valid"):
+                valid_count += 1
+            else:
+                invalid_count += 1
+            if len(rows) >= SEO_CHECKER_V2_SCHEMA_LIMIT:
+                continue
+            rows.append(
+                {
+                    "page": source_page,
+                    "index": schema.get("index", total_count),
+                    "type": schema.get("type", "Unknown"),
+                    "valid": bool(schema.get("valid")),
+                    "error": schema.get("error", ""),
+                    "preview": schema.get("preview", ""),
+                }
+            )
+    return {
+        "rows": rows,
+        "total_count": total_count,
+        "valid_count": valid_count,
+        "invalid_count": invalid_count,
+        "display_count": len(rows),
+        "truncated": total_count > len(rows),
+        "limit": SEO_CHECKER_V2_SCHEMA_LIMIT,
+    }
 
 
 def _seo_grade(score: int) -> str:

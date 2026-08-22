@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% set active_page = "seo-v2" %}
+
+{% block title %}Website SEO Checker V2{% endblock %}
+{% block eyebrow %}SEO Audit{% endblock %}
+{% block hero_title %}Website SEO Checker V2{% endblock %}
+{% block hero_text %}Run the Website SEO Checker with extra internal link and schema tables. Large sites are sampled and capped so the page stays usable.{% endblock %}
+
+{% block content %}
+  <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <form method="post" data-loading-message="Listing pages and running SEO Checker V2..." data-inline-loading data-inline-status-target="#seoCheckerV2Status" data-inline-error-target="#seoCheckerV2Error" data-background-submit class="grid gap-4 lg:grid-cols-[1fr_160px_auto] lg:items-end">
+      <textarea name="generation_log_json" class="hidden-form lg:col-span-3" aria-hidden="true">{{ generation_log_json | e }}</textarea>
+      <div>
+        <label for="url" class="mb-2 block text-sm font-bold text-sand-900">Website URL <span class="text-red-600">*</span></label>
+        <input id="url" name="url" type="text" value="{{ url }}" placeholder="https://example.com or http://localhost:3000" required class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+      </div>
+      <div>
+        <label for="limit" class="mb-2 block text-sm font-bold text-sand-900">Page Limit</label>
+        <input id="limit" name="limit" type="number" min="1" max="100" value="{{ limit }}" class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+      </div>
+      <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">List & Check V2</button>
+      <label class="flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800 lg:col-span-3">
+        <input type="checkbox" name="ignore_ssl_errors" value="1" {% if ignore_ssl_errors %}checked{% endif %} class="mt-1 h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500" />
+        <span>Ignore SSL certificate errors for this check</span>
+      </label>
+      <label class="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800 lg:col-span-3">
+        <input type="checkbox" name="allow_private_urls" value="1" {% if allow_private_urls %}checked{% endif %} class="mt-1 h-4 w-4 rounded border-amber-300 text-amber-700 focus:ring-amber-500" />
+        <span>Allow local/private URLs such as localhost, 127.0.0.1, or local dev network addresses</span>
+      </label>
+    </form>
+    <p id="seoCheckerV2Status" class="mt-4 hidden text-sm font-bold leading-6 text-moss-700"></p>
+    <p id="seoCheckerV2Error" class="mt-3 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
+    {% include "_generation_log.html" %}
+
+    {% if error %}
+      <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
+    {% endif %}
+  </section>
+
+  {% if result and result.mode == "site" %}
+    {% set internal_links = result.internal_link_details|default({}) %}
+    {% set schemas = result.schema_details|default({}) %}
+
+    <section class="mt-6 grid gap-5 xl:grid-cols-[280px_1fr_1fr]">
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Site SEO Rating</p>
+        <div class="mt-4 flex items-end gap-3">
+          <span class="font-display text-7xl font-bold leading-none text-sand-950">{{ result.summary.average_grade }}</span>
+          <span class="pb-2 text-2xl font-bold text-sand-700">{{ result.summary.average_score }}/100</span>
+        </div>
+        <p class="mt-4 break-words text-sm leading-6 text-sand-700">{{ result.base_url }}</p>
+      </div>
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Internal Links</p>
+        <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ internal_links.total_count or 0 }} sampled internal link{% if internal_links.total_count != 1 %}s{% endif %}</h2>
+        <p class="mt-3 text-sm leading-6 text-sand-700">Shows anchor text, destination, source page, and HTTP/redirect result.</p>
+      </div>
+      <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Schema</p>
+        <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ schemas.total_count or 0 }} schema item{% if schemas.total_count != 1 %}s{% endif %}</h2>
+        <p class="mt-3 text-sm leading-6 text-sand-700">{{ schemas.valid_count or 0 }} valid, {{ schemas.invalid_count or 0 }} invalid JSON-LD block{% if schemas.invalid_count != 1 %}s{% endif %}.</p>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">V2 Internal Link List</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Internal Link Table</h2>
+        </div>
+        {% if internal_links.truncated %}
+          <span class="rounded-full bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800">Showing first {{ internal_links.limit }} of {{ internal_links.total_count }}</span>
+        {% endif %}
+      </div>
+
+      {% if internal_links.rows %}
+        <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+          <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+            <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+              <tr>
+                <th class="whitespace-nowrap px-4 py-3">Anchor Text</th>
+                <th class="whitespace-nowrap px-4 py-3">Redirect Link</th>
+                <th class="whitespace-nowrap px-4 py-3">Link Page Location</th>
+                <th class="whitespace-nowrap px-4 py-3">Error Message</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-sand-100">
+              {% for link in internal_links.rows %}
+                <tr>
+                  <td class="whitespace-nowrap px-4 py-3 font-semibold text-sand-900">{{ link.anchor_text }}</td>
+                  <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.redirect_link }}</td>
+                  <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.link_page_location }}</td>
+                  <td class="whitespace-nowrap px-4 py-3 {% if link.status == 'broken' or link.status == 'unreachable' %}font-bold text-red-700{% elif link.redirected %}font-bold text-amber-800{% else %}text-sand-700{% endif %}">{{ link.error_message }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="mt-5 rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No sampled internal links were found.</p>
+      {% endif %}
+    </section>
+
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">V2 Schema</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Schema For Each Page</h2>
+        </div>
+        {% if schemas.truncated %}
+          <span class="rounded-full bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800">Showing first {{ schemas.limit }} of {{ schemas.total_count }}</span>
+        {% endif %}
+      </div>
+
+      {% if schemas.rows %}
+        <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+          <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+            <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+              <tr>
+                <th class="whitespace-nowrap px-4 py-3">Page</th>
+                <th class="whitespace-nowrap px-4 py-3">Schema Type</th>
+                <th class="whitespace-nowrap px-4 py-3">Status</th>
+                <th class="whitespace-nowrap px-4 py-3">Error</th>
+                <th class="whitespace-nowrap px-4 py-3">Preview</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-sand-100">
+              {% for schema in schemas.rows %}
+                <tr class="align-top">
+                  <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ schema.page }}</td>
+                  <td class="whitespace-nowrap px-4 py-3 font-semibold text-sand-900">{{ schema.type }}</td>
+                  <td class="whitespace-nowrap px-4 py-3">
+                    {% if schema.valid %}
+                      <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Valid</span>
+                    {% else %}
+                      <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Invalid</span>
+                    {% endif %}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3 text-red-700">{{ schema.error or "None" }}</td>
+                  <td class="min-w-[520px] px-4 py-3 font-mono text-xs leading-5 text-sand-700">{{ schema.preview }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="mt-5 rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No JSON-LD schema blocks were found on checked pages.</p>
+      {% endif %}
+    </section>
+
+    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8" data-seo-v2-tabs>
+      <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Each Page Detailed Report</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">{{ result.summary.checked_count }}/{{ result.summary.discovered_count }} checked</h2>
+        </div>
+        <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">Tabs by page</span>
+      </div>
+
+      <div class="mb-5 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Checked page details">
+        {% for page in result.pages %}
+          <button
+            type="button"
+            role="tab"
+            data-seo-v2-tab="{{ loop.index0 }}"
+            aria-selected="{{ 'true' if loop.first else 'false' }}"
+            class="whitespace-nowrap rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition {% if loop.first %}bg-sand-600 text-sand-50{% else %}bg-sand-100 text-sand-700 hover:bg-sand-200{% endif %}"
+          >
+            Page {{ loop.index }}
+          </button>
+        {% endfor %}
+      </div>
+
+      {% for page in result.pages %}
+        <article data-seo-v2-panel="{{ loop.index0 }}" class="{% if not loop.first %}hidden{% endif %}">
+          <div class="rounded-[24px] border border-sand-200 bg-white p-5">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 class="break-words text-xl font-bold text-sand-950">{{ page.url }}</h3>
+                {% if page.status == "checked" %}
+                  <p class="mt-2 text-sm leading-6 text-sand-700">{{ page.result.stats.title or "Missing title" }}</p>
+                {% endif %}
+              </div>
+              {% if page.status == "checked" %}
+                <div class="flex shrink-0 items-end gap-2">
+                  <span class="font-display text-5xl font-bold leading-none text-sand-950">{{ page.result.grade }}</span>
+                  <span class="pb-1 text-lg font-bold text-sand-700">{{ page.result.score }}/100</span>
+                </div>
+              {% else %}
+                <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Error</span>
+              {% endif %}
+            </div>
+
+            {% if page.status == "checked" %}
+              <div class="mt-5 grid gap-4 md:grid-cols-3">
+                <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">Words:</strong> {{ page.result.stats.word_count }}</div>
+                <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">H1:</strong> {{ page.result.stats.h1_count }}</div>
+                <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">Missing alt:</strong> {{ page.result.stats.missing_alt_count }}</div>
+              </div>
+
+              <div class="mt-6 grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+                <section class="rounded-[22px] border border-sand-200 bg-sand-50 p-5">
+                  <h4 class="font-display text-2xl font-bold text-sand-950">Audit Checks</h4>
+                  <div class="mt-4 grid gap-2">
+                    {% for check in page.result.checks %}
+                      <div class="grid gap-2 rounded-2xl bg-white px-4 py-3 md:grid-cols-[120px_1fr]">
+                        <div>
+                          {% if check.status == "pass" %}
+                            <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Pass</span>
+                          {% elif check.status == "warn" %}
+                            <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-700">Warning</span>
+                          {% else %}
+                            <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Fix</span>
+                          {% endif %}
+                        </div>
+                        <div>
+                          <h5 class="text-sm font-bold text-sand-950">{{ check.name }}</h5>
+                          <p class="mt-1 text-sm leading-6 text-sand-700">{{ check.detail }}</p>
+                          <p class="mt-1 text-sm font-bold leading-6 text-sand-800">{{ check.recommendation }}</p>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </section>
+
+                <section class="rounded-[22px] border border-sand-200 bg-sand-50 p-5">
+                  <h4 class="font-display text-2xl font-bold text-sand-950">Page Details</h4>
+                  <dl class="mt-4 grid gap-3 text-sm">
+                    <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Meta title</dt><dd class="mt-1 break-words text-sand-700">{{ page.result.stats.title or "Missing" }} ({{ page.result.stats.title_length }} chars)</dd></div>
+                    <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Meta description</dt><dd class="mt-1 break-words text-sand-700">{{ page.result.stats.meta_description or "Missing" }} ({{ page.result.stats.meta_description_length }} chars)</dd></div>
+                    <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Canonical URL</dt><dd class="mt-1 break-words text-sand-700">{{ page.result.stats.canonical or "Missing" }}</dd></div>
+                    <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Sitemap</dt><dd class="mt-1 text-sand-700">{{ "Found" if page.result.stats.sitemaps|selectattr("found")|list else "Not found" }}</dd></div>
+                    <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Robots.txt</dt><dd class="mt-1 break-words text-sand-700">{{ page.result.stats.robots_url or "/robots.txt" }} · HTTP {{ page.result.stats.robots_status_code or "n/a" }}</dd></div>
+                    <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Internal links</dt><dd class="mt-1 text-sand-700">{{ page.result.stats.links.internal_count }} internal, {{ page.result.stats.links.external_count }} external</dd></div>
+                  </dl>
+                </section>
+              </div>
+
+              <section class="mt-5 rounded-[22px] border border-sand-200 bg-white p-5">
+                <h4 class="font-display text-2xl font-bold text-sand-950">Social Media View</h4>
+                <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
+                    <h5 class="text-sm font-bold text-sand-950">Open Graph</h5>
+                    <dl class="mt-3 grid gap-2 text-sm leading-6 text-sand-700">
+                      {% for key, value in page.result.stats.open_graph.items() %}
+                        <div><dt class="font-bold text-sand-900">{{ key }}</dt><dd class="break-words">{{ value }}</dd></div>
+                      {% else %}
+                        <div>No Open Graph tags found.</div>
+                      {% endfor %}
+                    </dl>
+                  </div>
+                  <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
+                    <h5 class="text-sm font-bold text-sand-950">Twitter Cards</h5>
+                    <dl class="mt-3 grid gap-2 text-sm leading-6 text-sand-700">
+                      {% for key, value in page.result.stats.twitter_cards.items() %}
+                        <div><dt class="font-bold text-sand-900">{{ key }}</dt><dd class="break-words">{{ value }}</dd></div>
+                      {% else %}
+                        <div>No Twitter card tags found.</div>
+                      {% endfor %}
+                    </dl>
+                  </div>
+                </div>
+              </section>
+
+              <section class="mt-5 rounded-[22px] border border-sand-200 bg-white p-5">
+                {% set page_links = page.result.stats.links|default({}) %}
+                <h4 class="font-display text-2xl font-bold text-sand-950">Link Health</h4>
+                <p class="mt-2 text-sm leading-6 text-sand-700">{{ page_links.not_found_count or 0 }} 404, {{ page_links.redirect_count or 0 }} redirects, {{ page_links.unreachable_count or 0 }} unreachable, {{ page_links.checked_count or page_links.sample_checks|length }} checked.</p>
+                <div class="mt-4 overflow-x-auto rounded-2xl border border-sand-200">
+                  <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+                    <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+                      <tr>
+                        <th class="whitespace-nowrap px-4 py-3">Anchor</th>
+                        <th class="whitespace-nowrap px-4 py-3">URL</th>
+                        <th class="whitespace-nowrap px-4 py-3">Final URL</th>
+                        <th class="whitespace-nowrap px-4 py-3">HTTP</th>
+                        <th class="whitespace-nowrap px-4 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-sand-100">
+                      {% for link in page_links.sample_checks %}
+                        <tr>
+                          <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.text or "No anchor text" }}</td>
+                          <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.url }}</td>
+                          <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.final_url or "n/a" }}</td>
+                          <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.status_code or "n/a" }}</td>
+                          <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ "redirect" if link.redirected else link.status }}</td>
+                        </tr>
+                      {% else %}
+                        <tr><td colspan="5" class="px-4 py-3 text-sand-700">No sampled links were checked.</td></tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="mt-5 rounded-[22px] border border-sand-200 bg-white p-5">
+                <h4 class="font-display text-2xl font-bold text-sand-950">Schema</h4>
+                <div class="mt-4 grid gap-3">
+                  {% for schema in page.result.stats.schemas %}
+                    <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
+                      <div class="flex flex-wrap items-center gap-2">
+                        {% if schema.valid %}
+                          <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-green-700">Valid</span>
+                        {% else %}
+                          <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-red-700">Invalid</span>
+                        {% endif %}
+                        <span class="text-xs font-bold uppercase tracking-[0.1em] text-sand-600">{{ schema.type }}</span>
+                      </div>
+                      {% if schema.error %}
+                        <p class="mt-2 text-sm font-bold leading-6 text-red-700">{{ schema.error }}</p>
+                      {% endif %}
+                      <p class="mt-2 font-mono text-xs leading-5 text-sand-700">{{ schema.preview }}</p>
+                    </div>
+                  {% else %}
+                    <p class="rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No JSON-LD schema blocks found on this page.</p>
+                  {% endfor %}
+                </div>
+              </section>
+            {% else %}
+              <p class="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700">{{ page.error }}</p>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (() => {
+      const root = document.querySelector("[data-seo-v2-tabs]");
+      if (!root) return;
+      const tabs = Array.from(root.querySelectorAll("[data-seo-v2-tab]"));
+      const panels = Array.from(root.querySelectorAll("[data-seo-v2-panel]"));
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          const active = tab.getAttribute("data-seo-v2-tab");
+          tabs.forEach((item) => {
+            const selected = item.getAttribute("data-seo-v2-tab") === active;
+            item.setAttribute("aria-selected", selected ? "true" : "false");
+            item.classList.toggle("bg-sand-600", selected);
+            item.classList.toggle("text-sand-50", selected);
+            item.classList.toggle("bg-sand-100", !selected);
+            item.classList.toggle("text-sand-700", !selected);
+          });
+          panels.forEach((panel) => {
+            panel.classList.toggle("hidden", panel.getAttribute("data-seo-v2-panel") !== active);
+          });
+        });
+      });
+    })();
+  </script>
+{% endblock %}
