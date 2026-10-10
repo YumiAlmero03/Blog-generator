@@ -45,7 +45,7 @@
       const customTitle = customTitleInput.value.trim();
       return customTitle ? { value: customTitle } : null;
     }
-    return document.querySelector('input[name="selected_title"]:checked');
+    return document.querySelector('input[name="selected_title"]:checked, #contentForm input[type="hidden"][name="selected_title"]');
   }
 
   function syncCustomTitleRadio() {
@@ -59,7 +59,96 @@
   }
 
   function getSelectedMetaDescription() {
-    return document.querySelector('input[name="meta_description_choice"]:checked');
+    return document.querySelector('input[name="meta_description_choice"]:checked, #contentForm textarea[name="meta_description_choice"]');
+  }
+
+  const postGenerator = contentForm ? contentForm.dataset.postGenerator : "";
+  const postStatus = document.getElementById("postSaveStatus");
+  let postSaveQueue = Promise.resolve();
+
+  function postPayload() {
+    syncCustomTitleRadio();
+    prepareContentForm();
+    const payload = Object.fromEntries(new FormData(contentForm));
+    payload.generator = postGenerator;
+    payload.selected_title = getSelectedTitle()?.value || "";
+    payload.meta_description_choice = getSelectedMetaDescription()?.value || "";
+    return payload;
+  }
+
+  async function postRequest(url, payload) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || "Could not complete the request. Please try again.");
+    }
+    return response;
+  }
+
+  function savePost(autosave) {
+    const payload = postPayload();
+    payload.autosave = autosave;
+    // Serialize changes so a slower earlier choice cannot overwrite a newer one.
+    postSaveQueue = postSaveQueue.then(async function () {
+      if (postStatus) postStatus.textContent = "Saving…";
+      payload.history_id = contentForm.querySelector('[name="history_id"]')?.value || "";
+      try {
+        const response = await postRequest("/posts/save", payload);
+        const result = await response.json();
+        const historyInput = contentForm.querySelector('[name="history_id"]');
+        if (historyInput) historyInput.value = result.history_id;
+        const categorySelect = contentForm.querySelector('[name="category"]');
+        if (categorySelect?.value === "Auto" && result.category) {
+          categorySelect.querySelector('option[value="Auto"]').textContent = "Auto · " + result.category;
+        }
+        if (postStatus) postStatus.textContent = result.message;
+      } catch (error) {
+        if (postStatus) postStatus.textContent = "Not saved: " + error.message;
+      }
+    });
+    return postSaveQueue;
+  }
+
+  if (postGenerator) {
+    contentForm.querySelectorAll("[data-save-post]").forEach(function (button) {
+      button.addEventListener("click", () => savePost(false));
+    });
+    contentForm.addEventListener("change", function (event) {
+      if (event.target.matches('[name="meta_description_choice"], [name="category"]') && getSelectedMetaDescription()?.value.trim()) {
+        savePost(true);
+      }
+    });
+    contentForm.querySelectorAll("[data-download-post]").forEach(function (button) {
+      button.addEventListener("click", async function () {
+        button.disabled = true;
+        try {
+          await postSaveQueue;
+          const payload = postPayload();
+          payload.format = button.dataset.downloadPost;
+          const response = await postRequest("/posts/download", payload);
+          const blobUrl = URL.createObjectURL(await response.blob());
+          const link = document.createElement("a");
+          const disposition = response.headers.get("Content-Disposition") || "";
+          const filename = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+          const plainFilename = disposition.match(/filename="?([^";]+)"?/i);
+          link.href = blobUrl;
+          link.download = filename ? decodeURIComponent(filename[1]) : (plainFilename ? plainFilename[1] : "post." + (payload.format === "json" ? "json" : "xml"));
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+          if (postStatus) postStatus.textContent = "Post downloaded.";
+        } catch (error) {
+          if (postStatus) postStatus.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
   }
 
   function syncSelectedCopyFields() {
@@ -271,6 +360,16 @@
           return "- " + inlineMarkdown(item).trim();
         });
         chunks.push(items.join("\n"));
+      } else if (tag === "table") {
+        const rows = Array.from(node.rows).map(function (row) {
+          return "| " + Array.from(row.cells).map(function (cell) {
+            return inlineMarkdown(cell).trim().replace(/\|/g, "\\|").replace(/\n/g, " ");
+          }).join(" | ") + " |";
+        });
+        if (rows.length) {
+          rows.splice(1, 0, "| " + Array.from(node.rows[0].cells).map(function () { return "---"; }).join(" | ") + " |");
+        }
+        chunks.push(rows.join("\n"));
       } else if (tag === "blockquote") {
         chunks.push("> " + text);
       } else {
@@ -295,6 +394,8 @@
         parts.push('<!-- wp:heading {"level":3} -->' + outer + "<!-- /wp:heading -->");
       } else if (tag === "ul" || tag === "ol") {
         parts.push("<!-- wp:list -->" + outer + "<!-- /wp:list -->");
+      } else if (tag === "table") {
+        parts.push('<!-- wp:table --><figure class="wp-block-table">' + outer + '</figure><!-- /wp:table -->');
       } else if (tag === "blockquote") {
         parts.push("<!-- wp:quote -->" + outer + "<!-- /wp:quote -->");
       } else {
@@ -440,7 +541,8 @@
     }
   });
 
-  function handleGenerateAction(button) {
+  async function handleGenerateAction(button) {
+    if (postGenerator) await postSaveQueue;
     const action = button.dataset.generateAction || "generate_content";
     if (contentActionInput) {
       contentActionInput.value = action;
@@ -451,7 +553,7 @@
       showValidationMessage("Please select a title first.");
       return;
     }
-    if (action !== "generate_meta_descriptions" && action !== "generate_all" && !getSelectedMetaDescription()) {
+    if (action !== "generate_meta_descriptions" && action !== "generate_all" && !getSelectedMetaDescription()?.value.trim()) {
       showValidationMessage("Please choose a meta description first.");
       return;
     }
@@ -479,6 +581,10 @@
 
   if (saveGeneratedButton && contentForm) {
     saveGeneratedButton.addEventListener("click", function () {
+      if (postGenerator) {
+        savePost(false);
+        return;
+      }
       if (contentActionInput) {
         contentActionInput.value = saveGeneratedButton.dataset.saveAction || "save_generated_blog";
       }
@@ -532,6 +638,10 @@
 
   if (downloadButton && downloadForm) {
     downloadButton.addEventListener("click", function () {
+      if (postGenerator && !getSelectedMetaDescription()?.value.trim()) {
+        showValidationMessage("Please choose a meta description before downloading.");
+        return;
+      }
       syncPreviewFields();
       if (quill) {
         downloadContentHtml.value = quill.root.innerHTML;
@@ -567,6 +677,18 @@
       ? rawHtml
       : convertMarkdownToHtml(editorContainer.textContent || editorContainer.innerText || rawHtml);
 
+    if (/<table\b/i.test(cleanHtml)) {
+      // Quill removes unsupported tables; preserve them in a native editor.
+      editorContainer.innerHTML = "";
+      const root = document.createElement("div");
+      root.className = "ql-editor";
+      root.contentEditable = "true";
+      root.setAttribute("role", "textbox");
+      root.setAttribute("aria-label", "Article content");
+      root.setAttribute("aria-multiline", "true");
+      editorContainer.appendChild(root);
+      quill = { root: root, on: function (_event, handler) { root.addEventListener("input", handler); } };
+    } else {
     quill = new window.Quill("#contentEditor", {
       theme: "snow",
       modules: {
@@ -579,6 +701,8 @@
         ],
       },
     });
+
+    }
 
     quill.root.innerHTML = cleanHtml;
     updateEditorWordCount();

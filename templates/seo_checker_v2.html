@@ -19,6 +19,14 @@
         <input id="limit" name="limit" type="number" min="1" max="100" value="{{ limit }}" class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
       </div>
       <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">List & Check V2</button>
+      <label class="flex items-center gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800 lg:col-span-3">
+        <input type="checkbox" name="use_ai" value="1" {% if use_ai %}checked{% endif %} class="h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500" />
+        <span>Use AI suggestions</span>
+      </label>
+      <label class="flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm leading-6 text-sand-800 lg:col-span-3">
+        <input type="checkbox" name="check_google_issues" value="1" {% if check_google_issues %}checked{% endif %} class="mt-1 h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500" />
+        <span><strong>Check Google issues with Search Console</strong><br />Uses saved Google credentials and requires access to each site's Search Console domain property. Uses one URL Inspection request per listed page. Without inspection, Google’s canonical choice remains unverified.</span>
+      </label>
       <label class="flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800 lg:col-span-3">
         <input type="checkbox" name="ignore_ssl_errors" value="1" {% if ignore_ssl_errors %}checked{% endif %} class="mt-1 h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500" />
         <span>Ignore SSL certificate errors for this check</span>
@@ -35,13 +43,20 @@
     {% if error %}
       <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>
     {% endif %}
+    {% if loaded_history %}
+      <div class="mt-5 rounded-2xl border border-moss-200 bg-moss-50 px-4 py-3 text-sm font-bold text-moss-800">Loaded complete JSON report saved on {{ loaded_history.created_at }}.</div>
+    {% endif %}
   </section>
 
   {% if result and result.mode == "site" %}
     {% set internal_links = result.internal_link_details|default({}) %}
+    {% set header_footer_links = result.header_footer_link_details|default({}) %}
     {% set schemas = result.schema_details|default({}) %}
 
-    <section class="mt-6 grid gap-5 xl:grid-cols-[280px_1fr_1fr]">
+    <div class="mx-auto max-w-[1280px] xl:grid xl:grid-cols-[minmax(0,1fr)_210px] xl:items-start xl:gap-6">
+    <div class="min-w-0">
+
+    <section id="seo-v2-summary" class="mx-auto mt-6 grid max-w-5xl scroll-mt-6 gap-5 xl:grid-cols-[280px_1fr_1fr]">
       <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
         <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Site SEO Rating</p>
         <div class="mt-4 flex items-end gap-3">
@@ -49,6 +64,14 @@
           <span class="pb-2 text-2xl font-bold text-sand-700">{{ result.summary.average_score }}/100</span>
         </div>
         <p class="mt-4 break-words text-sm leading-6 text-sand-700">{{ result.base_url }}</p>
+        <form method="post" action="/seo-checker/download-report" class="mt-5">
+          <textarea name="result_json" class="hidden-form" aria-hidden="true">{{ result|tojson }}</textarea>
+          <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black">Download Complete Report</button>
+        </form>
+        <form method="post" action="/seo-checker/download-performance-summary" class="mt-3">
+          <textarea name="result_json" class="hidden-form" aria-hidden="true">{{ result|tojson }}</textarea>
+          <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-full border border-sand-300 bg-white px-4 py-2.5 text-sm font-bold text-sand-900 transition hover:bg-sand-50">Download Performance Summary</button>
+        </form>
       </div>
       <div class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
         <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Internal Links</p>
@@ -62,59 +85,93 @@
       </div>
     </section>
 
-    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-      <div class="flex flex-wrap items-end justify-between gap-3">
+    <details id="seo-v2-navigation" open class="group mx-auto mt-6 max-w-5xl scroll-mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 shadow-soft backdrop-blur-md">
+      <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-6 sm:p-8">
         <div>
-          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">V2 Internal Link List</p>
-          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Internal Link Table</h2>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Navigation Link Inventory</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Links From Header And Footer</h2>
         </div>
-        {% if internal_links.truncated %}
-          <span class="rounded-full bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800">Showing first {{ internal_links.limit }} of {{ internal_links.total_count }}</span>
-        {% endif %}
-      </div>
+        <span class="flex items-center gap-3 text-sm font-bold text-sand-700">
+          {{ header_footer_links.total_count or 0 }} links
+          <span aria-hidden="true" class="text-2xl leading-none transition group-open:rotate-45">+</span>
+        </span>
+      </summary>
+      <div class="border-t border-sand-200 px-6 pb-6 sm:px-8 sm:pb-8" data-link-pagination data-table-pagination data-page-size="10">
+      <p class="mt-5 text-sm leading-6 text-sand-700">Only links inside semantic header and footer elements are listed here. Duplicate anchor text and URL pairs are removed, and all other links appear in each page's Link Health table.</p>
+      {% if header_footer_links.duplicate_count %}
+        <p class="mt-2 text-xs font-bold uppercase tracking-[0.1em] text-sand-600">{{ header_footer_links.duplicate_count }} duplicate entr{% if header_footer_links.duplicate_count == 1 %}y{% else %}ies{% endif %} removed</p>
+      {% endif %}
 
-      {% if internal_links.rows %}
+      {% if header_footer_links.rows %}
         <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
-          <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+          <table class="min-w-full divide-y divide-sand-100 text-left text-sm" data-audit-table data-table-name="Header and footer links" data-filter-column="2" data-filter-label="Region">
             <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
               <tr>
                 <th class="whitespace-nowrap px-4 py-3">Anchor Text</th>
-                <th class="whitespace-nowrap px-4 py-3">Redirect Link</th>
-                <th class="whitespace-nowrap px-4 py-3">Link Page Location</th>
-                <th class="whitespace-nowrap px-4 py-3">Error Message</th>
+                <th class="whitespace-nowrap px-4 py-3">URL</th>
+                <th class="whitespace-nowrap px-4 py-3">Region</th>
+                <th class="whitespace-nowrap px-4 py-3">Found On Page</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-sand-100">
-              {% for link in internal_links.rows %}
-                <tr>
-                  <td class="whitespace-nowrap px-4 py-3 font-semibold text-sand-900">{{ link.anchor_text }}</td>
-                  <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.redirect_link }}</td>
-                  <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.link_page_location }}</td>
-                  <td class="whitespace-nowrap px-4 py-3 {% if link.status == 'broken' or link.status == 'unreachable' %}font-bold text-red-700{% elif link.redirected %}font-bold text-amber-800{% else %}text-sand-700{% endif %}">{{ link.error_message }}</td>
+              {% for link in header_footer_links.rows %}
+                <tr data-link-row data-table-row>
+                  <td class="px-4 py-3 text-sand-900">
+                    {% if link.is_image %}
+                      <span class="block text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">Image</span>
+                      <span class="mt-1 block font-semibold">Alt: {{ link.image_alt or "Missing alt text" }}</span>
+                      {% if link.anchor_text and link.anchor_text != "No anchor text" %}
+                        <span class="mt-1 block text-xs text-sand-600">Text: {{ link.anchor_text }}</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="font-semibold">{{ link.anchor_text }}</span>
+                    {% endif %}
+                    {% if link.element_id %}
+                      <span class="mt-1 block font-mono text-xs text-sand-600">ID: {{ link.element_id }}</span>
+                    {% endif %}
+                    {% if link.image_id %}
+                      <span class="mt-1 block font-mono text-xs text-sand-600">Image ID: {{ link.image_id }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.url }}</td>
+                  <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.region|title }}</td>
+                  <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.source_page }}</td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
+        <nav class="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="Header and footer links pagination">
+          <p class="text-sm font-semibold text-sand-700" data-pagination-status></p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" data-pagination-previous class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-800 transition hover:bg-sand-50 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+            <div class="flex flex-wrap items-center gap-1" data-pagination-pages></div>
+            <button type="button" data-pagination-next class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-800 transition hover:bg-sand-50 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+          </div>
+        </nav>
       {% else %}
-        <p class="mt-5 rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No sampled internal links were found.</p>
+        <p class="mt-5 rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No header or footer links were found on the checked pages.</p>
       {% endif %}
-    </section>
+      </div>
+    </details>
 
-    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-      <div class="flex flex-wrap items-end justify-between gap-3">
+    <details id="seo-v2-schema-table" class="group mx-auto mt-6 max-w-5xl scroll-mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 shadow-soft backdrop-blur-md">
+      <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-6 sm:p-8">
         <div>
           <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">V2 Schema</p>
           <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Schema For Each Page</h2>
         </div>
-        {% if schemas.truncated %}
-          <span class="rounded-full bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800">Showing first {{ schemas.limit }} of {{ schemas.total_count }}</span>
-        {% endif %}
-      </div>
+        <span class="flex items-center gap-3 text-sm font-bold text-sand-700">
+          {{ schemas.total_count or 0 }} items
+          <span aria-hidden="true" class="text-2xl leading-none transition group-open:rotate-45">+</span>
+        </span>
+      </summary>
+      <div class="border-t border-sand-200 px-6 pb-6 sm:px-8 sm:pb-8">
 
       {% if schemas.rows %}
-        <div class="mt-5 overflow-x-auto rounded-2xl border border-sand-200 bg-white">
-          <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+        <div class="mt-5" data-table-pagination data-page-size="10">
+        <div class="overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+          <table class="min-w-full divide-y divide-sand-100 text-left text-sm" data-audit-table data-table-name="Schema for each page" data-filter-column="2" data-filter-label="Status">
             <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
               <tr>
                 <th class="whitespace-nowrap px-4 py-3">Page</th>
@@ -126,7 +183,7 @@
             </thead>
             <tbody class="divide-y divide-sand-100">
               {% for schema in schemas.rows %}
-                <tr class="align-top">
+                <tr class="align-top" data-table-row>
                   <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ schema.page }}</td>
                   <td class="whitespace-nowrap px-4 py-3 font-semibold text-sand-900">{{ schema.type }}</td>
                   <td class="whitespace-nowrap px-4 py-3">
@@ -137,18 +194,24 @@
                     {% endif %}
                   </td>
                   <td class="whitespace-nowrap px-4 py-3 text-red-700">{{ schema.error or "None" }}</td>
-                  <td class="min-w-[520px] px-4 py-3 font-mono text-xs leading-5 text-sand-700">{{ schema.preview }}</td>
+                  <td class="min-w-[520px] px-4 py-3">
+                    <p class="font-mono text-xs leading-5 text-sand-700">{{ schema.preview }}</p>
+                    <button type="button" class="mt-3 rounded-full border border-sand-300 bg-white px-4 py-2 text-xs font-bold text-sand-800 transition hover:bg-sand-50" data-schema-toggle aria-expanded="false" aria-controls="site-schema-{{ loop.index0 }}">Read more</button>
+                    <pre id="site-schema-{{ loop.index0 }}" class="mt-3 hidden max-h-[32rem] overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-sand-950 p-4 text-xs leading-5 text-sand-700">{{ schema.content }}</pre>
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
+        </div>
       {% else %}
         <p class="mt-5 rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No JSON-LD schema blocks were found on checked pages.</p>
       {% endif %}
-    </section>
+      </div>
+    </details>
 
-    <section class="mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8" data-seo-v2-tabs>
+    <section id="seo-v2-pages" class="mx-auto mt-6 max-w-5xl scroll-mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8" data-seo-v2-tabs>
       <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Each Page Detailed Report</p>
@@ -157,23 +220,24 @@
         <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">Tabs by page</span>
       </div>
 
-      <div class="mb-5 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Checked page details">
+      <div class="mb-5 grid max-h-80 gap-2 overflow-y-auto pr-2" role="tablist" aria-label="Checked page details">
         {% for page in result.pages %}
           <button
             type="button"
             role="tab"
             data-seo-v2-tab="{{ loop.index0 }}"
             aria-selected="{{ 'true' if loop.first else 'false' }}"
-            class="whitespace-nowrap rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition {% if loop.first %}bg-sand-600 text-sand-50{% else %}bg-sand-100 text-sand-700 hover:bg-sand-200{% endif %}"
+            class="w-full rounded-lg px-4 py-3 text-left text-xs font-extrabold uppercase tracking-[0.1em] transition {% if loop.first %}bg-sand-600 text-sand-50{% else %}bg-sand-100 text-sand-700 hover:bg-sand-200{% endif %}"
           >
-            Page {{ loop.index }}
+            {{ page.tab_label|default("Homepage" if page.url.endswith("/") else page.url) }}
           </button>
         {% endfor %}
       </div>
 
       {% for page in result.pages %}
+        {% set page_index = loop.index0 %}
         <article data-seo-v2-panel="{{ loop.index0 }}" class="{% if not loop.first %}hidden{% endif %}">
-          <div class="rounded-[24px] border border-sand-200 bg-white p-5">
+          <div class="mx-auto max-w-4xl rounded-[30px] border border-sand-200 bg-white p-5 sm:p-7">
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h3 class="break-words text-xl font-bold text-sand-950">{{ page.url }}</h3>
@@ -191,6 +255,8 @@
               {% endif %}
             </div>
 
+            {% include "_google_issues.html" %}
+
             {% if page.status == "checked" %}
               <div class="mt-5 grid gap-4 md:grid-cols-3">
                 <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">Words:</strong> {{ page.result.stats.word_count }}</div>
@@ -198,10 +264,13 @@
                 <div class="rounded-2xl bg-sand-100 px-4 py-3 text-sm text-sand-700"><strong class="text-sand-900">Missing alt:</strong> {{ page.result.stats.missing_alt_count }}</div>
               </div>
 
-              <div class="mt-6 grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-                <section class="rounded-[22px] border border-sand-200 bg-sand-50 p-5">
-                  <h4 class="font-display text-2xl font-bold text-sand-950">Audit Checks</h4>
-                  <div class="mt-4 grid gap-2">
+              <div class="mt-6 grid gap-5 lg:grid-cols-2">
+                <details class="group self-start rounded-[22px] border border-sand-200 bg-sand-50">
+                  <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+                    <h4 class="font-display text-2xl font-bold text-sand-950">Audit Checks</h4>
+                    <span aria-hidden="true" class="text-2xl leading-none text-sand-700 transition group-open:rotate-45">+</span>
+                  </summary>
+                  <div class="grid gap-2 border-t border-sand-200 p-5">
                     {% for check in page.result.checks %}
                       <div class="grid gap-2 rounded-2xl bg-white px-4 py-3 md:grid-cols-[120px_1fr]">
                         <div>
@@ -221,11 +290,14 @@
                       </div>
                     {% endfor %}
                   </div>
-                </section>
+                </details>
 
-                <section class="rounded-[22px] border border-sand-200 bg-sand-50 p-5">
-                  <h4 class="font-display text-2xl font-bold text-sand-950">Page Details</h4>
-                  <dl class="mt-4 grid gap-3 text-sm">
+                <details class="group self-start rounded-[22px] border border-sand-200 bg-sand-50">
+                  <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+                    <h4 class="font-display text-2xl font-bold text-sand-950">Page Details</h4>
+                    <span aria-hidden="true" class="text-2xl leading-none text-sand-700 transition group-open:rotate-45">+</span>
+                  </summary>
+                  <dl class="grid gap-3 border-t border-sand-200 p-5 text-sm">
                     <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Meta title</dt><dd class="mt-1 break-words text-sand-700">{{ page.result.stats.title or "Missing" }} ({{ page.result.stats.title_length }} chars)</dd></div>
                     <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Meta description</dt><dd class="mt-1 break-words text-sand-700">{{ page.result.stats.meta_description or "Missing" }} ({{ page.result.stats.meta_description_length }} chars)</dd></div>
                     <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Canonical URL</dt><dd class="mt-1 break-words text-sand-700">{{ page.result.stats.canonical or "Missing" }}</dd></div>
@@ -233,12 +305,104 @@
                     <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Robots.txt</dt><dd class="mt-1 break-words text-sand-700">{{ page.result.stats.robots_url or "/robots.txt" }} · HTTP {{ page.result.stats.robots_status_code or "n/a" }}</dd></div>
                     <div class="rounded-2xl bg-white px-4 py-3"><dt class="font-bold text-sand-900">Internal links</dt><dd class="mt-1 text-sand-700">{{ page.result.stats.links.internal_count }} internal, {{ page.result.stats.links.external_count }} external</dd></div>
                   </dl>
-                </section>
+                </details>
               </div>
 
-              <section class="mt-5 rounded-[22px] border border-sand-200 bg-white p-5">
-                <h4 class="font-display text-2xl font-bold text-sand-950">Social Media View</h4>
-                <div class="mt-4 grid gap-4 lg:grid-cols-2">
+              <details class="group mt-5 rounded-[22px] border border-sand-200 bg-white">
+                {% set heading_sequence = page.result.stats.heading_sequence|default([]) %}
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+                  <div>
+                    <h4 class="font-display text-2xl font-bold text-sand-950">Headings Hierarchy</h4>
+                    <p class="mt-2 text-sm leading-6 text-sand-700">{{ heading_sequence|length }} heading{% if heading_sequence|length != 1 %}s{% endif %} in page order.</p>
+                  </div>
+                  <span aria-hidden="true" class="shrink-0 text-2xl leading-none text-sand-700 transition group-open:rotate-45">+</span>
+                </summary>
+                <div class="border-t border-sand-200 p-5">
+                  {% if heading_sequence %}
+                    <ol class="grid gap-2">
+                      {% for heading in heading_sequence %}
+                        {% set heading_depth = (heading.level[1:]|int) - 1 %}
+                        <li class="flex min-w-0 items-start gap-3 rounded-xl bg-sand-50 px-3 py-2 text-sm" style="margin-left: {{ heading_depth * 1.25 }}rem">
+                          <span class="shrink-0 font-mono font-bold text-sand-600">&lt;{{ heading.level|upper }}&gt;</span>
+                          <span class="min-w-0 break-words font-semibold text-sand-900">{{ heading.text }}</span>
+                        </li>
+                      {% endfor %}
+                    </ol>
+                  {% else %}
+                    <p class="rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No H1-H6 headings were found on this page.</p>
+                  {% endif %}
+                </div>
+              </details>
+
+              <details class="group mt-5 rounded-[22px] border border-sand-200 bg-white">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+                  <h4 class="font-display text-2xl font-bold text-sand-950">Social Media View</h4>
+                  <span aria-hidden="true" class="text-2xl leading-none text-sand-700 transition group-open:rotate-45">+</span>
+                </summary>
+                {% set social_preview = page.result.stats.social_preview|default({}) %}
+                {% set google_preview = social_preview.google|default({}) %}
+                {% set facebook_preview = social_preview.facebook|default({}) %}
+                {% set twitter_preview = social_preview.twitter|default({}) %}
+                <div class="border-t border-sand-200 p-5">
+                  <div class="grid gap-4">
+                    <section class="overflow-hidden rounded-2xl border border-sand-200 bg-white">
+                      <div class="border-b border-sand-200 bg-sand-50 px-4 py-3">
+                        <h5 class="text-sm font-bold text-sand-950">Google Search</h5>
+                      </div>
+                      <div class="max-w-2xl px-5 py-4 font-sans">
+                        <div class="flex min-w-0 items-center gap-3">
+                          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sand-100 text-xs font-bold uppercase text-sand-700">{{ (google_preview.domain or page.url)[0] }}</span>
+                          <div class="min-w-0">
+                            <p class="truncate text-sm text-[#202124]">{{ google_preview.domain or page.url }}</p>
+                            <p class="truncate text-xs text-[#4d5156]">{{ google_preview.url or page.url }}</p>
+                          </div>
+                        </div>
+                        <p class="mt-2 text-xl leading-7 text-[#1a0dab]">{{ (google_preview.title or page.result.stats.title or page.url)|truncate(70, True, "...") }}</p>
+                        <p class="mt-1 text-sm leading-6 text-[#4d5156]">{{ (google_preview.description or page.result.stats.meta_description or "No meta description was found for this page.")|truncate(165, True, "...") }}</p>
+                      </div>
+                    </section>
+
+                    <div class="grid gap-4 xl:grid-cols-2">
+                      <section class="overflow-hidden rounded-2xl border border-sand-200 bg-white">
+                        <div class="border-b border-sand-200 bg-sand-50 px-4 py-3">
+                          <h5 class="text-sm font-bold text-sand-950">Facebook</h5>
+                        </div>
+                        {% if facebook_preview.image %}
+                          <img src="{{ facebook_preview.image }}" alt="" loading="lazy" class="aspect-[1.91/1] w-full bg-sand-100 object-cover" />
+                        {% else %}
+                          <div class="flex aspect-[1.91/1] w-full items-center justify-center bg-sand-100 px-4 text-center text-sm font-semibold text-sand-600">No Open Graph image</div>
+                        {% endif %}
+                        <div class="border-t border-sand-200 bg-sand-50 px-4 py-3">
+                          <p class="truncate text-xs uppercase text-sand-600">{{ facebook_preview.site_name or facebook_preview.domain or page.url }}</p>
+                          <p class="mt-1 max-h-12 overflow-hidden text-base font-bold leading-6 text-sand-950">{{ facebook_preview.title or page.result.stats.open_graph.get("og:title") or page.result.stats.title or page.url }}</p>
+                          {% if facebook_preview.description or page.result.stats.open_graph.get("og:description") %}
+                            <p class="mt-1 max-h-10 overflow-hidden text-sm leading-5 text-sand-700">{{ facebook_preview.description or page.result.stats.open_graph.get("og:description") }}</p>
+                          {% endif %}
+                        </div>
+                      </section>
+
+                      <section class="overflow-hidden rounded-2xl border border-sand-300 bg-white">
+                        <div class="border-b border-sand-200 bg-sand-50 px-4 py-3">
+                          <h5 class="text-sm font-bold text-sand-950">Twitter / X</h5>
+                        </div>
+                        {% if twitter_preview.image %}
+                          <img src="{{ twitter_preview.image }}" alt="" loading="lazy" class="aspect-video w-full bg-sand-100 object-cover" />
+                        {% else %}
+                          <div class="flex aspect-video w-full items-center justify-center bg-sand-100 px-4 text-center text-sm font-semibold text-sand-600">No Twitter card image</div>
+                        {% endif %}
+                        <div class="px-4 py-3">
+                          <p class="max-h-12 overflow-hidden text-base font-bold leading-6 text-sand-950">{{ twitter_preview.title or page.result.stats.twitter_cards.get("twitter:title") or page.result.stats.open_graph.get("og:title") or page.result.stats.title or page.url }}</p>
+                          {% if twitter_preview.description or page.result.stats.twitter_cards.get("twitter:description") %}
+                            <p class="mt-1 max-h-10 overflow-hidden text-sm leading-5 text-sand-700">{{ twitter_preview.description or page.result.stats.twitter_cards.get("twitter:description") }}</p>
+                          {% endif %}
+                          <p class="mt-2 truncate text-sm text-sand-600">{{ twitter_preview.domain or page.url }}</p>
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+
+                  <h5 class="mt-6 text-sm font-bold uppercase tracking-[0.12em] text-sand-600">Detected Metadata</h5>
+                  <div class="mt-3 grid gap-4 lg:grid-cols-2">
                   <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
                     <h5 class="text-sm font-bold text-sand-950">Open Graph</h5>
                     <dl class="mt-3 grid gap-2 text-sm leading-6 text-sand-700">
@@ -259,15 +423,22 @@
                       {% endfor %}
                     </dl>
                   </div>
+                  </div>
                 </div>
-              </section>
+              </details>
 
-              <section class="mt-5 rounded-[22px] border border-sand-200 bg-white p-5">
+              <details class="group mt-5 rounded-[22px] border border-sand-200 bg-white">
                 {% set page_links = page.result.stats.links|default({}) %}
-                <h4 class="font-display text-2xl font-bold text-sand-950">Link Health</h4>
-                <p class="mt-2 text-sm leading-6 text-sand-700">{{ page_links.not_found_count or 0 }} 404, {{ page_links.redirect_count or 0 }} redirects, {{ page_links.unreachable_count or 0 }} unreachable, {{ page_links.checked_count or page_links.sample_checks|length }} checked.</p>
-                <div class="mt-4 overflow-x-auto rounded-2xl border border-sand-200">
-                  <table class="min-w-full divide-y divide-sand-100 text-left text-sm">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+                  <div>
+                    <h4 class="font-display text-2xl font-bold text-sand-950">Link Health</h4>
+                    <p class="mt-2 text-sm leading-6 text-sand-700">{{ page_links.not_found_count or 0 }} 404, {{ page_links.redirect_count or 0 }} redirects, {{ page_links.unreachable_count or 0 }} unreachable, {{ page_links.checked_count or page_links.sample_checks|length }} checked.</p>
+                  </div>
+                  <span aria-hidden="true" class="shrink-0 text-2xl leading-none text-sand-700 transition group-open:rotate-45">+</span>
+                </summary>
+                <div class="border-t border-sand-200 p-5" data-table-pagination data-page-size="10">
+                  <div class="overflow-x-auto rounded-2xl border border-sand-200">
+                  <table class="min-w-full divide-y divide-sand-100 text-left text-sm" data-audit-table data-table-name="Link Health" data-filter-column="4" data-filter-label="Status">
                     <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
                       <tr>
                         <th class="whitespace-nowrap px-4 py-3">Anchor</th>
@@ -279,8 +450,18 @@
                     </thead>
                     <tbody class="divide-y divide-sand-100">
                       {% for link in page_links.sample_checks %}
-                        <tr>
-                          <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.text or "No anchor text" }}</td>
+                        <tr data-table-row>
+                          <td class="px-4 py-3 text-sand-700">
+                            {% if link.is_image %}
+                              <span class="block text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">Image</span>
+                              <span class="mt-1 block font-semibold text-sand-900">Alt: {{ link.image_alt or "Missing alt text" }}</span>
+                              {% if link.text %}<span class="mt-1 block text-xs">Text: {{ link.text }}</span>{% endif %}
+                            {% else %}
+                              <span class="font-semibold text-sand-900">{{ link.text or "No anchor text" }}</span>
+                            {% endif %}
+                            {% if link.id %}<span class="mt-1 block font-mono text-xs text-sand-600">ID: {{ link.id }}</span>{% endif %}
+                            {% if link.image_id %}<span class="mt-1 block font-mono text-xs text-sand-600">Image ID: {{ link.image_id }}</span>{% endif %}
+                          </td>
                           <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.url }}</td>
                           <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.final_url or "n/a" }}</td>
                           <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.status_code or "n/a" }}</td>
@@ -291,12 +472,26 @@
                       {% endfor %}
                     </tbody>
                   </table>
+                  </div>
+                  {% if page_links.sample_checks %}
+                    <nav class="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="Link Health pagination">
+                      <p class="text-sm font-semibold text-sand-700" data-pagination-status></p>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" data-pagination-previous class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-800 transition hover:bg-sand-50 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+                        <div class="flex flex-wrap items-center gap-1" data-pagination-pages></div>
+                        <button type="button" data-pagination-next class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-800 transition hover:bg-sand-50 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+                      </div>
+                    </nav>
+                  {% endif %}
                 </div>
-              </section>
+              </details>
 
-              <section class="mt-5 rounded-[22px] border border-sand-200 bg-white p-5">
-                <h4 class="font-display text-2xl font-bold text-sand-950">Schema</h4>
-                <div class="mt-4 grid gap-3">
+              <details class="group mt-5 rounded-[22px] border border-sand-200 bg-white">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+                  <h4 class="font-display text-2xl font-bold text-sand-950">Schema</h4>
+                  <span aria-hidden="true" class="text-2xl leading-none text-sand-700 transition group-open:rotate-45">+</span>
+                </summary>
+                <div class="grid gap-3 border-t border-sand-200 p-5">
                   {% for schema in page.result.stats.schemas %}
                     <div class="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3">
                       <div class="flex flex-wrap items-center gap-2">
@@ -310,13 +505,32 @@
                       {% if schema.error %}
                         <p class="mt-2 text-sm font-bold leading-6 text-red-700">{{ schema.error }}</p>
                       {% endif %}
-                      <p class="mt-2 font-mono text-xs leading-5 text-sand-700">{{ schema.preview }}</p>
+                      {% if schema.hierarchy|default([]) %}
+                        <dl class="mt-3 divide-y divide-sand-200 overflow-hidden rounded-2xl border border-sand-200 bg-white">
+                          {% for row in schema.hierarchy %}
+                            <div class="grid gap-1 px-3 py-2 text-sm sm:grid-cols-[minmax(120px,180px)_1fr]" style="padding-left: {{ 0.75 + (row.depth * 1.25) }}rem">
+                              <dt class="break-words font-mono font-bold text-sand-900">{{ row.key }}</dt>
+                              <dd class="min-w-0 break-words text-sand-700">
+                                {% if row.is_url %}
+                                  <a href="{{ row.value }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-sand-700 underline decoration-sand-300 underline-offset-2 hover:text-sand-950">{{ row.value }}</a>
+                                {% else %}
+                                  {{ row.value }}
+                                {% endif %}
+                              </dd>
+                            </div>
+                          {% endfor %}
+                        </dl>
+                      {% else %}
+                        <p class="mt-2 font-mono text-xs leading-5 text-sand-700">{{ schema.preview }}</p>
+                      {% endif %}
+                      <button type="button" class="mt-3 rounded-full border border-sand-300 bg-white px-4 py-2 text-xs font-bold text-sand-800 transition hover:bg-sand-50" data-schema-toggle aria-expanded="false" aria-controls="page-schema-{{ page_index }}-{{ loop.index0 }}">Read more</button>
+                      <pre id="page-schema-{{ page_index }}-{{ loop.index0 }}" class="mt-3 hidden max-h-[32rem] overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-sand-950 p-4 text-xs leading-5 text-sand-700">{{ schema.content|default(schema.preview) }}</pre>
                     </div>
                   {% else %}
                     <p class="rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No JSON-LD schema blocks found on this page.</p>
                   {% endfor %}
                 </div>
-              </section>
+              </details>
             {% else %}
               <p class="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700">{{ page.error }}</p>
             {% endif %}
@@ -324,6 +538,78 @@
         </article>
       {% endfor %}
     </section>
+
+    {% set all_404_links = result.link_health_details.not_found_links|default([]) %}
+    <section id="seo-v2-404" class="mx-auto mt-6 max-w-5xl scroll-mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-red-700">Site-Wide Link Issues</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">All 404 Links</h2>
+        </div>
+        <span class="rounded-full bg-red-50 px-4 py-2 text-xs font-bold text-red-700">{{ all_404_links|length }} found</span>
+      </div>
+
+      {% if all_404_links %}
+        <div class="mt-5" data-table-pagination data-page-size="10">
+          <div class="overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+            <table class="min-w-full divide-y divide-sand-100 text-left text-sm" data-audit-table data-table-name="All 404 links" data-filter-column="0" data-filter-label="Found on page">
+              <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+                <tr>
+                  <th class="whitespace-nowrap px-4 py-3">Found On Page</th>
+                  <th class="whitespace-nowrap px-4 py-3">Anchor</th>
+                  <th class="whitespace-nowrap px-4 py-3">404 URL</th>
+                  <th class="whitespace-nowrap px-4 py-3">HTTP</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-sand-100">
+                {% for link in all_404_links %}
+                  <tr data-table-row>
+                    <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ link.source_page }}</td>
+                    <td class="px-4 py-3 text-sand-700">
+                      <span class="font-semibold text-sand-900">{{ link.text or link.image_alt or "No anchor text" }}</span>
+                      {% if link.id %}<span class="mt-1 block font-mono text-xs text-sand-600">ID: {{ link.id }}</span>{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-red-700">{{ link.url }}</td>
+                    <td class="whitespace-nowrap px-4 py-3 font-bold text-red-700">{{ link.status_code or 404 }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <nav class="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="All 404 links pagination">
+            <p class="text-sm font-semibold text-sand-700" data-pagination-status></p>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" data-pagination-previous class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-800 transition hover:bg-sand-50 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+              <div class="flex flex-wrap items-center gap-1" data-pagination-pages></div>
+              <button type="button" data-pagination-next class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-800 transition hover:bg-sand-50 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+            </div>
+          </nav>
+        </div>
+      {% else %}
+        <p class="mt-5 rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No 404 links were found outside the header and footer.</p>
+      {% endif %}
+    </section>
+
+    {% include "_seo_history_compare.html" %}
+    </div>
+
+    <aside class="sticky top-6 mt-6 hidden max-h-[calc(100vh-3rem)] overflow-y-auto rounded-lg border border-sand-200 bg-white/90 p-3 shadow-soft backdrop-blur-md xl:block" aria-label="SEO report table of contents">
+      <p class="px-2 pb-2 text-xs font-extrabold uppercase tracking-[0.14em] text-sand-600">Report Contents</p>
+      <nav class="grid gap-1">
+        <a href="#seo-v2-summary" data-seo-toc-link class="rounded-lg bg-sand-100 px-3 py-2 text-sm font-bold text-sand-900 transition hover:bg-sand-100">Summary</a>
+        <a href="#seo-v2-navigation" data-seo-toc-link class="rounded-lg px-3 py-2 text-sm font-semibold text-sand-700 transition hover:bg-sand-100 hover:text-sand-950">Header &amp; Footer Links</a>
+        <a href="#seo-v2-schema-table" data-seo-toc-link class="rounded-lg px-3 py-2 text-sm font-semibold text-sand-700 transition hover:bg-sand-100 hover:text-sand-950">Schema by Page</a>
+        <a href="#seo-v2-pages" data-seo-toc-link class="rounded-lg px-3 py-2 text-sm font-semibold text-sand-700 transition hover:bg-sand-100 hover:text-sand-950">Page Reports</a>
+        <a href="#seo-v2-404" data-seo-toc-link class="rounded-lg px-3 py-2 text-sm font-semibold text-sand-700 transition hover:bg-sand-100 hover:text-sand-950">All 404 Links</a>
+        <a href="#seo-comparison" data-seo-toc-link class="rounded-lg px-3 py-2 text-sm font-semibold text-sand-700 transition hover:bg-sand-100 hover:text-sand-950">Comparison</a>
+        <a href="#seo-history" data-seo-toc-link class="rounded-lg px-3 py-2 text-sm font-semibold text-sand-700 transition hover:bg-sand-100 hover:text-sand-950">Saved History</a>
+      </nav>
+    </aside>
+    </div>
+  {% endif %}
+
+  {% if not result or result.mode != "site" %}
+    {% include "_seo_history_compare.html" %}
   {% endif %}
 {% endblock %}
 
@@ -348,6 +634,194 @@
           panels.forEach((panel) => {
             panel.classList.toggle("hidden", panel.getAttribute("data-seo-v2-panel") !== active);
           });
+        });
+      });
+    })();
+
+    (() => {
+      const links = Array.from(document.querySelectorAll("[data-seo-toc-link]"));
+      if (!links.length) return;
+      const sections = links
+        .map((link) => document.querySelector(link.getAttribute("href")))
+        .filter(Boolean);
+
+      const setActive = (sectionId) => {
+        links.forEach((link) => {
+          const selected = link.getAttribute("href") === `#${sectionId}`;
+          link.classList.toggle("bg-sand-100", selected);
+          link.classList.toggle("font-bold", selected);
+          link.classList.toggle("font-semibold", !selected);
+          link.classList.toggle("text-sand-900", selected);
+          link.classList.toggle("text-sand-700", !selected);
+          if (selected) link.setAttribute("aria-current", "location");
+          else link.removeAttribute("aria-current");
+        });
+      };
+
+      links.forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const target = document.querySelector(link.getAttribute("href"));
+          if (!target) return;
+          event.preventDefault();
+          if (target.tagName === "DETAILS") target.open = true;
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          window.history.replaceState(null, "", link.getAttribute("href"));
+          setActive(target.id);
+        });
+      });
+
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver((entries) => {
+          const visible = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (visible) setActive(visible.target.id);
+        }, { rootMargin: "-15% 0px -70% 0px", threshold: [0, 0.1, 0.5] });
+        sections.forEach((section) => observer.observe(section));
+      }
+    })();
+
+    (() => {
+      document.querySelectorAll("[data-table-pagination]").forEach((root) => {
+        const table = root.querySelector("[data-audit-table]");
+        const rows = Array.from(root.querySelectorAll("[data-table-row]"));
+        const pageSize = Number(root.dataset.pageSize) || 10;
+        if (!table || !rows.length) return;
+
+        const tableName = table.dataset.tableName || "table";
+        const filterColumn = Number(table.dataset.filterColumn ?? -1);
+        const filterLabel = table.dataset.filterLabel || "Filter";
+        const tableFrame = table.parentElement;
+        const toolbar = document.createElement("div");
+        toolbar.className = "mb-4 grid gap-3 rounded-2xl bg-sand-50 p-3 sm:grid-cols-2";
+        toolbar.innerHTML = `
+          <label class="grid gap-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-600">
+            <span>Search</span>
+            <input type="search" data-table-search class="min-h-10 w-full rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm font-medium normal-case tracking-[0] text-sand-900 outline-none focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+          </label>
+          <label class="grid gap-1 text-xs font-bold uppercase tracking-[0.1em] text-sand-600">
+            <span data-filter-label></span>
+            <select data-table-filter class="min-h-10 w-full rounded-xl border border-sand-200 bg-white px-3 py-2 text-sm font-medium normal-case tracking-[0] text-sand-900 outline-none focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+              <option value="">All</option>
+            </select>
+          </label>
+        `;
+        root.insertBefore(toolbar, tableFrame);
+
+        const search = toolbar.querySelector("[data-table-search]");
+        const filter = toolbar.querySelector("[data-table-filter]");
+        toolbar.querySelector("[data-filter-label]").textContent = filterLabel;
+        search.placeholder = `Search ${tableName.toLowerCase()}`;
+        search.setAttribute("aria-label", `Search ${tableName}`);
+        filter.setAttribute("aria-label", `Filter ${tableName} by ${filterLabel}`);
+        filter.options[0].textContent = `All ${filterLabel.toLowerCase()}`;
+
+        const filterValues = new Set();
+        rows.forEach((row) => {
+          row.dataset.searchText = row.textContent.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+          const cell = row.cells[filterColumn];
+          if (cell) {
+            const value = cell.textContent.replace(/\s+/g, " ").trim();
+            if (value) filterValues.add(value);
+          }
+        });
+        Array.from(filterValues).sort((a, b) => a.localeCompare(b)).forEach((value) => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          filter.appendChild(option);
+        });
+
+        let pagination = root.querySelector("nav [data-pagination-status]")?.closest("nav");
+        if (!pagination) {
+          pagination = document.createElement("nav");
+          pagination.className = "mt-4 flex flex-wrap items-center justify-between gap-3";
+          pagination.setAttribute("aria-label", `${tableName} pagination`);
+          pagination.innerHTML = `
+            <p class="text-sm font-semibold text-sand-700" data-pagination-status></p>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" data-pagination-previous class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-800 transition hover:bg-sand-50 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+              <div class="flex flex-wrap items-center gap-1" data-pagination-pages></div>
+              <button type="button" data-pagination-next class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-800 transition hover:bg-sand-50 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+            </div>
+          `;
+          root.appendChild(pagination);
+        }
+
+        const previous = pagination.querySelector("[data-pagination-previous]");
+        const next = pagination.querySelector("[data-pagination-next]");
+        const pages = pagination.querySelector("[data-pagination-pages]");
+        const status = pagination.querySelector("[data-pagination-status]");
+        let currentPage = 1;
+
+        const render = () => {
+          const query = search.value.trim().toLocaleLowerCase();
+          const selectedFilter = filter.value;
+          const filteredRows = rows.filter((row) => {
+            const matchesSearch = !query || row.dataset.searchText.includes(query);
+            const cell = row.cells[filterColumn];
+            const cellValue = cell ? cell.textContent.replace(/\s+/g, " ").trim() : "";
+            return matchesSearch && (!selectedFilter || cellValue === selectedFilter);
+          });
+          const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+          currentPage = Math.min(currentPage, pageCount);
+          const first = (currentPage - 1) * pageSize;
+          const last = Math.min(first + pageSize, filteredRows.length);
+          const visibleRows = new Set(filteredRows.slice(first, last));
+          rows.forEach((row) => row.classList.toggle("hidden", !visibleRows.has(row)));
+          status.textContent = filteredRows.length
+            ? `Showing ${first + 1}-${last} of ${filteredRows.length}${filteredRows.length !== rows.length ? ` (${rows.length} total)` : ""}`
+            : `No matching rows (${rows.length} total)`;
+          previous.disabled = currentPage === 1 || !filteredRows.length;
+          next.disabled = currentPage === pageCount || !filteredRows.length;
+          pages.innerHTML = "";
+
+          for (let page = 1; page <= pageCount && filteredRows.length; page += 1) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = String(page);
+            button.setAttribute("aria-label", `Go to link page ${page}`);
+            button.setAttribute("aria-current", page === currentPage ? "page" : "false");
+            button.className = page === currentPage
+              ? "h-9 min-w-9 rounded-full bg-sand-600 px-3 text-sm font-bold text-sand-50"
+              : "h-9 min-w-9 rounded-full bg-sand-100 px-3 text-sm font-bold text-sand-700 transition hover:bg-sand-200";
+            button.addEventListener("click", () => {
+              currentPage = page;
+              render();
+            });
+            pages.appendChild(button);
+          }
+        };
+
+        previous.addEventListener("click", () => {
+          currentPage = Math.max(1, currentPage - 1);
+          render();
+        });
+        next.addEventListener("click", () => {
+          currentPage += 1;
+          render();
+        });
+        search.addEventListener("input", () => {
+          currentPage = 1;
+          render();
+        });
+        filter.addEventListener("change", () => {
+          currentPage = 1;
+          render();
+        });
+        render();
+      });
+    })();
+
+    (() => {
+      document.querySelectorAll("[data-schema-toggle]").forEach((button) => {
+        const content = document.getElementById(button.getAttribute("aria-controls"));
+        if (!content) return;
+        button.addEventListener("click", () => {
+          const expanded = button.getAttribute("aria-expanded") === "true";
+          button.setAttribute("aria-expanded", expanded ? "false" : "true");
+          button.textContent = expanded ? "Read more" : "Show less";
+          content.classList.toggle("hidden", expanded);
         });
       });
     })();

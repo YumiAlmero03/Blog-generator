@@ -1,0 +1,31 @@
+<details class="group mt-6 rounded-[22px] border border-sand-200 bg-sand-50" open>
+  <summary class="flex cursor-pointer items-center justify-between gap-3 p-5">
+    <h4 class="font-display text-2xl font-bold text-sand-950">Google issues</h4>
+  </summary>
+  <div class="grid gap-5 border-t border-sand-200 p-5">
+    {% for issue in page.google_issues|default([]) %}
+      <article class="min-w-0 rounded-2xl bg-white p-5">
+        <h5 class="text-lg font-bold text-sand-950">{{ issue.title }}</h5>
+        <p class="mt-2 font-bold text-sand-800">{{ issue.status }}</p>
+        <p class="mt-2 text-sm leading-6 text-sand-700">{{ issue.reason }}</p>
+        <p class="mt-3 text-sm leading-6 text-sand-700">{{ issue.meaning }}</p>
+        <dl class="mt-4 grid gap-3 md:grid-cols-2">
+          {% for item in issue.evidence %}
+            <div class="min-w-0 rounded-xl bg-sand-50 p-3"><dt class="text-sm font-bold text-sand-900">{{ item.label }}</dt><dd class="mt-1 break-words text-sm text-sand-700">{{ item.value }}</dd></div>
+          {% endfor %}
+        </dl>
+        <h6 class="mt-5 font-bold text-sand-900">What this check observed</h6>
+        <ul class="mt-2 list-disc space-y-2 pl-5 text-sm leading-6 text-sand-700">{% for text in issue.observations %}<li>{{ text }}</li>{% endfor %}</ul>
+        <p class="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-6 text-amber-800">{{ issue.limitations }}</p>
+        <h6 class="mt-5 font-bold text-sand-900">Possible reasons — investigate before concluding</h6>
+        <ul class="mt-2 list-disc space-y-2 pl-5 text-sm leading-6 text-sand-700">{% for text in issue.possible_causes %}<li>{{ text }}</li>{% endfor %}</ul>
+        <h6 class="mt-5 font-bold text-sand-900">How to investigate and fix</h6>
+        <ol class="mt-2 list-decimal space-y-2 pl-5 text-sm leading-6 text-sand-700">{% for text in issue.steps %}<li>{{ text }}</li>{% endfor %}</ol>
+        <div class="mt-4 flex flex-wrap gap-3 text-sm">{% for source in issue.sources %}<a href="{{ source.url }}" target="_blank" rel="noopener noreferrer" class="font-bold text-sand-700 underline">{{ source.title }}</a>{% endfor %}</div>
+      </article>
+    {% else %}
+      <p class="text-sm text-sand-700">This saved report predates Google issue checks. Run a new V2 check to generate this group.</p>
+    {% endfor %}
+    {% if result.google_issues_checked_at %}<p class="break-words text-xs text-sand-600">Report generated: {{ result.google_issues_checked_at }}. Google inspection reflects indexed data, not a live indexing decision.</p>{% endif %}
+  </div>
+</details>

@@ -19,7 +19,6 @@ from utils import extract_json_string
 FETCH_TIMEOUT = 12
 USER_AGENT = "AutoBlogGeneratorSeoChecker/1.0"
 COMMON_SITEMAP_PATHS = ("/sitemap.xml", "/sitemap_index.xml", "/sitemap-index.xml")
-LINK_HEALTH_CHECK_LIMIT = 50
 SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 UNVERIFIED_SSL_CONTEXT = ssl._create_unverified_context()
 
@@ -35,6 +34,23 @@ class FetchResult:
 
 
 class PageSeoParser(HTMLParser):
+    VOID_TAGS = {
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    }
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.title_parts = []
@@ -57,7 +73,8 @@ class PageSeoParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         attrs_dict = {name.lower(): (value or "") for name, value in attrs}
         tag = tag.lower()
-        self._tag_stack.append(tag)
+        if tag not in self.VOID_TAGS:
+            self._tag_stack.append(tag)
 
         if tag == "script" and "ld+json" in attrs_dict.get("type", "").lower():
             self._schema_script_stack.append([])
@@ -80,17 +97,35 @@ class PageSeoParser(HTMLParser):
             if "canonical" in rel_values:
                 self.canonical = attrs_dict.get("href", "").strip()
         elif tag == "img":
+            image_alt = attrs_dict.get("alt", "").strip()
+            image_id = attrs_dict.get("id", "").strip()
             self.images.append(
                 {
                     "src": attrs_dict.get("src", "").strip(),
-                    "alt": attrs_dict.get("alt", "").strip(),
-                    "has_alt": "alt" in attrs_dict and bool(attrs_dict.get("alt", "").strip()),
+                    "alt": image_alt,
+                    "has_alt": "alt" in attrs_dict and bool(image_alt),
                 }
             )
+            for link_index in self._open_link_indexes:
+                self.links[link_index]["is_image"] = True
+                if image_alt:
+                    self.links[link_index]["image_alts"].append(image_alt)
+                if image_id:
+                    self.links[link_index]["image_ids"].append(image_id)
         elif tag == "a":
             href = attrs_dict.get("href", "").strip()
             if href:
-                self.links.append({"href": href, "text": ""})
+                self.links.append(
+                    {
+                        "href": href,
+                        "id": attrs_dict.get("id", "").strip(),
+                        "text": "",
+                        "region": self._current_link_region(),
+                        "is_image": False,
+                        "image_alts": [],
+                        "image_ids": [],
+                    }
+                )
                 self._open_link_indexes.append(len(self.links) - 1)
         elif tag in self.headings:
             self._heading_stack.append({"tag": tag, "parts": []})
@@ -108,8 +143,9 @@ class PageSeoParser(HTMLParser):
 
         if tag in {"script", "style", "noscript", "svg"} and self._skip_depth > 0:
             self._skip_depth -= 1
-        if self._tag_stack:
-            self._tag_stack.pop()
+        if tag in self._tag_stack:
+            tag_index = len(self._tag_stack) - 1 - self._tag_stack[::-1].index(tag)
+            del self._tag_stack[tag_index:]
 
     def handle_data(self, data):
         if self._schema_script_stack:
@@ -148,8 +184,14 @@ class PageSeoParser(HTMLParser):
                     self.heading_sequence.append({"level": tag, "text": text})
                 return
 
+    def _current_link_region(self) -> str:
+        for tag in reversed(self._tag_stack):
+            if tag in {"header", "footer"}:
+                return tag
+        return "content"
 
-def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = False) -> dict:
+
+def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = False, use_ai: bool = True) -> dict:
     url = _normalize_url(raw_url)
     page = fetch_url(url, verify_ssl=verify_ssl, allow_private=allow_private)
     parser = PageSeoParser()
@@ -161,9 +203,14 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = F
     sitemap_result = _check_sitemaps(base_url, robots_result.get("text", ""), verify_ssl=page.ssl_verified, allow_private=allow_private)
     link_report = _build_link_report(parser.links, page.url, base_url, verify_ssl=page.ssl_verified, allow_private=allow_private)
     scrape_report = _build_scrape_report(parser, link_report)
+    social_preview = _build_social_preview(parser, page.url)
     checks = _build_checks(parser, page, sitemap_result, robots_result, link_report)
     score = _score_checks(checks)
-    ai_summary = _generate_ai_summary(parser, checks, score, page.url, scrape_report)
+    ai_summary = (
+        _generate_ai_summary(parser, checks, score, page.url, scrape_report)
+        if use_ai
+        else {"summary": "", "priority_actions": [], "source": "Disabled"}
+    )
 
     return {
         "url": page.url,
@@ -173,6 +220,7 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = F
         "grade": _grade(score),
         "checks": checks,
         "ai_summary": ai_summary,
+        "ai_enabled": bool(use_ai),
         "stats": {
             "title": parser.title,
             "title_length": len(parser.title),
@@ -186,6 +234,7 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = F
             "canonical": parser.canonical,
             "open_graph": parser.open_graph,
             "twitter_cards": parser.twitter_cards,
+            "social_preview": social_preview,
             "schemas": _schema_reports(parser.schema_scripts),
             "robots_found": robots_result.get("found", False),
             "robots_url": robots_result.get("url", ""),
@@ -386,9 +435,9 @@ def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict
         ),
         _check(
             "Meta description",
-            "pass" if 130 <= meta_length <= 160 else "fail" if not parser.meta_description else "warn",
+            "pass" if 120 <= meta_length <= 160 else "fail" if not parser.meta_description else "warn",
             f"{meta_length} characters" if parser.meta_description else "Missing meta description",
-            "Write one useful search snippet around 130-160 characters.",
+            "Write one useful search snippet around 120-160 characters.",
             16,
         ),
         _check(
@@ -502,6 +551,47 @@ def _word_count(text: str) -> int:
     return len(re.findall(r"\b[\w'-]+\b", text or ""))
 
 
+def _build_social_preview(parser: PageSeoParser, page_url: str) -> dict:
+    open_graph = parser.open_graph
+    twitter = parser.twitter_cards
+    parsed_page = urlparse(page_url)
+    domain = parsed_page.netloc or page_url
+
+    facebook_url = open_graph.get("og:url", "").strip() or page_url
+    facebook_image = open_graph.get("og:image", "").strip()
+    twitter_image = (
+        twitter.get("twitter:image", "").strip()
+        or twitter.get("twitter:image:src", "").strip()
+        or facebook_image
+    )
+
+    return {
+        "google": {
+            "url": page_url,
+            "domain": domain,
+            "title": parser.title or page_url,
+            "description": parser.meta_description or "No meta description was found for this page.",
+        },
+        "facebook": {
+            "url": facebook_url,
+            "domain": urlparse(facebook_url).netloc or domain,
+            "site_name": open_graph.get("og:site_name", "").strip() or domain,
+            "title": open_graph.get("og:title", "").strip() or parser.title or page_url,
+            "description": open_graph.get("og:description", "").strip() or parser.meta_description,
+            "image": urljoin(page_url, facebook_image) if facebook_image else "",
+        },
+        "twitter": {
+            "url": page_url,
+            "domain": domain,
+            "site": twitter.get("twitter:site", "").strip(),
+            "card": twitter.get("twitter:card", "").strip() or "summary",
+            "title": twitter.get("twitter:title", "").strip() or open_graph.get("og:title", "").strip() or parser.title or page_url,
+            "description": twitter.get("twitter:description", "").strip() or open_graph.get("og:description", "").strip() or parser.meta_description,
+            "image": urljoin(page_url, twitter_image) if twitter_image else "",
+        },
+    }
+
+
 def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bool = True, allow_private: bool = False) -> dict:
     parsed_base = urlparse(base_url)
     normalized_links = []
@@ -509,9 +599,27 @@ def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bo
         if isinstance(link, dict):
             href = link.get("href", "")
             anchor_text = " ".join(str(link.get("text", "")).split()).strip()
+            element_id = " ".join(str(link.get("id", "")).split()).strip()
+            region = (link.get("region", "") or "content").strip()
+            is_image = bool(link.get("is_image"))
+            image_alts = [
+                " ".join(str(alt).split()).strip()
+                for alt in link.get("image_alts", []) or []
+                if " ".join(str(alt).split()).strip()
+            ]
+            image_ids = [
+                " ".join(str(image_id).split()).strip()
+                for image_id in link.get("image_ids", []) or []
+                if " ".join(str(image_id).split()).strip()
+            ]
         else:
             href = link
             anchor_text = ""
+            element_id = ""
+            region = "content"
+            is_image = False
+            image_alts = []
+            image_ids = []
         cleaned = (href or "").strip()
         if not cleaned or cleaned.startswith(("#", "mailto:", "tel:", "javascript:")):
             continue
@@ -520,18 +628,33 @@ def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bo
         if parsed_link.scheme not in {"http", "https"} or not parsed_link.netloc:
             continue
         link_type = "internal" if parsed_link.netloc == parsed_base.netloc else "external"
-        normalized_links.append({"url": absolute_url, "text": anchor_text, "type": link_type})
+        normalized_links.append(
+            {
+                "url": absolute_url,
+                "text": anchor_text,
+                "id": element_id,
+                "type": link_type,
+                "region": region,
+                "is_image": is_image,
+                "image_alt": "; ".join(dict.fromkeys(image_alts)),
+                "image_id": "; ".join(dict.fromkeys(image_ids)),
+            }
+        )
 
     sample_checks = []
     seen = set()
-    for item in normalized_links:
+    health_links = [item for item in normalized_links if item.get("region") not in {"header", "footer"}]
+    for item in health_links:
         if item["url"] in seen:
             continue
         seen.add(item["url"])
-        if len(sample_checks) >= LINK_HEALTH_CHECK_LIMIT:
-            break
         checked_link = _check_link_url(item["url"], item["type"], verify_ssl=verify_ssl, allow_private=allow_private)
         checked_link["text"] = item.get("text", "")
+        checked_link["id"] = item.get("id", "")
+        checked_link["region"] = item.get("region", "content")
+        checked_link["is_image"] = item.get("is_image", False)
+        checked_link["image_alt"] = item.get("image_alt", "")
+        checked_link["image_id"] = item.get("image_id", "")
         sample_checks.append(checked_link)
     not_found_links = [item for item in sample_checks if item.get("status_code") == 404]
     broken_links = [item for item in sample_checks if item.get("status") == "broken" and item.get("status_code") != 404]
@@ -542,6 +665,9 @@ def _build_link_report(links: list, page_url: str, base_url: str, verify_ssl: bo
         "total_count": len(normalized_links),
         "internal_count": sum(1 for item in normalized_links if item["type"] == "internal"),
         "external_count": sum(1 for item in normalized_links if item["type"] == "external"),
+        "health_total_count": len(health_links),
+        "header_footer_count": sum(1 for item in normalized_links if item.get("region") in {"header", "footer"}),
+        "header_footer_links": [item for item in normalized_links if item.get("region") in {"header", "footer"}],
         "items": normalized_links,
         "sample_checks": sample_checks,
         "broken_sample_count": sum(1 for item in sample_checks if item["status"] in {"broken", "unreachable"}),
@@ -589,18 +715,21 @@ def _build_scrape_report(parser: PageSeoParser, link_report: dict) -> dict:
 
 def _schema_reports(schema_scripts: list[str]) -> list[dict]:
     reports = []
-    for index, raw_schema in enumerate(schema_scripts[:20], start=1):
+    for index, raw_schema in enumerate(schema_scripts, start=1):
         raw = raw_schema or ""
         try:
             parsed = json.loads(raw)
             schema_types = _schema_types(parsed)
+            content = json.dumps(parsed, indent=2, ensure_ascii=False)
             reports.append(
                 {
                     "index": index,
                     "valid": True,
                     "type": ", ".join(schema_types) or "Unknown",
                     "error": "",
-                    "preview": _truncate_schema_preview(raw),
+                    "preview": _truncate_schema_preview(content),
+                    "content": content,
+                    "hierarchy": _schema_hierarchy_rows(parsed),
                 }
             )
         except Exception as exc:
@@ -611,9 +740,65 @@ def _schema_reports(schema_scripts: list[str]) -> list[dict]:
                     "type": "Invalid JSON-LD",
                     "error": str(exc),
                     "preview": _truncate_schema_preview(raw),
+                    "content": raw,
+                    "hierarchy": [],
                 }
             )
     return reports
+
+
+def _schema_hierarchy_rows(value) -> list[dict]:
+    rows = []
+
+    def add_row(key, item, depth):
+        text = _schema_scalar_text(item)
+        rows.append(
+            {
+                "key": str(key),
+                "value": text,
+                "depth": min(depth, 8),
+                "is_url": text.startswith(("http://", "https://")),
+            }
+        )
+
+    def visit(item, depth=0):
+        if isinstance(item, dict):
+            for key, child in item.items():
+                if isinstance(child, dict):
+                    add_row(key, "", depth)
+                    visit(child, depth + 1)
+                elif isinstance(child, list):
+                    if key == "@graph":
+                        for graph_item in child:
+                            visit(graph_item, depth)
+                        continue
+                    add_row(key, "", depth)
+                    for index, list_item in enumerate(child):
+                        if isinstance(list_item, (dict, list)):
+                            visit(list_item, depth + 1)
+                        else:
+                            add_row(index, list_item, depth + 1)
+                else:
+                    add_row(key, child, depth)
+        elif isinstance(item, list):
+            for index, child in enumerate(item):
+                if isinstance(child, (dict, list)):
+                    visit(child, depth)
+                else:
+                    add_row(index, child, depth)
+        else:
+            add_row("value", item, depth)
+
+    visit(value)
+    return rows
+
+
+def _schema_scalar_text(value) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
 
 
 def _schema_types(value) -> list[str]:

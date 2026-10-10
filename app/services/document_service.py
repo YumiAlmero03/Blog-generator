@@ -576,6 +576,7 @@ def build_seo_checker_report_response(result: dict):
         _add_seo_page_scores(doc, result.get("pages", []))
         _add_seo_link_health(doc, result.get("link_health_details", {}) or {})
         _add_seo_page_issues(doc, result.get("pages", []))
+        _add_seo_complete_site_documentation(doc, result)
     else:
         doc.add_heading("Summary Dashboard", level=2)
         stats = result.get("stats", {}) or {}
@@ -802,6 +803,207 @@ def _add_seo_page_issues(doc: Document, pages: list[dict]) -> None:
     if rows:
         doc.add_heading("Warnings And Fix Items", level=2)
         _add_simple_table(doc, ("Page", "Check", "Status", "Detail", "Recommendation"), rows)
+
+
+def _add_seo_complete_site_documentation(doc: Document, result: dict) -> None:
+    doc.add_heading("Complete Audit Documentation", level=1)
+
+    navigation_rows = []
+    for link in (result.get("header_footer_link_details", {}) or {}).get("rows", []) or []:
+        anchor = link.get("anchor_text", "") or link.get("image_alt", "") or "No anchor text"
+        if link.get("is_image"):
+            anchor = f"Image - Alt: {link.get('image_alt', '') or 'Missing alt text'}"
+        navigation_rows.append(
+            (
+                anchor,
+                link.get("element_id", "") or link.get("image_id", ""),
+                link.get("url", ""),
+                str(link.get("region", "")).title(),
+                link.get("source_page", ""),
+            )
+        )
+    doc.add_heading("Header And Footer Links", level=2)
+    if navigation_rows:
+        _add_simple_table(doc, ("Anchor", "ID", "URL", "Region", "Found On Page"), navigation_rows)
+    else:
+        doc.add_paragraph("No header or footer links were recorded.")
+
+    doc.add_heading("Page-By-Page Documentation", level=2)
+    for index, page in enumerate(result.get("pages", []) or [], start=1):
+        page_url = page.get("url", "")
+        page_label = page.get("tab_label", "") or page_url or f"Page {index}"
+        doc.add_heading(f"Page {index}: {page_label}", level=3)
+        _add_label_value(doc, "URL", page_url)
+        if page.get("status") != "checked" or not page.get("result"):
+            _add_label_value(doc, "Audit Error", page.get("error", "") or "Could not check this page.")
+            continue
+
+        audit = page.get("result", {}) or {}
+        stats = audit.get("stats", {}) or {}
+        links = stats.get("links", {}) or {}
+        _add_simple_table(
+            doc,
+            ("Page Metric", "Value"),
+            [
+                ("HTTP Status", audit.get("status_code", "")),
+                ("Content Type", audit.get("content_type", "")),
+                ("Grade", audit.get("grade", "")),
+                ("Score", f"{audit.get('score', 0)}/100"),
+                ("Title", stats.get("title", "") or "Missing"),
+                ("Title Length", stats.get("title_length", 0)),
+                ("Meta Description", stats.get("meta_description", "") or "Missing"),
+                ("Meta Description Length", stats.get("meta_description_length", 0)),
+                ("Canonical", stats.get("canonical", "") or "Missing"),
+                ("Word Count", stats.get("word_count", 0)),
+                ("Images", stats.get("image_count", 0)),
+                ("Missing Alt Text", stats.get("missing_alt_count", 0)),
+                ("H1 Count", stats.get("h1_count", 0)),
+                ("H2 Count", stats.get("h2_count", 0)),
+                ("Internal Links", links.get("internal_count", 0)),
+                ("External Links", links.get("external_count", 0)),
+                ("Robots.txt", f"{stats.get('robots_url', '')} - HTTP {stats.get('robots_status_code') or 'n/a'}"),
+                ("SSL Verified", "Yes" if stats.get("ssl_verified", True) else "No"),
+                ("SSL Warning", stats.get("ssl_warning", "")),
+            ],
+        )
+
+        ai_summary = audit.get("ai_summary", {}) or {}
+        if ai_summary.get("summary") or ai_summary.get("priority_actions"):
+            doc.add_heading("Audit Summary", level=4)
+            if ai_summary.get("summary"):
+                doc.add_paragraph(str(ai_summary.get("summary", "")))
+            for action in ai_summary.get("priority_actions", []) or []:
+                doc.add_paragraph(str(action), style="List Bullet")
+
+        checks = audit.get("checks", []) or []
+        if checks:
+            doc.add_heading("Audit Checks", level=4)
+            _add_simple_table(
+                doc,
+                ("Check", "Status", "Detail", "Recommendation"),
+                [
+                    (
+                        check.get("name", ""),
+                        str(check.get("status", "")).title(),
+                        check.get("detail", ""),
+                        check.get("recommendation", ""),
+                    )
+                    for check in checks
+                ],
+            )
+
+        headings = stats.get("heading_sequence", []) or []
+        doc.add_heading("Headings Hierarchy", level=4)
+        if headings:
+            _add_simple_table(
+                doc,
+                ("Level", "Heading Text"),
+                [(str(heading.get("level", "")).upper(), heading.get("text", "")) for heading in headings],
+            )
+        else:
+            doc.add_paragraph("No H1-H6 headings were found.")
+
+        sitemaps = stats.get("sitemaps", []) or []
+        doc.add_heading("Sitemap Checks", level=4)
+        if sitemaps:
+            _add_simple_table(
+                doc,
+                ("Sitemap URL", "Found", "HTTP"),
+                [
+                    (
+                        sitemap.get("url", ""),
+                        "Yes" if sitemap.get("found") else "No",
+                        sitemap.get("status_code") or "n/a",
+                    )
+                    for sitemap in sitemaps
+                ],
+            )
+        else:
+            doc.add_paragraph("No sitemap checks were recorded.")
+
+        images = (stats.get("scrape_report", {}) or {}).get("images", []) or []
+        doc.add_heading("Image Alt Inventory", level=4)
+        if images:
+            _add_simple_table(
+                doc,
+                ("Image Source", "Alt Text", "Has Alt"),
+                [
+                    (
+                        image.get("src", ""),
+                        image.get("alt", "") or "Missing",
+                        "Yes" if image.get("has_alt") else "No",
+                    )
+                    for image in images
+                ],
+            )
+        else:
+            doc.add_paragraph("No image inventory was recorded.")
+
+        doc.add_heading("Social Metadata", level=4)
+        social_rows = [
+            ("Open Graph", key, value)
+            for key, value in (stats.get("open_graph", {}) or {}).items()
+        ] + [
+            ("Twitter", key, value)
+            for key, value in (stats.get("twitter_cards", {}) or {}).items()
+        ]
+        if social_rows:
+            _add_simple_table(doc, ("Platform", "Property", "Value"), social_rows)
+        else:
+            doc.add_paragraph("No Open Graph or Twitter Card metadata was found.")
+
+        doc.add_heading("Complete Link Health", level=4)
+        checked_links = links.get("sample_checks", []) or []
+        if checked_links:
+            _add_simple_table(
+                doc,
+                ("Anchor", "ID", "URL", "Final URL", "HTTP", "Status"),
+                [
+                    (
+                        link.get("text", "") or link.get("image_alt", "") or "No anchor text",
+                        link.get("id", "") or link.get("image_id", ""),
+                        link.get("url", ""),
+                        link.get("final_url", ""),
+                        link.get("status_code") or "n/a",
+                        "Redirect" if link.get("redirected") else str(link.get("status", "")).title(),
+                    )
+                    for link in checked_links
+                ],
+            )
+        else:
+            doc.add_paragraph("No content links were checked on this page.")
+
+        doc.add_heading("Complete Schema", level=4)
+        schemas = stats.get("schemas", []) or []
+        if schemas:
+            for schema_index, schema in enumerate(schemas, start=1):
+                status = "Valid" if schema.get("valid") else "Invalid"
+                doc.add_heading(f"Schema {schema_index}: {schema.get('type', 'Unknown')} ({status})", level=5)
+                if schema.get("error"):
+                    _add_label_value(doc, "Error", schema.get("error", ""))
+                doc.add_paragraph(schema.get("content", "") or schema.get("preview", ""))
+        else:
+            doc.add_paragraph("No JSON-LD schema blocks were found on this page.")
+
+    doc.add_heading("All 404 Links", level=2)
+    not_found_links = (result.get("link_health_details", {}) or {}).get("not_found_links", []) or []
+    if not_found_links:
+        _add_simple_table(
+            doc,
+            ("Found On Page", "Anchor", "ID", "404 URL", "HTTP"),
+            [
+                (
+                    link.get("source_page", ""),
+                    link.get("text", "") or link.get("image_alt", "") or "No anchor text",
+                    link.get("id", "") or link.get("image_id", ""),
+                    link.get("url", ""),
+                    link.get("status_code") or 404,
+                )
+                for link in not_found_links
+            ],
+        )
+    else:
+        doc.add_paragraph("No 404 links were found outside the header and footer.")
 
 
 def _add_seo_checks(doc: Document, checks: list[dict]) -> None:

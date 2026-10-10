@@ -875,9 +875,9 @@ def _neutral_validator_checks(state: dict, report: dict) -> list[dict]:
         ),
         _validator_check(
             "Neutral meta",
-            "pass" if 120 <= len(meta_description) <= 140 else "fail",
+            "pass" if 120 <= len(meta_description) <= 160 else "fail",
             f"{len(meta_description)} characters",
-            "Keep the generated meta description between 120 and 140 characters.",
+            "Keep the generated meta description between 120 and 160 characters.",
         ),
         _validator_check(
             "Neutral tags",

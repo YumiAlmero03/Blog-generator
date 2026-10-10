@@ -10,8 +10,45 @@
     statusText.textContent = message;
   }
 
+  function updateCounters() {
+    const text = textInput.value;
+    
+    // Character count (with spaces)
+    const charCount = text.length;
+    
+    // Character count (without spaces)
+    const charCountNoSpaces = text.replace(/\s/g, '').length;
+    
+    // Word count
+    const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+    const wordCount = text.trim().length === 0 ? 0 : words.length;
+    
+    // Sentence count
+    const sentences = text.trim().split(/[.!?]+/).filter(sentence => sentence.trim().length > 0);
+    const sentenceCount = text.trim().length === 0 ? 0 : sentences.length;
+    
+    // Paragraph count
+    const paragraphs = text.trim().split(/\n\n+/).filter(para => para.trim().length > 0);
+    const paragraphCount = text.trim().length === 0 ? 0 : paragraphs.length;
+    
+    // Update the display
+    document.getElementById("charCount").textContent = charCount.toLocaleString();
+    document.getElementById("charCountNoSpaces").textContent = charCountNoSpaces.toLocaleString();
+    document.getElementById("wordCount").textContent = wordCount.toLocaleString();
+    document.getElementById("sentenceCount").textContent = sentenceCount.toLocaleString();
+    document.getElementById("paragraphCount").textContent = paragraphCount.toLocaleString();
+  }
+
+  // Update counters on input
+  textInput.addEventListener("input", updateCounters);
+  textInput.addEventListener("change", updateCounters);
+  
+  // Initial count
+  updateCounters();
+
   function applyTransform(transformer, message) {
     textInput.value = transformer(textInput.value);
+    updateCounters();
     setStatus(message);
     textInput.focus();
   }

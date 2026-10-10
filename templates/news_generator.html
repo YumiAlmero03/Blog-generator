@@ -128,7 +128,8 @@
 
     {% if titles %}
       <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-        <form method="post" id="contentForm" data-loading-message="Generating news pieces..." data-inline-loading data-inline-status-target="#newsGenerationStatus" data-inline-error-target="#newsGenerationError" data-inline-actions-target="#newsGenerationActions" data-background-submit class="grid gap-6">
+        <form method="post" id="contentForm" data-post-generator="news" data-loading-message="Generating news pieces..." data-inline-loading data-inline-status-target="#newsGenerationStatus" data-inline-error-target="#newsGenerationError" data-inline-actions-target="#newsGenerationActions" data-background-submit class="grid gap-6">
+          {% include "_post_fields.html" %}
           <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -240,19 +241,6 @@
                 <span class="rounded-full bg-moss-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-moss-700">{{ meta_descriptions|length }} Options</span>
               </div>
               <ul class="grid gap-3">
-                <li>
-                  <label for="meta_none" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
-                    <input
-                      type="radio"
-                      id="meta_none"
-                      name="meta_description_choice"
-                      value=""
-                      class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500"
-                      {% if not meta_description %}checked{% endif %}
-                    />
-                    <span class="block text-sm font-semibold leading-6 text-sand-900">No meta description</span>
-                  </label>
-                </li>
                 {% for meta_desc in meta_descriptions %}
                   <li>
                     <label for="meta_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">

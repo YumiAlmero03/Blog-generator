@@ -57,6 +57,10 @@
         <label for="supporting_keywords" class="mb-2 block text-sm font-bold text-sand-900">Supporting keywords</label>
         <textarea id="supporting_keywords" name="supporting_keywords" placeholder="e.g. 24/7 plumbing, drain cleaning, leak repair, licensed plumber" class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ supporting_keywords }}</textarea>
 
+        <label for="reference_url" class="mb-2 block text-sm font-bold text-sand-900">Reference URL (optional)</label>
+        <input id="reference_url" name="reference_url" type="url" value="{{ reference_url }}" placeholder="https://example.com/page" aria-describedby="referenceUrlHelp" class="mb-2 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        <p id="referenceUrlHelp" class="mb-4 text-xs leading-5 text-sand-600">The AI uses readable text from this page as reference data. Use a public page that does not require a login.</p>
+
         <label for="expectations" class="mb-2 block text-sm font-bold text-sand-900">What to expect in the page</label>
         <textarea id="expectations" name="expectations" placeholder="e.g. hero section, benefits, pricing overview, service areas, FAQs, trust signals, strong call to action" class="mb-5 min-h-[130px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ expectations }}</textarea>
 
@@ -217,6 +221,7 @@
       {% endif %}
       <form id="savePageForm" method="post" class="hidden-form" aria-hidden="true">
         <input type="hidden" name="action" value="save_generated_blog" />
+        <input type="hidden" name="reference_url" value="{{ reference_url }}" />
         <input type="hidden" name="history_id" value="{{ history_id }}" />
         <input type="hidden" name="brand" value="{{ brand }}" />
         <input type="hidden" name="language" value="{{ language }}" />

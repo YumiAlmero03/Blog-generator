@@ -70,11 +70,11 @@ def test_upsert_website_index_urls_saves_and_updates_keywords():
             connection.execute("DELETE FROM website_index_urls WHERE url = ?", (url,))
 
 
-def test_due_website_index_urls_use_30_minute_window():
-    fresh_url = "https://website-index-test.example/fresh-30-minute"
-    due_url = "https://website-index-test.example/due-30-minute"
-    fresh_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=29)).isoformat(timespec="seconds")
-    due_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=31)).isoformat(timespec="seconds")
+def test_due_website_index_urls_use_10_minute_window():
+    fresh_url = "https://website-index-test.example/fresh-10-minute"
+    due_url = "https://website-index-test.example/due-10-minute"
+    fresh_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=9)).isoformat(timespec="seconds")
+    due_checked_at = (datetime.now(timezone.utc) - timedelta(minutes=11)).isoformat(timespec="seconds")
 
     try:
         upsert_website_index_urls([fresh_url, due_url])

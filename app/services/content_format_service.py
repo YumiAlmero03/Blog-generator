@@ -41,8 +41,32 @@ def markdown_to_html(markdown: str) -> str:
             blocks.append(f"<blockquote>{_inline_markdown_to_html(text)}</blockquote>")
             quote_lines = []
 
-    for raw_line in lines:
+    def table_cells(line):
+        return [cell.strip().replace(r"\|", "|") for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+
+    index = 0
+    while index < len(lines):
+        raw_line = lines[index]
+        index += 1
         line = raw_line.strip()
+        if "|" in line and index < len(lines):
+            headers = table_cells(line)
+            separators = table_cells(lines[index])
+            if len(headers) == len(separators) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in separators):
+                flush_paragraph()
+                flush_list()
+                flush_quote()
+                index += 1
+                rows = []
+                while index < len(lines) and "|" in lines[index] and lines[index].strip():
+                    cells = table_cells(lines[index])
+                    if len(cells) != len(headers):
+                        break
+                    rows.append("<tr>" + "".join(f"<td>{_inline_markdown_to_html(cell)}</td>" for cell in cells) + "</tr>")
+                    index += 1
+                head = "".join(f'<th scope="col">{_inline_markdown_to_html(cell)}</th>' for cell in headers)
+                blocks.append("<table><thead><tr>" + head + "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>")
+                continue
         if not line:
             flush_paragraph()
             flush_list()
@@ -85,6 +109,7 @@ def markdown_to_html(markdown: str) -> str:
 
 def html_to_gutenberg(html_content: str) -> str:
     output = html_content or ""
+    output = re.sub(r"<table\b[^>]*>.*?</table>", lambda match: '<!-- wp:table --><figure class="wp-block-table">' + match.group(0) + '</figure><!-- /wp:table -->', output, flags=re.IGNORECASE | re.DOTALL)
     output = re.sub(r"<p\b([^>]*)>(.*?)</p>", r"<!-- wp:paragraph --><p\1>\2</p><!-- /wp:paragraph -->", output, flags=re.IGNORECASE | re.DOTALL)
     output = re.sub(r"<h2\b([^>]*)>(.*?)</h2>", r"<!-- wp:heading --><h2\1>\2</h2><!-- /wp:heading -->", output, flags=re.IGNORECASE | re.DOTALL)
     output = re.sub(r"<h3\b([^>]*)>(.*?)</h3>", r"<!-- wp:heading {\"level\":3} --><h3\1>\2</h3><!-- /wp:heading -->", output, flags=re.IGNORECASE | re.DOTALL)

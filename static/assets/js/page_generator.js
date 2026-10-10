@@ -38,7 +38,7 @@
     if (!generatorForm || !saveForm) {
       return;
     }
-    ["history_id", "brand", "language", "keyword", "supporting_keywords", "expectations", "image_count"].forEach(function (name) {
+    ["history_id", "brand", "language", "keyword", "supporting_keywords", "expectations", "reference_url", "image_count"].forEach(function (name) {
       const source = generatorForm.querySelector("[name='" + name + "']");
       const target = saveForm.querySelector("[name='" + name + "']");
       if (source && target) {

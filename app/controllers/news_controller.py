@@ -3,6 +3,7 @@ import re
 
 from flask import render_template, request
 
+from app.services.post_export_service import CATEGORIES, normalize_category, resolved_category, suggest_category
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
@@ -156,7 +157,11 @@ def news_generator():
     if request.method == "GET" and edit_history_id.isdigit():
         _load_history_item(state, int(edit_history_id))
 
+    state["category"] = state.get("category", "Auto")
+    state["generator"] = "news"
+    state["post_categories"] = CATEGORIES
     if request.method == "POST":
+        state["category"] = normalize_category(request.form.get("category", "Auto"))
         action = request.form.get("action", "").strip()
         if action == "generate_titles":
             _handle_generate_titles(state)
@@ -171,6 +176,7 @@ def news_generator():
     state["target_countries"] = country_options(state["target_country"])
     state["reference_fetch_summary"] = _reference_fetch_summary(state.get("reference_fetches", []))
     state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
+    state["suggested_category"] = suggest_category(state)
     return render_template("news_generator.html", **base_template_context(), **state)
 
 
@@ -519,6 +525,10 @@ def _handle_save_generated_news(state: dict) -> None:
         state["error"] = "There is no generated news content to save."
         return
 
+    if not state["meta_description"] or not state.get("category", "General"):
+        state["error"] = "Please select a meta description and category before saving."
+        return
+
     min_words, max_words = get_blog_word_limits()
     _record_completed_news(state, min_words, max_words)
     state["success"] = "Generated news article saved to history."
@@ -532,6 +542,7 @@ def _load_history_item(state: dict, history_id: int) -> None:
     prompt_inputs = _loads(item.get("prompt_inputs", "{}"))
     if not prompt_inputs.get("news_generator"):
         return
+    state["category"] = "Auto" if prompt_inputs.get("category_mode") == "auto" else (normalize_category(prompt_inputs.get("category", "Auto")) or "Auto")
     state["history_id"] = str(item.get("id", ""))
     state["brand"] = item.get("brand_name", "") or ""
     state["keyword"] = item.get("primary_keyword", "") or ""
@@ -625,6 +636,8 @@ def _record_completed_news(state: dict, min_words: int, max_words: int) -> None:
         meta_description=state["meta_description"],
         tags=state["tag_suggestions"],
         prompt_inputs={
+            "category": resolved_category({**state, "category": state.get("category", "Auto"), "generator": "news"}),
+            "category_mode": "auto" if state.get("category", "Auto") == "Auto" else "manual",
             "tone": state["tone"],
             "language": state["language"],
             "focus_keyword": state["focus_keyword"],

@@ -86,7 +86,7 @@ Brand: {brand}
 {banned_words_section}
 
 Rules:
-- Each meta description must be between 120 and 140 characters long.
+- Each meta description must be between 120 and 160 characters long.
 - Count characters carefully before finishing.
 - Include the main keyword naturally.
 - Make it compelling and encourage clicks.
@@ -97,7 +97,7 @@ Rules:
 - If a brand is provided, align the wording with the brand and mention the brand only if it fits naturally.
 - Vary the approach for each variant.
 - Do not add any extra text before or after the JSON.
-- Ensure each meta description is complete, natural, and within the 130-160 character limit.
+- Ensure each meta description is complete, natural, and within the 120-160 character limit.
 - Start your response with '{' and end with '}'
 
 Return valid JSON only in this format:
@@ -238,6 +238,8 @@ Rules:
 - Write the content value in Markdown source, not HTML.
 - Use Markdown headings like ## and ###.
 - Use Markdown lists where helpful.
+- Include a concise table only when comparisons, specifications, timelines, or structured facts are clearer in a table. Otherwise omit tables.
+- Use Markdown pipe tables with a header and separator row; the app converts them to HTML tables for viewing and copying. Keep cells short and use only supported facts; never invent data to fill a table.
 - If a brand is provided, reflect the brand voice, positioning, and audience naturally throughout the article.
 - If brand database context is provided, avoid repeating existing keyword angles and keep the content aligned with current brand pages.
 - You may include relevant reference links only if they fit naturally in the article.

@@ -20,6 +20,8 @@ from app.services.generation_log_service import append_generation_log, generatio
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_page_word_limits
+from app.services.page_reference_service import build_page_reference_context
+from app.services.page_layout_service import group_page_html
 
 
 def page_generator():
@@ -30,6 +32,7 @@ def page_generator():
         "supporting_keywords": "",
         "page_type": "",
         "expectations": "",
+        "reference_url": "",
         "page_title": "",
         "change_request": "",
         "meta_description": "",
@@ -63,6 +66,7 @@ def page_generator():
         state["supporting_keywords"] = request.form.get("supporting_keywords", "").strip()
         state["page_type"] = state["keyword"]
         state["expectations"] = request.form.get("expectations", "").strip()
+        state["reference_url"] = request.form.get("reference_url", "").strip()
         state["change_request"] = request.form.get("change_request", "").strip()
         state["regenerate_scope"] = request.form.get("regenerate_scope", "full").strip() or "full"
         state["page_title"] = request.form.get("page_title", "").strip()
@@ -91,6 +95,12 @@ def page_generator():
                 brand_context = get_brand_context(state["brand"])
                 progress = _progress_callback("Page", generation_token, state["generation_log"])
                 progress("Generation started.")
+                reference_context = ""
+                if state["reference_url"]:
+                    progress("Reading reference page...")
+                    reference_context = build_page_reference_context(state["reference_url"])
+                    progress("Reference page read. Using its data for generation.")
+                generation_expectations = "\n\n".join(filter(None, [state["expectations"], reference_context]))
                 is_minor_revision = bool(state["page_content"] and state["change_request"])
                 if action == "generate_page_section":
                     if not state["page_content"]:
@@ -108,7 +118,7 @@ def page_generator():
                             brand=state["brand"],
                             supporting_keywords=state["supporting_keywords"],
                             page_type=state["page_type"],
-                            expectations=state["expectations"],
+                            expectations=generation_expectations,
                             brand_context=brand_context,
                             language=state["language"],
                             progress_callback=progress,
@@ -123,7 +133,7 @@ def page_generator():
                         provider,
                         title=state["page_title"] or state["keyword"],
                         existing_content=state["page_content"],
-                        change_request=state["change_request"],
+                        change_request="\n\n".join(filter(None, [state["change_request"], reference_context])),
                         scope=state["regenerate_scope"],
                         output_format="html",
                         keyword=state["keyword"],
@@ -131,6 +141,7 @@ def page_generator():
                         language=state["language"],
                         progress_callback=progress,
                     )
+                    state["page_content"] = group_page_html(state["page_content"])
                     progress("Generation complete.")
                     _record_completed_page(state, min_words, max_words)
                 elif action == "generate_page_all":
@@ -141,7 +152,7 @@ def page_generator():
                         brand=state["brand"],
                         supporting_keywords=state["supporting_keywords"],
                         page_type=state["page_type"],
-                        expectations=state["expectations"],
+                        expectations=generation_expectations,
                         brand_context=brand_context,
                         language=state["language"],
                         progress_callback=progress,
@@ -155,7 +166,7 @@ def page_generator():
                         brand=state["brand"],
                         supporting_keywords=state["supporting_keywords"],
                         page_type=state["page_type"],
-                        expectations=state["expectations"],
+                        expectations=generation_expectations,
                         brand_context=brand_context,
                         language=state["language"],
                         progress_callback=progress,
@@ -170,7 +181,7 @@ def page_generator():
                         brand=state["brand"],
                         supporting_keywords=state["supporting_keywords"],
                         page_type=state["page_type"],
-                        expectations=state["expectations"],
+                        expectations=generation_expectations,
                         brand_context=brand_context,
                         change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
                         min_words=min_words,
@@ -180,6 +191,7 @@ def page_generator():
                     )
                     state["page_content"] = result.get("content", "")
                     state["image_count"] = result.get("image_count", 0)
+                    state["page_content"] = group_page_html(state["page_content"])
                     progress("Generation complete.")
                     _record_completed_page(state, min_words, max_words)
                 elif action == "generate_page_meta" and not state["page_title"]:
@@ -196,7 +208,7 @@ def page_generator():
                         brand=state["brand"],
                         supporting_keywords=state["supporting_keywords"],
                         page_type=state["page_type"],
-                        expectations=state["expectations"],
+                        expectations=generation_expectations,
                         brand_context=brand_context,
                         language=state["language"],
                         progress_callback=progress,
@@ -210,7 +222,7 @@ def page_generator():
                         brand=state["brand"],
                         supporting_keywords=state["supporting_keywords"],
                         page_type=state["page_type"],
-                        expectations=state["expectations"],
+                        expectations=generation_expectations,
                         brand_context=brand_context,
                         language=state["language"],
                         progress_callback=progress,
@@ -225,7 +237,7 @@ def page_generator():
                         brand=state["brand"],
                         supporting_keywords=state["supporting_keywords"],
                         page_type=state["page_type"],
-                        expectations=state["expectations"],
+                        expectations=generation_expectations,
                         brand_context=brand_context,
                         change_request=_scoped_change_request(state["change_request"], state["regenerate_scope"]),
                         min_words=min_words,
@@ -235,6 +247,7 @@ def page_generator():
                     )
                     state["page_content"] = result.get("content", "")
                     state["image_count"] = result.get("image_count", 0)
+                    state["page_content"] = group_page_html(state["page_content"])
                     progress("Generation complete.")
                     _record_completed_page(state, min_words, max_words)
                 clear_generation_status(generation_token)
@@ -494,6 +507,7 @@ def _record_completed_page(state: dict, min_words: int, max_words: int):
             "language": state["language"],
             "supporting_keywords": state["supporting_keywords"],
             "expectations": state["expectations"],
+            "reference_url": state.get("reference_url", ""),
             "image_count": state["image_count"],
             "regenerate_scope": state["regenerate_scope"],
             "change_request": state["change_request"],
@@ -584,6 +598,7 @@ def _save_page_generation(state: dict):
             "language": state["language"],
             "supporting_keywords": state["supporting_keywords"],
             "expectations": state["expectations"],
+            "reference_url": state.get("reference_url", ""),
             "image_count": state["image_count"],
             "manual_save": True,
             "generation_log": state.get("generation_log", []),
@@ -664,6 +679,7 @@ def _load_page_history_item(state: dict, history_id: int):
     state["supporting_keywords"] = prompt_inputs.get("supporting_keywords", "")
     state["page_type"] = prompt_inputs.get("page_type", "")
     state["expectations"] = prompt_inputs.get("expectations", "")
+    state["reference_url"] = prompt_inputs.get("reference_url", "")
     state["change_request"] = prompt_inputs.get("change_request", "")
     state["regenerate_scope"] = prompt_inputs.get("regenerate_scope", "full") or "full"
     state["page_title"] = item.get("title", "") or ""

@@ -7,7 +7,7 @@ from logger import logger
 from word_bank import find_banned_terms_in_text
 
 MIN_META_DESCRIPTION_CHARACTERS = 120
-MAX_META_DESCRIPTION_CHARACTERS = 140
+MAX_META_DESCRIPTION_CHARACTERS = 160
 MAX_ATTEMPTS = 5
 
 def _generate_meta_descriptions_from_prompt(
@@ -28,9 +28,9 @@ def _generate_meta_descriptions_from_prompt(
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words or phrases, missed the 130-160 character range, or returned too few usable descriptions.\n"
+                "- Your previous response used banned words or phrases, missed the 120-160 character range, or returned too few usable descriptions.\n"
                 "- Return fresh meta descriptions that avoid every banned term completely.\n"
-                "- Make every meta description between 130 and 160 characters.\n"
+                "- Make every meta description between 120 and 160 characters.\n"
                 "- Count only the description text, not JSON syntax.\n"
             )
             if cleaned_forbidden_phrases:
@@ -104,7 +104,7 @@ def _generate_meta_descriptions_from_prompt(
                 if rejected_lengths:
                     _publish_progress(
                         progress_callback,
-                        f"Meta attempt {attempt}: ignored descriptions outside 130-160 characters ({', '.join(str(length) for length in rejected_lengths)} chars).",
+                        f"Meta attempt {attempt}: ignored descriptions outside 120-160 characters ({', '.join(str(length) for length in rejected_lengths)} chars).",
                     )
                     logger.warning(
                         "Ignored meta descriptions outside %d-%d characters with lengths %s on attempt %d",
@@ -172,7 +172,7 @@ def _generate_meta_descriptions_from_prompt(
                 )
                 _publish_progress(
                     progress_callback,
-                    f"Meta attempt {attempt}: descriptions missed 130-160 characters ({', '.join(str(length) for length in rejected_lengths)} chars). Retrying...",
+                    f"Meta attempt {attempt}: descriptions missed 120-160 characters ({', '.join(str(length) for length in rejected_lengths)} chars). Retrying...",
                 )
                 logger.warning(
                     "Generated meta descriptions missed %d-%d characters with lengths %s on attempt %d",

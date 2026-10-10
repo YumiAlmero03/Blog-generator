@@ -73,6 +73,8 @@ class GoogleInspectionItemResult:
     indexing_state: str
     last_crawl_time: str
     detail: str
+    user_canonical: str = ""
+    google_canonical: str = ""
 
 
 @dataclass
@@ -363,6 +365,8 @@ def inspect_google_index_status(
                         robots_txt_state=index_status.get("robotsTxtState", ""),
                         indexing_state=index_status.get("indexingState", ""),
                         last_crawl_time=index_status.get("lastCrawlTime", ""),
+                        user_canonical=index_status.get("userCanonical", ""),
+                        google_canonical=index_status.get("googleCanonical", ""),
                         detail=detail,
                     )
                 )

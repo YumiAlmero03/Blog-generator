@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% set active_page = "schema-reader" %}
+{% block title %}Schema Reader{% endblock %}
+{% block eyebrow %}Structured Data{% endblock %}
+{% block hero_title %}Schema Reader{% endblock %}
+{% block hero_text %}Read, edit, and check JSON-LD. Add common schema blocks and fold nested code as you work.{% endblock %}
+{% block head_extras %}
+  {% for file in ['codemirror.css', 'foldgutter.css', 'material-darker.css'] %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/codemirror/' ~ file) }}" />
+  {% endfor %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/schema_reader.css') }}" />
+{% endblock %}
+{% block content %}
+<section class="schema-reader min-w-0 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+  <h2 class="font-display text-2xl font-bold text-sand-950">Schema blocks</h2>
+  <p class="mt-2 text-sm text-sand-700">Click a template to add it to your document. Set page details below, then add the schema types that describe your page.</p>
+  <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    {% for key, label, placeholder in [('DOMAIN_URL', 'Domain override', 'https://your-domain.com'), ('PAGE_URL', 'Page URL or path', '/your-page/'), ('META_TITLE', 'Meta title', 'META_TITLE'), ('META_DESCRIPTION', 'Meta description', 'META_DESCRIPTION'), ('META_IMAGE', 'Page image URL', 'META_IMAGE'), ('SITE_NAME', 'Website / organization name', 'SITE_NAME'), ('LOGO_URL', 'Organization logo URL', 'LOGO_URL'), ('AUTHOR_NAME', 'Author name', 'AUTHOR_NAME'), ('PAGE_LANGUAGE', 'Page language', 'en'), ('DATE_PUBLISHED', 'Published date (ISO 8601)', 'DATE_PUBLISHED'), ('DATE_MODIFIED', 'Modified date (ISO 8601)', 'DATE_MODIFIED')] %}
+    <div class="min-w-0">
+      <label for="schema{{ key }}" class="mb-2 block text-sm font-bold text-sand-900">{{ label }}</label>
+      <input id="schema{{ key }}" data-schema-field="{{ key }}" type="text" placeholder="{{ placeholder }}" class="w-full rounded-2xl border border-sand-300 bg-white px-4 py-3 text-sm text-sand-900" />
+      {% if key == 'PAGE_URL' %}
+      <button id="schemaExtract" type="button" class="mt-2 min-h-11 rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-bold text-sand-700">Extract metadata</button>
+      <p class="mt-2 text-sm text-sand-700">Fetch page metadata from this URL. For a path, enter a domain override. Extraction fills empty fields.</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <p class="mt-3 text-sm text-sand-700">The domain overrides the page URL’s domain while preserving its path and query. New blocks use these values. Blank fields remain named placeholders. Fill type-specific details in the editor; remove optional properties that do not apply. Use only information visible on the page.</p>
+  <button id="schemaApply" type="button" class="mt-4 min-h-11 rounded-full bg-moss-700 px-4 py-2 text-sm font-bold text-white">Fill placeholders in existing code</button>
+  <div id="schemaTemplates" class="mt-4 flex flex-wrap gap-2" aria-label="Add schema template"></div>
+  <div class="mt-6 flex flex-wrap items-center gap-2">
+    {% for id, label in [('schemaCheck', 'Check Code'), ('schemaFormat', '{} Format'), ('schemaFold', 'Collapse All'), ('schemaUnfold', 'Expand All'), ('schemaCopy', 'Copy JSON-LD'), ('schemaDownload', 'Download JSON')] %}
+    <button id="{{ id }}" type="button" class="min-h-11 rounded-full {{ 'bg-moss-700 text-white' if id == 'schemaCheck' else 'border border-sand-300 bg-white text-sand-700' }} px-4 py-2 text-sm font-bold">{{ label }}</button>
+    {% endfor %}
+  </div>
+  <label for="schemaCode" class="mb-2 mt-5 block text-sm font-bold text-sand-900">schema.jsonld</label>
+  <p id="schemaEditorHelp" class="mb-3 text-sm text-sand-700">Use the arrows beside line numbers to toggle { } and [ ] blocks. Press Esc, then Tab to leave the editor. Checks run as you type. Your draft stays in this browser when storage is available.</p>
+  <div class="schema-editor-shell"><textarea id="schemaCode" aria-describedby="schemaEditorHelp" spellcheck="false">{
+  "@context": "https://schema.org",
+  "@graph": []
+}</textarea></div>
+  <p id="schemaStatus" class="mt-3 min-h-6 text-sm text-sand-700" role="status"></p>
+  <div class="mt-5 rounded-2xl border border-sand-200 p-4">
+    <h2 class="text-lg font-bold text-sand-900">Code check</h2>
+    <div id="schemaResults" class="mt-2 text-sm text-sand-700" role="status" aria-live="polite"></div>
+    <p class="mt-3 text-xs text-sand-600">Checks JSON syntax and basic JSON-LD structure. For schema properties and search eligibility, use <a class="underline" href="https://validator.schema.org/" target="_blank" rel="noopener noreferrer">Schema.org Validator</a> or <a class="underline" href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer">Google Rich Results Test</a>.</p>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+  {% for file in ['codemirror.js', 'javascript.js', 'foldcode.js', 'foldgutter.js', 'brace-fold.js', 'matchbrackets.js', 'closebrackets.js'] %}
+  <script src="{{ url_for('static', filename='vendor/codemirror/' ~ file) }}"></script>
+  {% endfor %}
+  <script src="{{ url_for('static', filename='assets/js/schema_reader_core.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/js/schema_reader.js') }}"></script>
+{% endblock %}

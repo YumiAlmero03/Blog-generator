@@ -80,6 +80,7 @@ def edit_generation_history(history_id: int):
         return redirect(url_for("web.news_generator", edit_history_id=history_id))
     routes = {
         "blog": "web.index",
+        "blog rework": "web.blog_rework_generator",
         "medium blog": "web.backlink_blog_generator",
         "tier 2 blog": "web.tier2_blog_generator",
         "neutral post": "web.neutral_blog_generator",

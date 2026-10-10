@@ -17,7 +17,7 @@ def test_list_scheduled_jobs_includes_trigger_details(monkeypatch):
         "Image Tool Cleanup",
     ]
     assert jobs[0]["next_trigger_label"] == "Due on next scheduler loop"
-    assert "every 30 minutes" in jobs[1]["trigger"]
+    assert "every 15 minutes" in jobs[1]["trigger"]
     assert "older than 15 day(s)" in jobs[2]["notes"]
 
 

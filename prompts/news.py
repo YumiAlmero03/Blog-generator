@@ -102,7 +102,7 @@ Brand/publication: {brand}
 {banned_words_section}
 
 Rules:
-- Each meta description must be between 120 and 140 characters long.
+- Each meta description must be between 120 and 160 characters long.
 - Count characters carefully before finishing.
 - Keep the wording current to 2026 and relevant to today's event.
 - If a focus keyphrase and supporting keyphrases are provided, use the focus keyphrase naturally when it fits and do not force every supporting keyphrase.
@@ -245,6 +245,8 @@ Rules:
 - Keep the tone neutral, timely, and informative.
 - If a brand is provided, align with that publication voice without forcing the brand name.
 - Write the content value in Markdown source, not HTML.
+- Include a concise table only when comparisons, specifications, timelines, or structured facts are clearer in a table. Otherwise omit tables.
+- Use Markdown pipe tables with a header and separator row; the app converts them to HTML tables for viewing and copying. Keep cells short and use only supported facts; never invent data to fill a table.
 - Return only valid JSON with this format: {{"content":"## Heading\\n\\nParagraph..."}}.
 - Do not add any explanation, notes, or text before or after the JSON object.
 - Start the response with "{{" and end it with "}}".

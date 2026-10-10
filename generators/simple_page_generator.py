@@ -1,4 +1,5 @@
 import json
+import re
 
 from generation_retry_policy import (
     can_accept_close_enough,
@@ -21,7 +22,74 @@ from content_repetition import repeated_content_issue
 MIN_SIMPLE_PAGE_WORDS = 900
 MAX_SIMPLE_PAGE_WORDS = 1200
 MIN_META_DESCRIPTION_CHARACTERS = 120
-MAX_META_DESCRIPTION_CHARACTERS = 140
+MAX_META_DESCRIPTION_CHARACTERS = 160
+
+
+def _heading_paragraph_issues(markdown_content: str) -> list[str]:
+    blocks = []
+    paragraph_lines = []
+
+    def flush_paragraph():
+        if paragraph_lines:
+            blocks.append(("paragraph", " ".join(paragraph_lines)))
+            paragraph_lines.clear()
+
+    for raw_line in (markdown_content or "").replace("\r\n", "\n").split("\n"):
+        line = raw_line.strip()
+        heading = re.match(r"^(#{1,6})\s+(.+)$", line)
+        if not line:
+            flush_paragraph()
+        elif heading:
+            flush_paragraph()
+            blocks.append(("heading", heading.group(1)))
+        elif re.match(r"^(?:[-*]\s+|\d+\.\s+|>)", line):
+            flush_paragraph()
+            blocks.append(("other", ""))
+        else:
+            paragraph_lines.append(line)
+    flush_paragraph()
+
+    issues = []
+    h2_count = sum(kind == "heading" and value == "##" for kind, value in blocks)
+    h3_count = sum(kind == "heading" and value == "###" for kind, value in blocks)
+    if h2_count < 1:
+        issues.append("missing an ## H2 heading")
+    if h3_count < 1:
+        issues.append("missing a ### H3 heading")
+
+    for index, (kind, value) in enumerate(blocks):
+        if kind != "heading" or value not in {"##", "###"}:
+            continue
+        paragraph_count = 0
+        for following_kind, following_value in blocks[index + 1:]:
+            if following_kind == "heading":
+                break
+            if following_kind == "paragraph":
+                paragraph_count += 1
+        if paragraph_count < 1 or paragraph_count > 2:
+            issues.append(f"{value} heading has {paragraph_count} paragraphs; expected 1 or 2")
+    issues.extend(_introduction_issues(blocks))
+    return issues
+
+
+def _introduction_issues(blocks: list[tuple[str, str]]) -> list[str]:
+    h1_index = next((index for index, (kind, value) in enumerate(blocks) if kind == "heading" and value == "#"), None)
+    if h1_index is None:
+        return ["missing the # H1 heading required before the introduction"]
+
+    introduction_blocks = []
+    for kind, value in blocks[h1_index + 1:]:
+        if kind == "heading":
+            break
+        if kind == "paragraph":
+            introduction_blocks.append(value)
+    if len(introduction_blocks) != 1:
+        return [f"introduction has {len(introduction_blocks)} paragraphs; expected exactly 1"]
+
+    sentence_count = len([sentence for sentence in re.split(r"[.!?]+(?:\s+|$)", introduction_blocks[0]) if sentence.strip()])
+    if not 1 <= sentence_count <= 3:
+        return [f"introduction has {sentence_count} sentences; expected 1 to 3"]
+    return []
 
 
 def generate_simple_page(
@@ -38,7 +106,7 @@ def generate_simple_page(
     language: str = "English",
     progress_callback=None,
 ):
-    from app.services.content_format_service import count_markdown_heading_level, count_markdown_words, markdown_to_html
+    from app.services.content_format_service import count_markdown_words, markdown_to_html
 
     min_word_count, max_word_count = _normalize_word_limits(min_words, max_words)
     prompt = build_simple_page_prompt(
@@ -67,7 +135,9 @@ def generate_simple_page(
                 "- Your previous response used banned words, repeated content, missed required ### subheadings, missed the word-count range, or missed the meta description character range.\n"
                 f"- The page content must be at least {min_word_count} words. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.\n"
                 f"- Every meta description must be between {MIN_META_DESCRIPTION_CHARACTERS} and {MAX_META_DESCRIPTION_CHARACTERS} characters.\n"
-                "- Include at least 3 ### subheadings.\n"
+                "- The introduction immediately after the H1 must be exactly one paragraph containing 1 to 3 sentences.\n"
+                "- Include at least one ## H2 heading and at least one ### H3 heading.\n"
+                "- Follow every ## H2 and ### H3 heading with 1 or 2 paragraphs before the next heading.\n"
                 "- Do not repeat the same sentence or paragraph. Rewrite repeated ideas with fresh details.\n"
                 "- Return a fresh simple page and avoid every banned term completely.\n"
             )
@@ -119,7 +189,7 @@ def generate_simple_page(
             if invalid_meta_lengths:
                 _publish_progress(
                     progress_callback,
-                    f"Simple page attempt {attempt}: meta descriptions missed 130-160 characters ({', '.join(str(length) for length in invalid_meta_lengths)} chars). Retrying...",
+                    f"Simple page attempt {attempt}: meta descriptions missed 120-160 characters ({', '.join(str(length) for length in invalid_meta_lengths)} chars). Retrying...",
                 )
                 logger.warning(
                     "Simple page meta descriptions missed %d-%d characters with lengths %s on attempt %d",
@@ -130,18 +200,18 @@ def generate_simple_page(
                 )
                 wait_before_retry(attempt, progress_callback, "meta length miss")
                 continue
-            h3_count = count_markdown_heading_level(markdown_content, 3)
-            if h3_count < 3:
+            heading_issues = _heading_paragraph_issues(markdown_content)
+            if heading_issues:
                 _publish_progress(
                     progress_callback,
-                    f"Simple page attempt {attempt}: only {h3_count} ### subheadings, minimum is 3. Retrying...",
+                    f"Simple page attempt {attempt}: {'; '.join(heading_issues)}. Retrying...",
                 )
                 logger.warning(
-                    "Simple page used only %d ### subheadings on attempt %d",
-                    h3_count,
+                    "Simple page heading structure failed on attempt %d: %s",
                     attempt,
+                    "; ".join(heading_issues),
                 )
-                wait_before_retry(attempt, progress_callback, "missing subheadings")
+                wait_before_retry(attempt, progress_callback, "invalid heading structure")
                 continue
 
             if word_count < min_word_count:
@@ -289,7 +359,7 @@ def generate_simple_page_meta_descriptions(
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous response used banned words, missed the 130-160 character range, or returned too few descriptions.\n"
+                "- Your previous response used banned words, missed the 120-160 character range, or returned too few descriptions.\n"
                 "- Return exactly 3 fresh meta descriptions in valid JSON only.\n"
             )
         full_prompt = prompt + retry_instruction
@@ -328,7 +398,7 @@ def generate_simple_page_meta_descriptions(
                     return meta_descriptions[:3]
                 _publish_progress(
                     progress_callback,
-                    f"Simple page meta attempt {attempt}: descriptions missed 130-160 characters ({', '.join(str(length) for length in invalid_lengths)} chars). Retrying...",
+                    f"Simple page meta attempt {attempt}: descriptions missed 120-160 characters ({', '.join(str(length) for length in invalid_lengths)} chars). Retrying...",
                 )
                 wait_before_retry(attempt, progress_callback, "meta length miss")
                 continue
@@ -356,7 +426,7 @@ def generate_simple_page_content(
     language: str = "English",
     progress_callback=None,
 ):
-    from app.services.content_format_service import count_markdown_heading_level, count_markdown_words, markdown_to_html
+    from app.services.content_format_service import count_markdown_words, markdown_to_html
 
     min_word_count, max_word_count = _normalize_word_limits(min_words, max_words)
     prompt = build_simple_page_content_prompt(
@@ -386,7 +456,9 @@ def generate_simple_page_content(
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
                 "- Your previous content used banned words, repeated content, missed required ### subheadings, or missed the word-count range.\n"
                 f"- The page content must be at least {min_word_count} words.\n"
-                "- Include at least 3 ### subheadings.\n"
+                "- The introduction immediately after the H1 must be exactly one paragraph containing 1 to 3 sentences.\n"
+                "- Include at least one ## H2 heading and at least one ### H3 heading.\n"
+                "- Follow every ## H2 and ### H3 heading with 1 or 2 paragraphs before the next heading.\n"
                 "- Do not repeat the same sentence or paragraph. Rewrite repeated ideas with fresh details.\n"
                 "- Return corrected content in valid JSON only.\n"
             )
@@ -414,13 +486,13 @@ def generate_simple_page_content(
                 )
                 wait_before_retry(attempt, progress_callback, "repeated content")
                 continue
-            h3_count = count_markdown_heading_level(markdown_content, 3)
-            if h3_count < 3:
+            heading_issues = _heading_paragraph_issues(markdown_content)
+            if heading_issues:
                 _publish_progress(
                     progress_callback,
-                    f"Simple page content attempt {attempt}: only {h3_count} ### subheadings, minimum is 3. Retrying...",
+                    f"Simple page content attempt {attempt}: {'; '.join(heading_issues)}. Retrying...",
                 )
-                wait_before_retry(attempt, progress_callback, "missing subheadings")
+                wait_before_retry(attempt, progress_callback, "invalid heading structure")
                 continue
             if word_count > best_word_count:
                 best_markdown_content = markdown_content

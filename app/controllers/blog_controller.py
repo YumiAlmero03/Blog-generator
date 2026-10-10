@@ -8,6 +8,7 @@ from generators.meta_description_generator import generate_meta_descriptions
 from generators.title_generator import generate_titles
 from logger import logger
 
+from app.services.post_export_service import CATEGORIES, normalize_category, resolved_category, suggest_category
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
@@ -28,6 +29,7 @@ def index():
         "count": 10,
         "titles": [],
         "selected_title": "",
+        "custom_title": "",
         "meta_descriptions": [],
         "meta_description": "",
         "content": "",
@@ -56,9 +58,13 @@ def index():
     if request.method == "GET" and edit_history_id.isdigit():
         _load_history_item(state, int(edit_history_id))
 
+    state["category"] = state.get("category", "Auto")
+    state["generator"] = "blog"
+    state["post_categories"] = CATEGORIES
     if request.method == "POST":
+        state["category"] = normalize_category(request.form.get("category", "Auto"))
         action = request.form.get("action", "").strip()
-        if action == "generate_titles":
+        if action in {"generate_titles", "use_custom_title"}:
             _handle_generate_titles(state)
         elif action in {"generate_meta_descriptions", "generate_visual", "generate_content", "generate_tags"}:
             _handle_generate_content(state)
@@ -72,10 +78,12 @@ def index():
 
     state["language_options"] = language_options(state["language"])
     state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
+    state["suggested_category"] = suggest_category(state)
     return render_template("index.html", **base_template_context(), **state)
 
 
 def _handle_generate_titles(state: dict):
+    state["custom_title"] = request.form.get("custom_title", "").strip()
     state["keyword"] = request.form.get("keyword", "").strip()
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
@@ -88,6 +96,15 @@ def _handle_generate_titles(state: dict):
 
     if not state["keyword"]:
         state["error"] = "Please enter one or more keywords."
+        return
+
+    if request.form.get("action", "").strip() == "use_custom_title":
+        if not state["custom_title"]:
+            state["error"] = "Please enter a custom title."
+            return
+        state["selected_title"] = state["custom_title"]
+        state["titles"] = [state["custom_title"]]
+        state["success"] = "Custom title selected. Continue with article generation below."
         return
 
     if state["brand"]:
@@ -129,6 +146,7 @@ def _load_history_item(state: dict, history_id: int):
     if not item:
         return
     prompt_inputs = _loads(item.get("prompt_inputs", "{}"))
+    state["category"] = "Auto" if prompt_inputs.get("category_mode") == "auto" else (normalize_category(prompt_inputs.get("category", "Auto")) or "Auto")
     state["history_id"] = str(item.get("id", ""))
     state["brand"] = item.get("brand_name", "") or ""
     state["keyword"] = item.get("primary_keyword", "") or ""
@@ -429,6 +447,8 @@ def _record_completed_blog(state: dict, min_words: int, max_words: int):
         meta_description=state["meta_description"],
         tags=state["tag_suggestions"],
         prompt_inputs={
+            "category": resolved_category({**state, "category": state.get("category", "Auto"), "generator": "blog"}),
+            "category_mode": "auto" if state.get("category", "Auto") == "Auto" else "manual",
             "supporting_keyword": state["supporting_keyword"],
             "suggested_h2s": state["suggested_h2s"],
             "language": state["language"],
@@ -468,6 +488,7 @@ def _handle_save_generated_blog(state: dict):
     state["visual"] = request.form.get("visual", "").strip()
     titles_raw = request.form.get("titles_json", "").strip()
     selected_meta_description = request.form.get("meta_description_choice", "").strip()
+    state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", ""))
     state["meta_description"] = selected_meta_description
     state["links"] = _extract_links_from_request()
     state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
@@ -483,6 +504,10 @@ def _handle_save_generated_blog(state: dict):
         return
     if not state["content"]:
         state["error"] = "There is no generated blog content to save."
+        return
+
+    if not state["meta_description"] or not state.get("category", "General"):
+        state["error"] = "Please select a meta description and category before saving."
         return
 
     min_words, max_words = get_blog_word_limits()
@@ -511,6 +536,8 @@ def _handle_save_generated_blog(state: dict):
         meta_description=state["meta_description"],
         tags=state["tag_suggestions"],
         prompt_inputs={
+            "category": resolved_category({**state, "category": state.get("category", "Auto"), "generator": "blog"}),
+            "category_mode": "auto" if state.get("category", "Auto") == "Auto" else "manual",
             "supporting_keyword": state["supporting_keyword"],
             "suggested_h2s": state["suggested_h2s"],
             "language": state["language"],

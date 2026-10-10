@@ -1,0 +1,8 @@
+.schema-reader .schema-editor-shell { overflow: hidden; border: 1px solid #444; border-radius: 12px; }
+.schema-reader .CodeMirror { height: 520px; font: 14px/1.6 Menlo, Monaco, Consolas, monospace; }
+.schema-reader .CodeMirror-foldmarker { color: #ffd580; text-shadow: none; font-family: monospace; }
+.schema-reader .schema-error-line { background: rgba(220, 38, 38, 0.22); }
+.schema-reader #schemaCode { width: 100%; min-height: 520px; padding: 16px; font-family: monospace; }
+.schema-reader .schema-error { color: #b91c1c; }
+.dark .schema-reader .schema-error { color: #fca5a5; }
+@media (max-width: 640px) { .schema-reader .CodeMirror { height: 420px; font-size: 13px; } }

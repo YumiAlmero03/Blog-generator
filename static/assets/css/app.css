@@ -377,3 +377,18 @@ html.dark .shadow-soft {
     background: #fff !important;
   }
 }
+
+/* Keep generated article tables readable within the existing editor. */
+#contentEditor .ql-editor table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#contentEditor .ql-editor th,
+#contentEditor .ql-editor td {
+  border: 1px solid currentColor;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

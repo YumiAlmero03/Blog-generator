@@ -410,7 +410,7 @@ def generate_neutral_blog_meta_description(provider, title: str, topic: str, med
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
                 "- Return fresh valid JSON only.\n"
-                "- Meta description must be 130-160 characters.\n"
+                "- Meta description must be 120-160 characters.\n"
                 "- Use the selected title as context and avoid banned or restricted terms.\n"
             )
 
@@ -425,10 +425,10 @@ def generate_neutral_blog_meta_description(provider, title: str, topic: str, med
 
         restricted_terms = _find_gambling_related_terms(meta_description)
         banned_terms = find_banned_terms_in_text(meta_description)
-        if not 10 <= len(meta_description) <= 140:
+        if not 120 <= len(meta_description) <= 160:
             _publish_progress(
                 progress_callback,
-                f"Neutral meta attempt {attempt}: {len(meta_description)} characters, target is 130-160. Retrying...",
+                f"Neutral meta attempt {attempt}: {len(meta_description)} characters, target is 120-160. Retrying...",
             )
             continue
         if restricted_terms or banned_terms:
@@ -740,7 +740,7 @@ Rules:
 - Return valid JSON only.
 - Use the selected title as the anchor context.
 - Write exactly one meta description.
-- Meta description must be 130-160 characters.
+- Meta description must be 120-160 characters.
 - Keep it neutral, editorial, and natural.
 - Do not include a target, brand, money-site, or required promotional link.
 - Avoid gambling, betting, casino, jackpot, wagering, sportsbook, lottery, poker, roulette, or bonus-focused terms.
@@ -748,7 +748,7 @@ Rules:
 
 Return JSON only in this format:
 {{
-  "meta_description": "130 to 160 character meta description."
+  "meta_description": "120 to 160 character meta description."
 }}
 """
 

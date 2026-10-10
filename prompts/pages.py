@@ -63,7 +63,7 @@ Rules:
 - Follow Yoast-style SEO and readability rules: one clear H1, logical H2/H3 structure, concise paragraphs, transition words, active voice, clear internal intent, and helpful user-first copy.
 
 - Title should be catchy, include the main keyword naturally, and be 45–55 characters when possible.
-- Meta description must be useful for search snippets, natural, and between 120 and 140 characters.
+- Meta description must be useful for search snippets, natural, and between 120 and 160 characters.
 - Introduction should be 60–80 words, engaging, and include the main keyword naturally once.
 - Content must be more than {min_word_count} words, structured with clear sections and subheadings. Treat {max_word_count} words as a soft guide, but prioritize staying over the minimum.
 - Do not finish at exactly {min_word_count} words; the content must exceed that minimum.
@@ -186,7 +186,7 @@ What to expect in the page:
 
 Rules:
 - Make the description useful for search snippets and natural for readers.
-- Keep it between 120 and 140 characters.
+- Keep it between 120 and 160 characters.
 - Use the primary keyword naturally if it fits.
 - Do not use banned words.
 - Do not add explanations before or after the JSON.
@@ -264,7 +264,12 @@ Rules:
 - Use the "What to expect in the page" notes as guidance for sections, tone, and key details.
 - If a brand is provided, match the brand’s voice, positioning, and audience naturally.
 - When brand database context is provided, avoid duplicating existing pages too closely.
-- Return clean Markdown.
+- Return clean Markdown. The app renders the H1 and introduction as a hero div, and each H2 with its content as a separate styled div group.
+- Use one H1 with the selected title. Give each distinct topic its own H2; keep related H3 details, paragraphs, and lists inside that topic.
+- When reference data is supplied, organize only relevant, supported facts into these groups. For a promotion, cover the period, eligibility and requirements, benefits or VIP rules, and terms when supported by the source.
+- Preserve exact source dates, time zones, conditions, and restrictions. Do not invent reward amounts, VIP thresholds, guarantees, or missing terms to meet the word target.
+- Omit navigation, login prompts, cookie notices, and unrelated site boilerplate from the reference.
+- Do not write raw HTML, CSS, scripts, or a surrounding code fence; the app supplies the design.
 - Use bold only for emphasis on non-keyword phrases.
 - Never apply bold or emphasis to the main or supporting keywords.
 - Do not add explanations before or after the JSON.
@@ -345,7 +350,9 @@ Rules:
 - Write clear, structured Markdown source that the app can convert to HTML or Gutenberg
 - Use Markdown headings, paragraphs, lists, bold, emphasis, and blockquotes only
 - Include exactly one # H1 heading
-- Include at least 3 ### H3 subheadings in the content.
+- The introduction immediately after the H1 must be exactly one paragraph containing 1 to 3 sentences.
+- Include at least one ## H2 heading and at least one ### H3 subheading in the content.
+- Every ## H2 and ### H3 heading must be followed by 1 or 2 paragraphs before the next heading.
 - Keep the tone clear, professional, and easy to understand
 - Include supporting keywords naturally where they fit, without keyword stuffing
 - If a brand is provided, use the brand name naturally where relevant
@@ -355,7 +362,7 @@ Rules:
 - Do not use raw HTML
 - Ensure the content is complete and over {min_word_count} words.
 - Generate exactly 3 meta description options for the page.
-- Each meta description must be useful for search snippets, natural, and between 120 and 140 characters.
+- Each meta description must be useful for search snippets, natural, and between 120 and 160 characters.
 - Do not add explanations before or after the JSON
 - Start your response with '{{' and end with '}}'
 
@@ -462,7 +469,7 @@ What to include:
 {expectations}
 
 Rules:
-- Each meta description must be natural, useful for search snippets, and between 120 and 140 characters.
+- Each meta description must be natural, useful for search snippets, and between 120 and 160 characters.
 - Include supporting keywords naturally where they fit, without keyword stuffing.
 - Do not use banned words.
 - Do not add explanations before or after the JSON.
@@ -554,7 +561,9 @@ Rules:
 - Write clear, structured Markdown source that the app can convert to HTML or Gutenberg.
 - Use Markdown headings, paragraphs, lists, bold, emphasis, and blockquotes only.
 - Include exactly one # H1 heading using the selected title.
-- Include at least 3 ### H3 subheadings in the content.
+- The introduction immediately after the H1 must be exactly one paragraph containing 1 to 3 sentences.
+- Include at least one ## H2 heading and at least one ### H3 subheading in the content.
+- Every ## H2 and ### H3 heading must be followed by 1 or 2 paragraphs before the next heading.
 - Keep the tone clear, professional, and easy to understand.
 - Include supporting keywords naturally where they fit, without keyword stuffing.
 - If a brand is provided, use the brand name naturally where relevant.

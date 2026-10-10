@@ -10,6 +10,7 @@ from logger import logger
 
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
+from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
@@ -17,6 +18,7 @@ from app.services.provider_service import generation_error_message, get_provider
 
 def backlink_blog_generator():
     state = {
+        "generation_log": [],
         "keyword": "",
         "brand": "",
         "language": get_default_language(),
@@ -60,6 +62,7 @@ def backlink_blog_generator():
         _load_history_item(state, int(edit_history_id))
 
     if request.method == "POST":
+        state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
         action = request.form.get("action", "").strip()
         if action == "generate_titles":
             _handle_generate_titles(state)
@@ -70,6 +73,9 @@ def backlink_blog_generator():
         elif action == "save_generated_blog":
             _handle_save_generated_blog(state)
 
+    if state["error"]:
+        append_generation_log(state["generation_log"], "error", state["error"])
+    state["generation_log_json"] = generation_log_json(state["generation_log"])
     state["language_options"] = language_options(state["language"])
     return render_template("backlink_blog_generator.html", **base_template_context(), **state)
 
@@ -79,6 +85,7 @@ def _load_history_item(state: dict, history_id: int):
     if not item:
         return
     prompt_inputs = _loads(item.get("prompt_inputs", "{}"))
+    state["generation_log"] = parse_generation_log(prompt_inputs.get("generation_log", []))
     medium_name = item.get("medium_name", "") or ""
     selected_backlink = _find_backlink_from_history(prompt_inputs, medium_name)
     state["history_id"] = str(item.get("id", ""))
@@ -156,7 +163,7 @@ def _handle_generate_titles(state: dict):
         state["keyword"] = brand_record.get("main_keywords", "").strip()
 
     if not state["keyword"]:
-        state["error"] = "The selected brand needs main keywords saved in Brands before generating medium titles."
+        state["error"] = "Please enter a keyword, or save main keywords for the selected brand in Brands."
         return
 
     if not state["brand_website_url"]:
@@ -171,7 +178,7 @@ def _handle_generate_titles(state: dict):
     try:
         provider = get_provider()
         brand_context = get_brand_context(state["brand"])
-        progress = _progress_callback("Medium titles", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("Medium titles", request.form.get("generation_status_token", ""), state["generation_log"])
         progress("Starting title generation...")
         state["titles"] = generate_backlink_titles(
             provider,
@@ -244,7 +251,7 @@ def _handle_generate_meta_descriptions(state: dict):
 
     try:
         provider = get_provider()
-        progress = _progress_callback("Medium meta descriptions", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("Medium meta descriptions", request.form.get("generation_status_token", ""), state["generation_log"])
         if state["brand"]:
             upsert_brand(state["brand"])
         brand_context = get_brand_context(state["brand"])
@@ -332,7 +339,7 @@ def _handle_generate_content(state: dict):
         state["titles"] = _json_list(request.form.get("titles_json", "").strip())
         state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
         provider = get_provider()
-        progress = _progress_callback("Medium blog", request.form.get("generation_status_token", ""))
+        progress = _progress_callback("Medium blog", request.form.get("generation_status_token", ""), state["generation_log"])
         if state["brand"]:
             upsert_brand(state["brand"])
         brand_context = get_brand_context(state["brand"])
@@ -452,6 +459,7 @@ def _handle_generate_content(state: dict):
             meta_description=state["meta_description"],
             tags=state["tag_suggestions"],
             prompt_inputs={
+                "generation_log": state["generation_log"],
                 "tone": state["tone"],
                 "language": state["language"],
                 "suggested_content": state["suggested_content"],
@@ -550,6 +558,7 @@ def _handle_save_generated_blog(state: dict):
         post_link=state["post_link"],
         tags=state["tag_suggestions"],
         prompt_inputs={
+            "generation_log": state["generation_log"],
             "tone": state["tone"],
             "language": state["language"],
             "suggested_content": state["suggested_content"],
@@ -637,10 +646,12 @@ def _normalize_post_link(value: str) -> str:
     return cleaned
 
 
-def _progress_callback(label: str, token: str):
+def _progress_callback(label: str, token: str, log_entries: list[dict] | None = None):
     cleaned_label = (label or "Generation").strip()
 
     def publish(message: str, kind: str = "status"):
+        if log_entries is not None:
+            append_generation_log(log_entries, kind, message)
         if kind == "prompt":
             publish_generation_prompt(token, message)
             return

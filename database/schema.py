@@ -199,6 +199,27 @@ def init_db():
                 last_error TEXT NOT NULL DEFAULT ''
             );
 
+            CREATE TABLE IF NOT EXISTS seo_check_history (
+                id INTEGER PRIMARY KEY,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                checker_version TEXT NOT NULL DEFAULT 'v1',
+                source_url TEXT NOT NULL DEFAULT '',
+                base_url TEXT NOT NULL DEFAULT '',
+                page_limit INTEGER NOT NULL DEFAULT 0,
+                average_score INTEGER NOT NULL DEFAULT 0,
+                average_grade TEXT NOT NULL DEFAULT '',
+                checked_count INTEGER NOT NULL DEFAULT 0,
+                error_count INTEGER NOT NULL DEFAULT 0,
+                issue_count INTEGER NOT NULL DEFAULT 0,
+                not_found_link_count INTEGER NOT NULL DEFAULT 0,
+                redirect_link_count INTEGER NOT NULL DEFAULT 0,
+                broken_link_count INTEGER NOT NULL DEFAULT 0,
+                unreachable_link_count INTEGER NOT NULL DEFAULT 0,
+                internal_link_count INTEGER NOT NULL DEFAULT 0,
+                schema_count INTEGER NOT NULL DEFAULT 0,
+                result_json TEXT NOT NULL DEFAULT ''
+            );
+
             CREATE TABLE IF NOT EXISTS image_bank (
                 id INTEGER PRIMARY KEY,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -297,6 +318,22 @@ def init_db():
         _ensure_column(connection, "website_index_urls", "yahoo_detail", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "website_index_urls", "page_keywords", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "website_index_urls", "last_error", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "seo_check_history", "checker_version", "TEXT NOT NULL DEFAULT 'v1'")
+        _ensure_column(connection, "seo_check_history", "source_url", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "seo_check_history", "base_url", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "seo_check_history", "page_limit", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "average_score", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "average_grade", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "seo_check_history", "checked_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "error_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "issue_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "not_found_link_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "redirect_link_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "broken_link_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "unreachable_link_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "internal_link_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "schema_count", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(connection, "seo_check_history", "result_json", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "image_bank", "query", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "image_bank", "title", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(connection, "image_bank", "source_url", "TEXT NOT NULL DEFAULT ''")

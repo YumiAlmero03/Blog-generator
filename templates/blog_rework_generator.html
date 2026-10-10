@@ -105,7 +105,8 @@
 
     {% if content %}
       <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-        <form method="post" id="contentForm" class="grid gap-6">
+        <form method="post" id="contentForm" data-post-generator="rework" class="grid gap-6">
+          {% include "_post_fields.html" %}
           <input type="hidden" id="contentActionInput" name="action" value="save_blog_rework" />
           <input type="hidden" name="source_url" value="{{ source_url }}" />
           <input type="hidden" name="source_content_html" value="{{ source_content | e }}" />
@@ -125,7 +126,6 @@
           <input type="hidden" name="tags_json" value='{{ tag_suggestions | tojson }}' />
           <textarea name="generation_log_json" class="hidden-form" aria-hidden="true">{{ generation_log_json | e }}</textarea>
           <input type="radio" name="selected_title" value="{{ selected_title }}" checked class="hidden" aria-hidden="true" />
-          <input type="radio" name="meta_description_choice" value="{{ meta_description }}" checked class="hidden" aria-hidden="true" />
 
           <div class="grid gap-4 lg:grid-cols-[1fr_260px]">
             <div>
@@ -142,15 +142,18 @@
           </div>
 
           <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
-            <label for="metaDescriptionDisplay" class="mb-2 block text-sm font-bold text-sand-900">Meta Description</label>
-            <textarea id="metaDescriptionDisplay" rows="3" readonly class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sm leading-6 text-sand-900">{{ meta_description }}</textarea>
-            {% if meta_descriptions|length > 1 %}
-              <div class="mt-3 grid gap-2">
-                {% for item in meta_descriptions %}
-                  <p class="rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">{{ item.text }}</p>
-                {% endfor %}
-              </div>
-            {% endif %}
+            <h3 class="mb-2 text-sm font-bold text-sand-900">Meta Description (required)</h3>
+            <div class="grid gap-2">
+              {% for item in meta_descriptions %}
+                <label class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">
+                  <input type="radio" name="meta_description_choice" value="{{ item.text }}" {% if meta_description == item.text %}checked{% endif %} />
+                  <span>{{ item.text }}</span>
+                </label>
+              {% else %}
+                <label for="reworkMetaDescription" class="text-sm text-sand-700">Enter a meta description</label>
+                <textarea id="reworkMetaDescription" name="meta_description_choice" rows="3" class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3">{{ meta_description }}</textarea>
+              {% endfor %}
+            </div>
           </div>
 
           <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">

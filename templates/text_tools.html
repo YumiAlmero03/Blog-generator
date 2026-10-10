@@ -13,6 +13,29 @@
     <label for="textInput" class="mb-2 block text-sm font-bold text-sand-900">Text</label>
     <textarea id="textInput" placeholder="Paste or type your text here..." class="min-h-[360px] w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-4 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"></textarea>
 
+    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div class="rounded-[20px] border border-sand-200 bg-sand-50 p-4">
+        <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">Characters</p>
+        <div class="mt-2 font-display text-3xl font-bold text-sand-950" id="charCount">0</div>
+      </div>
+      <div class="rounded-[20px] border border-sand-200 bg-sand-50 p-4">
+        <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">Characters (no spaces)</p>
+        <div class="mt-2 font-display text-3xl font-bold text-sand-950" id="charCountNoSpaces">0</div>
+      </div>
+      <div class="rounded-[20px] border border-sand-200 bg-sand-50 p-4">
+        <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">Words</p>
+        <div class="mt-2 font-display text-3xl font-bold text-sand-950" id="wordCount">0</div>
+      </div>
+      <div class="rounded-[20px] border border-sand-200 bg-sand-50 p-4">
+        <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">Sentences</p>
+        <div class="mt-2 font-display text-3xl font-bold text-sand-950" id="sentenceCount">0</div>
+      </div>
+      <div class="rounded-[20px] border border-sand-200 bg-sand-50 p-4">
+        <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">Paragraphs</p>
+        <div class="mt-2 font-display text-3xl font-bold text-sand-950" id="paragraphCount">0</div>
+      </div>
+    </div>
+
     <div class="mt-5 flex flex-wrap gap-3">
       <button type="button" data-transform="unhyphen" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Unhyphen</button>
       <button type="button" data-transform="unsnake" class="inline-flex min-h-11 items-center justify-center rounded-full bg-sand-600 px-4 py-2.5 text-sm font-bold text-sand-50 transition hover:bg-sand-700">Unsnake</button>

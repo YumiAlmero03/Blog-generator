@@ -1,0 +1,84 @@
+{% if comparison %}
+  <section id="seo-comparison" class="mt-6 scroll-mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Compared With Last Check</p>
+        <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">
+          {% if comparison.score_delta > 0 %}
+            Score improved by {{ comparison.score_delta }} point{% if comparison.score_delta != 1 %}s{% endif %}
+          {% elif comparison.score_delta < 0 %}
+            Score dropped by {{ comparison.score_delta|abs }} point{% if comparison.score_delta != -1 %}s{% endif %}
+          {% else %}
+            Score stayed the same
+          {% endif %}
+        </h2>
+      </div>
+      <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">Previous: {{ comparison.previous.created_at }}</span>
+    </div>
+    <div class="mt-5 grid gap-3 md:grid-cols-3">
+      {% for metric in comparison.metrics %}
+        <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
+          <p class="text-xs font-bold uppercase tracking-[0.12em] text-sand-600">{{ metric.label }}</p>
+          <div class="mt-2 flex flex-wrap items-end gap-2">
+            <span class="text-2xl font-bold text-sand-950">{{ metric.current }}{{ metric.suffix }}</span>
+            <span class="{% if metric.direction == 'better' %}text-green-700{% elif metric.direction == 'worse' %}text-red-700{% else %}text-sand-600{% endif %} text-sm font-bold">{{ metric.delta_label }}</span>
+          </div>
+          <p class="mt-1 text-xs font-bold text-sand-500">Last: {{ metric.previous }}{{ metric.suffix }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% elif result %}
+  <section id="seo-comparison" class="mt-6 scroll-mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md">
+    <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Compared With Last Check</p>
+    <p class="mt-2 text-sm leading-6 text-sand-700">This is the first saved check for this site in this checker version.</p>
+  </section>
+{% endif %}
+
+{% if history %}
+  <section id="seo-history" class="mt-6 scroll-mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">SEO Checker History</p>
+        <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Recent Checks</h2>
+      </div>
+      <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ history|length }} saved</span>
+    </div>
+    <div class="mt-5" {% if active_page == "seo-v2" %}data-table-pagination data-page-size="10"{% endif %}>
+    <div class="overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+      <table class="min-w-full divide-y divide-sand-100 text-left text-sm" {% if active_page == "seo-v2" %}data-audit-table data-table-name="SEO checker history" data-filter-column="1" data-filter-label="Site"{% endif %}>
+        <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+          <tr>
+            <th class="whitespace-nowrap px-4 py-3">Checked At</th>
+            <th class="whitespace-nowrap px-4 py-3">Site</th>
+            <th class="whitespace-nowrap px-4 py-3">Score</th>
+            <th class="whitespace-nowrap px-4 py-3">Pages</th>
+            <th class="whitespace-nowrap px-4 py-3">Issues</th>
+            <th class="whitespace-nowrap px-4 py-3">404</th>
+            <th class="whitespace-nowrap px-4 py-3">Redirects</th>
+            <th class="whitespace-nowrap px-4 py-3">Schema</th>
+            {% if active_page == "seo-v2" %}<th class="whitespace-nowrap px-4 py-3">Report</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-sand-100">
+          {% for item in history %}
+            <tr {% if active_page == "seo-v2" %}data-table-row{% endif %}>
+              <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ item.created_at }}</td>
+              <td class="max-w-[340px] break-words px-4 py-3 text-sand-700">{{ item.base_url or item.source_url }}</td>
+              <td class="whitespace-nowrap px-4 py-3 font-bold text-sand-950">{{ item.average_grade }} · {{ item.average_score }}/100</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ item.checked_count }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ item.issue_count }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ item.not_found_link_count }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ item.redirect_link_count }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ item.schema_count }}</td>
+              {% if active_page == "seo-v2" %}
+                <td class="whitespace-nowrap px-4 py-3"><a href="{{ url_for('web.seo_checker_v2', history_id=item.id) }}" class="inline-flex min-h-9 items-center rounded-full bg-sand-100 px-4 py-2 text-xs font-bold text-sand-800 transition hover:bg-sand-200">Open full report</a></td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    </div>
+  </section>
+{% endif %}

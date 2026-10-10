@@ -2,6 +2,8 @@ import json
 import random
 import re
 
+from app.services.page_layout_service import group_page_html
+
 from generation_retry_policy import (
     can_accept_close_enough,
     max_generation_attempts,
@@ -20,7 +22,7 @@ MAX_PAGE_WORDS = 19000
 MIN_PAGE_TITLE_CHARACTERS = 50
 MAX_PAGE_TITLE_CHARACTERS = 60
 MIN_META_DESCRIPTION_CHARACTERS = 120
-MAX_META_DESCRIPTION_CHARACTERS = 140
+MAX_META_DESCRIPTION_CHARACTERS = 160
 
 
 PLACEHOLDER_PALETTE = [
@@ -152,7 +154,7 @@ def generate_page(
                     last_failure_detail = f"meta description was {meta_description_length} characters; target is {MIN_META_DESCRIPTION_CHARACTERS}-{MAX_META_DESCRIPTION_CHARACTERS}"
                     _publish_progress(
                         progress_callback,
-                        f"Page attempt {attempt}: meta description is {meta_description_length} characters, target is 130-160. Retrying...",
+                        f"Page attempt {attempt}: meta description is {meta_description_length} characters, target is 120-160. Retrying...",
                     )
                     logger.warning(
                         "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d",
@@ -188,7 +190,7 @@ def generate_page(
                 best_meta_description = meta_description
                 publish_generation_draft(
                     progress_callback,
-                    markdown_to_html(markdown_content),
+                    group_page_html(markdown_to_html(markdown_content)),
                     f"Showing a draft while retrying for the checklist ({word_count} words).",
                 )
 
@@ -230,7 +232,7 @@ def generate_page(
                 wait_before_retry(attempt, progress_callback, "long page content")
                 continue
 
-            content = markdown_to_html(markdown_content)
+            content = group_page_html(markdown_to_html(markdown_content))
             content, injected_count = inject_image_placeholders(content)
             logger.info(
                 "Page generated successfully for keyword '%s' with %d words and %d image placeholders on attempt %d",
@@ -250,7 +252,7 @@ def generate_page(
             raise ValueError("Could not parse JSON from model output.") from exc
 
     if best_markdown_content and _is_close_word_count(best_word_count, min_word_count):
-        content = markdown_to_html(best_markdown_content)
+        content = group_page_html(markdown_to_html(best_markdown_content))
         content, injected_count = inject_image_placeholders(content)
         _publish_progress(
             progress_callback,
@@ -414,7 +416,7 @@ def generate_page_meta_description(
         if attempt > 1:
             retry_instruction = (
                 "\n\nIMPORTANT RETRY REQUIREMENT:\n"
-                "- Your previous meta description was missing, used banned words, or missed the 130-160 character range.\n"
+                "- Your previous meta description was missing, used banned words, or missed the 120-160 character range.\n"
                 "- Return one fresh meta description in valid JSON only.\n"
                 "- Count only the description text, not JSON syntax.\n"
             )
@@ -455,7 +457,7 @@ def generate_page_meta_description(
                     return meta_description
                 _publish_progress(
                     progress_callback,
-                    f"Page meta attempt {attempt}: {meta_description_length} characters, target is 130-160. Retrying...",
+                    f"Page meta attempt {attempt}: {meta_description_length} characters, target is 120-160. Retrying...",
                 )
                 logger.warning(
                     "Page meta description is %d characters (target: %d-%d) for keyword '%s' on attempt %d",
@@ -577,7 +579,7 @@ def generate_page_content(
                 best_word_count = word_count
                 publish_generation_draft(
                     progress_callback,
-                    markdown_to_html(markdown_content),
+                    group_page_html(markdown_to_html(markdown_content)),
                     f"Showing a draft while retrying for the checklist ({word_count} words).",
                 )
 
@@ -612,7 +614,7 @@ def generate_page_content(
                 wait_before_retry(attempt, progress_callback, "long page content")
                 continue
 
-            content = markdown_to_html(markdown_content)
+            content = group_page_html(markdown_to_html(markdown_content))
             content, injected_count = inject_image_placeholders(content)
             logger.info(
                 "Page content generated successfully for keyword '%s' with %d words and %d image placeholders on attempt %d",
@@ -630,7 +632,7 @@ def generate_page_content(
             raise ValueError("Could not parse JSON from model output.") from exc
 
     if best_markdown_content and _is_close_word_count(best_word_count, min_word_count):
-        content = markdown_to_html(best_markdown_content)
+        content = group_page_html(markdown_to_html(best_markdown_content))
         content, injected_count = inject_image_placeholders(content)
         _publish_progress(
             progress_callback,
@@ -732,7 +734,7 @@ def generate_page_section(
                 wait_before_retry(attempt, progress_callback, "repeated content")
                 continue
 
-            html_content = markdown_to_html(markdown_content)
+            html_content = group_page_html(markdown_to_html(markdown_content))
             return {
                 "section_title": section_title or _section_title_from_markdown(markdown_content),
                 "section_content": html_content,

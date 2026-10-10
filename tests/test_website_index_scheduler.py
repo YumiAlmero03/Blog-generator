@@ -193,10 +193,10 @@ def test_daily_page_discovery_due_uses_24_hour_window(monkeypatch):
     assert website_index_scheduler._page_discovery_is_due() is False
 
 
-def test_scheduler_default_interval_is_30_minutes(monkeypatch):
+def test_scheduler_default_interval_is_10_minutes(monkeypatch):
     monkeypatch.delenv("WEBSITE_INDEX_SCHEDULER_INTERVAL_SECONDS", raising=False)
 
-    assert website_index_scheduler._interval_seconds() == 60 * 30
+    assert website_index_scheduler._interval_seconds() == 60 * 10
 
 
 def test_trigger_website_index_batch_starts_thread(monkeypatch):

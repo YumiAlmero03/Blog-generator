@@ -1,3 +1,4 @@
+from app.services.google_issues_service import add_google_issues
 import csv
 import io
 import json
@@ -6,7 +7,7 @@ import time
 from datetime import date, timedelta
 
 from flask import Response, redirect, render_template, request, url_for
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from app.controllers.helpers import base_template_context
 from app.services.banned_word_checker_service import check_website_banned_words
@@ -39,13 +40,15 @@ from app.services.meta_generator_service import (
 )
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.reference_link_service import fetch_url_html, fetch_url_rendered_html
+from app.services.schema_reader_service import fetch_schema_page
+from app.services.seo_performance_summary_service import build_seo_performance_summary_response
 from app.services.seo_checker_service import run_seo_audit
 from app.services.generation_status_service import publish_generation_prompt, publish_generation_status
 from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.website_page_discovery_service import discover_website_pages
 from app.services.website_index_scheduler import submit_website_index_urls_to_indexnow, trigger_website_index_batch
 from app.services.website_planner_service import DEFAULT_KEYWORD_CATEGORIES, build_keyword_website_plan_v2, build_website_plan, default_keyword_categories_text, enrich_keyword_website_plan_v2_with_ai, get_main_pages_setting, get_trust_pages_setting, parse_ahrefs_keyword_csv, parse_keyword_categories
-from database import get_brand_context, get_brand_record, get_setting, list_backlinks, list_brand_names, list_brand_records, set_setting
+from database import get_brand_context, get_brand_record, get_previous_seo_check_history, get_seo_check_history_result, get_setting, list_backlinks, list_brand_names, list_brand_records, list_seo_check_history, record_seo_check_history, set_setting
 from database import delete_website_index_url, delete_website_index_urls, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 from logger import logger
 
@@ -54,6 +57,23 @@ WEBSITE_INDEX_CHECK_LIMIT = 50
 WEBSITE_PAGES_PER_PAGE = 50
 SEO_CHECKER_V2_INTERNAL_LINK_LIMIT = 300
 SEO_CHECKER_V2_SCHEMA_LIMIT = 200
+
+
+def schema_reader():
+    return render_template("schema_reader.html", **base_template_context())
+
+
+def schema_reader_metadata():
+    url = request.args.get("url", "").strip()
+    if not url or len(url) > 8192:
+        return {"error": "Enter a valid Page URL or path with a domain."}, 400
+    try:
+        return fetch_schema_page(url)
+    except ValueError:
+        return {"error": "Use a public HTTP or HTTPS URL without credentials that returns an HTML page."}, 400
+    except Exception as exc:
+        logger.warning("Schema Reader metadata fetch failed (%s).", type(exc).__name__)
+        return {"error": "Could not fetch that page. Check the URL and try again."}, 502
 
 
 def text_tools():
@@ -1052,12 +1072,16 @@ def _append_context_lines(lines: list[str], fields: list[tuple[str, str]]) -> No
 
 
 def seo_checker():
+    checker_version = "v1"
     state = {
         "url": "",
         "ignore_ssl_errors": False,
         "allow_private_urls": False,
         "limit": 10,
         "result": None,
+        "history": list_seo_check_history(checker_version=checker_version),
+        "previous_check": None,
+        "comparison": None,
         "error": None,
         "generation_log": [],
         "generation_log_json": "[]",
@@ -1082,6 +1106,17 @@ def seo_checker():
                 allow_private=state["allow_private_urls"],
                 progress_callback=progress,
             )
+            history_id = record_seo_check_history(state["result"], checker_version=checker_version)
+            state["previous_check"] = get_previous_seo_check_history(
+                state["result"].get("base_url", ""),
+                history_id,
+                checker_version=checker_version,
+            )
+            state["comparison"] = _seo_history_comparison(state["result"], state["previous_check"])
+            state["history"] = list_seo_check_history(
+                checker_version=checker_version,
+                base_url=state["result"].get("base_url", ""),
+            )
             publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker: Check complete.")
             append_generation_log(state["generation_log"], "status", "Check complete.")
         except Exception as exc:
@@ -1094,21 +1129,56 @@ def seo_checker():
 
 
 def seo_checker_v2():
+    checker_version = "v2"
     state = {
         "url": "",
         "ignore_ssl_errors": False,
         "allow_private_urls": False,
+        "use_ai": False,
+        "check_google_issues": False,
         "limit": 10,
         "result": None,
+        "history": list_seo_check_history(checker_version=checker_version),
+        "previous_check": None,
+        "comparison": None,
+        "loaded_history": None,
         "error": None,
         "generation_log": [],
         "generation_log_json": "[]",
     }
 
+    history_id = request.args.get("history_id", "").strip()
+    if history_id and request.method == "GET":
+        try:
+            snapshot = get_seo_check_history_result(int(history_id), checker_version=checker_version)
+        except ValueError:
+            snapshot = None
+        if snapshot:
+            state["loaded_history"] = snapshot
+            state["result"] = snapshot["result"]
+            state["url"] = snapshot.get("source_url", "") or state["result"].get("source_url", "")
+            state["limit"] = int(snapshot.get("page_limit", 0) or state["result"].get("limit", 10) or 10)
+            state["use_ai"] = bool(state["result"].get("use_ai", True))
+            state["check_google_issues"] = bool(state["result"].get("check_google_issues", False))
+            state["previous_check"] = get_previous_seo_check_history(
+                state["result"].get("base_url", ""),
+                snapshot["id"],
+                checker_version=checker_version,
+            )
+            state["comparison"] = _seo_history_comparison(state["result"], state["previous_check"])
+            state["history"] = list_seo_check_history(
+                checker_version=checker_version,
+                base_url=state["result"].get("base_url", ""),
+            )
+        else:
+            state["error"] = "The saved V2 report could not be found or its JSON data is invalid."
+
     if request.method == "POST":
         state["url"] = request.form.get("url", "").strip()
         state["ignore_ssl_errors"] = request.form.get("ignore_ssl_errors") == "1"
         state["allow_private_urls"] = request.form.get("allow_private_urls") == "1" or _is_local_dev_url(state["url"])
+        state["use_ai"] = request.form.get("use_ai") == "1"
+        state["check_google_issues"] = request.form.get("check_google_issues") == "1"
         state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
         state["generation_log_json"] = generation_log_json(state["generation_log"])
         try:
@@ -1122,7 +1192,25 @@ def seo_checker_v2():
                 limit=state["limit"],
                 verify_ssl=not state["ignore_ssl_errors"],
                 allow_private=state["allow_private_urls"],
+                use_ai=state["use_ai"],
                 progress_callback=progress,
+            )
+            add_google_issues(
+                state["result"], enabled=state["check_google_issues"],
+                access_token=get_setting("google_oauth_access_token", ""),
+                service_account_json=get_setting("google_service_account_json", ""),
+                progress_callback=progress,
+            )
+            history_id = record_seo_check_history(state["result"], checker_version=checker_version)
+            state["previous_check"] = get_previous_seo_check_history(
+                state["result"].get("base_url", ""),
+                history_id,
+                checker_version=checker_version,
+            )
+            state["comparison"] = _seo_history_comparison(state["result"], state["previous_check"])
+            state["history"] = list_seo_check_history(
+                checker_version=checker_version,
+                base_url=state["result"].get("base_url", ""),
             )
             publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker V2: Check complete.")
             append_generation_log(state["generation_log"], "status", "Check complete.")
@@ -1142,7 +1230,76 @@ def download_seo_checker_report():
     return build_seo_checker_report_response(result)
 
 
-def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True, allow_private: bool = False, progress_callback=None) -> dict:
+def download_seo_performance_summary():
+    result = _json_dict(request.form.get("result_json", ""))
+    if not result:
+        return redirect(url_for("web.seo_checker_v2"))
+    return build_seo_performance_summary_response(result)
+
+
+def _seo_history_comparison(result: dict, previous_check: dict | None) -> dict | None:
+    if not result or not previous_check:
+        return None
+
+    summary = result.get("summary", {}) or {}
+    comparisons = [
+        _seo_metric_delta("Average score", summary.get("average_score", 0), previous_check.get("average_score", 0), higher_is_better=True, suffix="/100"),
+        _seo_metric_delta("Checked pages", summary.get("checked_count", 0), previous_check.get("checked_count", 0), higher_is_better=True),
+        _seo_metric_delta("Warning/fix items", summary.get("issue_count", 0), previous_check.get("issue_count", 0), higher_is_better=False),
+        _seo_metric_delta("404 links", summary.get("not_found_link_count", 0), previous_check.get("not_found_link_count", 0), higher_is_better=False),
+        _seo_metric_delta("Redirecting links", summary.get("redirect_link_count", 0), previous_check.get("redirect_link_count", 0), higher_is_better=False),
+        _seo_metric_delta("Broken links", summary.get("broken_link_count", 0), previous_check.get("broken_link_count", 0), higher_is_better=False),
+        _seo_metric_delta("Unreachable links", summary.get("unreachable_link_count", 0), previous_check.get("unreachable_link_count", 0), higher_is_better=False),
+        _seo_metric_delta("Internal links", summary.get("internal_link_count", 0), previous_check.get("internal_link_count", 0), higher_is_better=True),
+        _seo_metric_delta("Schema items", summary.get("schema_count", 0), previous_check.get("schema_count", 0), higher_is_better=True),
+    ]
+    score_delta = comparisons[0]["delta"]
+    return {
+        "previous": previous_check,
+        "metrics": comparisons,
+        "score_delta": score_delta,
+        "score_direction": _seo_delta_direction(score_delta, True),
+    }
+
+
+def _seo_metric_delta(label: str, current_value, previous_value, higher_is_better: bool, suffix: str = "") -> dict:
+    current_number = int(current_value or 0)
+    previous_number = int(previous_value or 0)
+    delta = current_number - previous_number
+    return {
+        "label": label,
+        "current": current_number,
+        "previous": previous_number,
+        "delta": delta,
+        "delta_label": _seo_delta_label(delta, suffix),
+        "direction": _seo_delta_direction(delta, higher_is_better),
+        "suffix": suffix,
+    }
+
+
+def _seo_delta_label(delta: int, suffix: str = "") -> str:
+    if delta > 0:
+        return f"+{delta}{suffix}"
+    if delta < 0:
+        return f"{delta}{suffix}"
+    return f"0{suffix}"
+
+
+def _seo_delta_direction(delta: int, higher_is_better: bool) -> str:
+    if delta == 0:
+        return "same"
+    improved = delta > 0 if higher_is_better else delta < 0
+    return "better" if improved else "worse"
+
+
+def _run_site_seo_checks(
+    raw_url: str,
+    limit: int = 10,
+    verify_ssl: bool = True,
+    allow_private: bool = False,
+    use_ai: bool = True,
+    progress_callback=None,
+) -> dict:
     allow_private = allow_private or _is_local_dev_url(raw_url)
     _publish_seo_progress(progress_callback, "Listing pages...")
     discovery = discover_website_pages(raw_url, limit=limit, allow_private=allow_private)
@@ -1154,13 +1311,15 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
     _publish_seo_progress(progress_callback, f"Found {total_pages} page(s). Starting page checks...")
 
     for index, page_url in enumerate(page_urls, start=1):
+        tab_label = _seo_page_tab_label(page_url)
         _publish_seo_progress(progress_callback, f"Checking page {index}/{total_pages}: {page_url}")
         try:
-            audit = run_seo_audit(page_url, verify_ssl=verify_ssl, allow_private=allow_private)
+            audit = run_seo_audit(page_url, verify_ssl=verify_ssl, allow_private=allow_private, use_ai=use_ai)
             page_results.append(
                 {
                     "index": index,
                     "url": page_url,
+                    "tab_label": tab_label,
                     "status": "checked",
                     "result": audit,
                     "error": "",
@@ -1183,6 +1342,7 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
                 {
                     "index": index,
                     "url": page_url,
+                    "tab_label": tab_label,
                     "status": "error",
                     "result": None,
                     "error": str(exc) or "Could not complete this page check.",
@@ -1222,12 +1382,14 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
     )
     link_health_details = _site_link_health_details(page_results)
     internal_link_details = _site_internal_link_details(page_results)
+    header_footer_link_details = _site_header_footer_link_details(page_results)
     schema_details = _site_schema_details(page_results)
     return {
         "mode": "site",
         "source_url": raw_url,
         "base_url": discovery.base_url,
         "limit": limit,
+        "use_ai": bool(use_ai),
         "discovered_pages": page_urls,
         "discovery_errors": discovery.errors,
         "sitemaps": discovery.sitemaps,
@@ -1252,8 +1414,16 @@ def _run_site_seo_checks(raw_url: str, limit: int = 10, verify_ssl: bool = True,
         },
         "link_health_details": link_health_details,
         "internal_link_details": internal_link_details,
+        "header_footer_link_details": header_footer_link_details,
         "schema_details": schema_details,
     }
+
+
+def _seo_page_tab_label(page_url: str) -> str:
+    path = unquote(urlparse(page_url or "").path or "/")
+    if path == "/":
+        return "Homepage"
+    return path.rstrip("/") or "Homepage"
 
 
 def _site_link_health_details(page_results: list[dict]) -> dict:
@@ -1312,6 +1482,53 @@ def _site_internal_link_details(page_results: list[dict]) -> dict:
     }
 
 
+def _site_header_footer_link_details(page_results: list[dict]) -> dict:
+    rows = []
+    total_count = 0
+    duplicate_count = 0
+    seen = set()
+    for page in page_results:
+        if page.get("status") != "checked" or not page.get("result"):
+            continue
+        source_page = page.get("url", "")
+        link_report = page.get("result", {}).get("stats", {}).get("links", {}) or {}
+        for link in link_report.get("header_footer_links", []) or []:
+            anchor_key = "|".join(
+                [
+                    str(link.get("text", "") or "").strip(),
+                    "image" if link.get("is_image") else "text",
+                    str(link.get("image_alt", "") or "").strip(),
+                ]
+            ).casefold()
+            duplicate_key = (anchor_key, str(link.get("url", "") or "").strip())
+            if duplicate_key in seen:
+                duplicate_count += 1
+                continue
+            seen.add(duplicate_key)
+            total_count += 1
+            rows.append(
+                {
+                    "anchor_text": link.get("text", "") or "No anchor text",
+                    "element_id": link.get("id", ""),
+                    "image_id": link.get("image_id", ""),
+                    "is_image": bool(link.get("is_image")),
+                    "image_alt": link.get("image_alt", ""),
+                    "url": link.get("url", ""),
+                    "type": link.get("type", ""),
+                    "region": link.get("region", ""),
+                    "source_page": source_page,
+                }
+            )
+    return {
+        "rows": rows,
+        "total_count": total_count,
+        "display_count": len(rows),
+        "duplicate_count": duplicate_count,
+        "truncated": False,
+        "limit": total_count,
+    }
+
+
 def _internal_link_status_message(link: dict) -> str:
     status_code = link.get("status_code")
     if status_code is None:
@@ -1339,8 +1556,6 @@ def _site_schema_details(page_results: list[dict]) -> dict:
                 valid_count += 1
             else:
                 invalid_count += 1
-            if len(rows) >= SEO_CHECKER_V2_SCHEMA_LIMIT:
-                continue
             rows.append(
                 {
                     "page": source_page,
@@ -1349,6 +1564,7 @@ def _site_schema_details(page_results: list[dict]) -> dict:
                     "valid": bool(schema.get("valid")),
                     "error": schema.get("error", ""),
                     "preview": schema.get("preview", ""),
+                    "content": schema.get("content", schema.get("preview", "")),
                 }
             )
     return {
@@ -1357,8 +1573,8 @@ def _site_schema_details(page_results: list[dict]) -> dict:
         "valid_count": valid_count,
         "invalid_count": invalid_count,
         "display_count": len(rows),
-        "truncated": total_count > len(rows),
-        "limit": SEO_CHECKER_V2_SCHEMA_LIMIT,
+        "truncated": False,
+        "limit": total_count,
     }
 
 

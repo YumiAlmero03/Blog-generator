@@ -3,6 +3,7 @@ import re
 
 from flask import render_template, request
 
+from app.services.post_export_service import CATEGORIES, normalize_category, resolved_category, suggest_category
 from app.controllers.helpers import base_template_context
 from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
@@ -10,7 +11,7 @@ from app.services.generation_status_service import clear_generation_status, publ
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.word_limit_settings import get_blog_word_limits, get_page_word_limits
-from database import get_brand_context, list_brand_names, record_blog, record_generation, upsert_brand
+from database import get_generation_history_item, get_brand_context, list_brand_names, record_blog, record_generation, upsert_brand
 from generators.blog_rework_generator import generate_blog_rework
 from generators.content_generator import count_html_words, suggest_content_tags
 from logger import logger
@@ -18,7 +19,14 @@ from logger import logger
 
 def blog_rework_generator():
     state = _default_state()
+    history_id = request.args.get("edit_history_id", "")
+    if request.method == "GET" and history_id.isdecimal():
+        _load_history_item(state, int(history_id))
+    state["category"] = state.get("category", "Auto")
+    state["generator"] = "rework"
+    state["post_categories"] = CATEGORIES
     if request.method == "POST":
+        state["category"] = normalize_category(request.form.get("category", "Auto"))
         action = request.form.get("action", "generate_rework").strip()
         if action == "save_blog_rework":
             _handle_save_blog_rework(state)
@@ -27,7 +35,29 @@ def blog_rework_generator():
 
     state["language_options"] = language_options(state["language"])
     state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
+    state["suggested_category"] = suggest_category(state)
     return render_template("blog_rework_generator.html", **base_template_context(), **state)
+
+
+def _load_history_item(state: dict, history_id: int) -> None:
+    item = get_generation_history_item(history_id)
+    if not item or item.get("content_type") != "Blog Rework":
+        return
+    inputs = json.loads(item.get("prompt_inputs") or "{}")
+    for key in ("source_url", "source_title", "old_brand", "supporting_keyword", "manual_supporting_keywords", "rework_content_type", "language", "tone", "visual"):
+        if key in inputs:
+            state[key] = inputs[key]
+    state.update(
+        history_id=str(item["id"]), selected_title=item["title"],
+        brand=item.get("brand_name") or "", keyword=item.get("primary_keyword") or "",
+        content=item.get("content") or "", meta_description=item.get("meta_description") or "",
+        category="Auto" if inputs.get("category_mode") == "auto" else (normalize_category(inputs.get("category", "Auto")) or "Auto"),
+        tag_suggestions=[tag.strip() for tag in (item.get("tags") or "").split(",") if tag.strip()],
+        quality_report=json.loads(item.get("quality_report") or "{}"),
+        generation_log=parse_generation_log(inputs.get("generation_log", [])),
+    )
+    if state["meta_description"]:
+        state["meta_descriptions"] = [{"text": state["meta_description"]}]
 
 
 def _default_state() -> dict:
@@ -145,6 +175,10 @@ def _handle_save_blog_rework(state: dict) -> None:
         state["error"] = "There is no generated rework to save."
         return
 
+    if not state["meta_description"] or not state.get("category", "General"):
+        state["error"] = "Please select a meta description and category before saving."
+        return
+
     min_words, max_words = _rework_word_limits(state["rework_content_type"])
     if not state["tag_suggestions"]:
         state["tag_suggestions"] = suggest_content_tags(
@@ -193,6 +227,8 @@ def _record_blog_rework(state: dict, min_words: int, max_words: int) -> None:
         meta_description=state["meta_description"],
         tags=state["tag_suggestions"],
         prompt_inputs={
+            "category": resolved_category({**state, "category": state.get("category", "Auto"), "generator": "rework"}),
+            "category_mode": "auto" if state.get("category", "Auto") == "Auto" else "manual",
             "source_url": state["source_url"],
             "source_type": "url" if state["source_url"] else "pasted_content",
             "rework_content_type": state.get("rework_content_type", "blog"),

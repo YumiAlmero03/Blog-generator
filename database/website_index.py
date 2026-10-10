@@ -179,7 +179,7 @@ def website_index_stats() -> dict:
     }
 
 
-def list_due_website_index_urls(hours: float = 0.5) -> list[dict]:
+def list_due_website_index_urls(hours: float = 10 / 60) -> list[dict]:
     cutoff = datetime.now(timezone.utc) - timedelta(hours=max(0.1, hours))
     cutoff_text = cutoff.isoformat(timespec="seconds")
     with get_connection() as connection:

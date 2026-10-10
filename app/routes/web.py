@@ -1,6 +1,7 @@
 from flask import Blueprint, send_from_directory
 
 from app.controllers import background_job_controller, backlink_blog_controller, backlink_controller, blog_controller, blog_rework_controller, brand_controller, brand_medium_controller, checklist_controller, dashboard_controller, image_controller, news_controller, page_controller, posting_planner_controller, settings_controller, social_media_controller, tier2_blog_controller, tool_controller, weekly_planner_controller
+from app.controllers import post_controller
 from app.views import generation_events_view
 from app.services.image_service import UPLOAD_ROOT
 
@@ -40,12 +41,15 @@ web.add_url_rule("/meta-generator", view_func=tool_controller.meta_generator, me
 web.add_url_rule("/gsc-planner", view_func=tool_controller.gsc_planner, methods=["GET", "POST"])
 web.add_url_rule("/gsc-planner/download-summary", view_func=tool_controller.download_gsc_summary_report, methods=["POST"])
 web.add_url_rule("/keyword-suggestions", view_func=tool_controller.keyword_suggestions, methods=["GET", "POST"])
+web.add_url_rule("/schema-reader", view_func=tool_controller.schema_reader, methods=["GET"])
+web.add_url_rule("/schema-reader/metadata", view_func=tool_controller.schema_reader_metadata, methods=["GET"])
 web.add_url_rule("/text-tools", view_func=tool_controller.text_tools, methods=["GET"])
 web.add_url_rule("/website-banned-word-checker", view_func=tool_controller.website_banned_word_checker, methods=["GET", "POST"])
 web.add_url_rule("/test-page", view_func=tool_controller.test_page, methods=["GET", "POST"])
 web.add_url_rule("/seo-checker", view_func=tool_controller.seo_checker, methods=["GET", "POST"])
 web.add_url_rule("/seo-checker-v2", view_func=tool_controller.seo_checker_v2, methods=["GET", "POST"])
 web.add_url_rule("/seo-checker/download-report", view_func=tool_controller.download_seo_checker_report, methods=["POST"])
+web.add_url_rule("/seo-checker/download-performance-summary", view_func=tool_controller.download_seo_performance_summary, methods=["POST"])
 web.add_url_rule("/indexnow", view_func=tool_controller.indexnow, methods=["GET", "POST"])
 web.add_url_rule("/website-index", view_func=tool_controller.indexnow, methods=["GET", "POST"])
 web.add_url_rule("/image-tools", view_func=image_controller.image_tools, methods=["GET", "POST"])
@@ -78,3 +82,6 @@ web.add_url_rule("/background-jobs/<job_id>", view_func=background_job_controlle
 @web.get("/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_ROOT, filename)
+
+web.add_url_rule("/posts/save", view_func=post_controller.save_post, methods=["POST"])
+web.add_url_rule("/posts/download", view_func=post_controller.download_post, methods=["POST"])

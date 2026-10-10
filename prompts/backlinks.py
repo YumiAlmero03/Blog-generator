@@ -175,7 +175,7 @@ Brand: {brand}
 {banned_words_section}
 
 Rules:
-- Each meta description must be between 130 and 160 characters long.
+- Each meta description must be between 120 and 160 characters long.
 - Count characters carefully before finishing.
 - Keep the description informational, neutral, and helpful.
 {brand_meta_rules}
@@ -192,7 +192,7 @@ Rules:
 - If the medium tier is Tier 1 and a publication name is provided, the description may sound like it belongs on that blog or publication, but keep it natural.
 - Vary the approach for each variant.
 - Do not add any extra text before or after the JSON.
-- Ensure each meta description is complete, natural, and within the 130-160 character limit.
+- Ensure each meta description is complete, natural, and within the 120-160 character limit.
 - Start your response with '{{' and end with '}}'
 
 Return valid JSON only in this format:
@@ -384,6 +384,8 @@ Required {cleaned_required_link_label} link rules:
 - Use only one blank line between Markdown blocks.
 - Use this Markdown link format once anywhere in the article when a required URL is provided: [{required_anchor}]({required_url}).
 - Do not use raw HTML tags in the content value.
+- Include a concise table only when comparisons, specifications, timelines, or structured facts are clearer in a table. Otherwise omit tables.
+- Use Markdown pipe tables with a header and separator row; the app converts them to HTML tables for viewing and copying. Keep cells short and use only supported facts; never invent data to fill a table.
 - Use Markdown bold only for important non-keyword words when emphasis helps.
 - Never bold the primary keyword.
 """

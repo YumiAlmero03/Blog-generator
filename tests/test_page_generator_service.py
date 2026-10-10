@@ -227,6 +227,27 @@ def test_simple_page_content_prompt_includes_supporting_keywords():
     assert "Include supporting keywords naturally" in prompt
 
 
+def test_simple_page_prompt_requires_h2_h3_and_one_or_two_paragraphs():
+    prompt = build_simple_page_content_prompt(
+        page_title="Privacy Policy",
+        generated_title="Privacy Policy for Visitor Data",
+    )
+
+    assert "at least one ## H2 heading and at least one ### H3 subheading" in prompt
+    assert "introduction immediately after the H1 must be exactly one paragraph containing 1 to 3 sentences" in prompt
+    assert "Every ## H2 and ### H3 heading must be followed by 1 or 2 paragraphs" in prompt
+    assert simple_page_generator._heading_paragraph_issues("# Title\n\nIntroduction text.\n\n## Policy\n\nOne paragraph.\n\n### Data\n\nDetails here.") == []
+    assert "missing an ## H2 heading" in simple_page_generator._heading_paragraph_issues("# Title\n\n### Data\n\nDetails here.")
+    assert any(
+        "### heading has 0 paragraphs" in issue
+        for issue in simple_page_generator._heading_paragraph_issues("# Title\n\n## Policy\n\nPolicy text.\n\n### Data")
+    )
+    assert any(
+        "introduction has 4 sentences" in issue
+        for issue in simple_page_generator._heading_paragraph_issues("# Title\n\nOne. Two. Three. Four.\n\n## Policy\n\nPolicy text.\n\n### Data\n\nDetails here.")
+    )
+
+
 def test_generate_simple_page_title_retries_until_title_starts_with_page_title(monkeypatch):
     provider = FakeProvider(
         [
