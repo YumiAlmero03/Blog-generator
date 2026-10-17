@@ -1,12 +1,14 @@
 from flask import Blueprint, send_from_directory
 
 from app.controllers import background_job_controller, backlink_blog_controller, backlink_controller, blog_controller, blog_rework_controller, brand_controller, brand_medium_controller, checklist_controller, dashboard_controller, image_controller, news_controller, page_controller, posting_planner_controller, settings_controller, social_media_controller, tier2_blog_controller, tool_controller, weekly_planner_controller
-from app.controllers import post_controller
+from app.controllers import post_controller, website_content_controller
 from app.views import generation_events_view
 from app.services.image_service import UPLOAD_ROOT
 
 
 web = Blueprint("web", __name__)
+
+web.add_url_rule("/website-content", view_func=website_content_controller.website_content, methods=["GET", "POST"])
 
 
 web.add_url_rule("/dashboard", view_func=dashboard_controller.dashboard, methods=["GET"])

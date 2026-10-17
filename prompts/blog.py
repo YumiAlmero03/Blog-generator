@@ -1,6 +1,6 @@
 from word_bank import build_banned_words_prompt_section
 
-from prompts.shared import MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_brand_context_section, build_language_instruction
+from prompts.shared import BLOG_LIST_INSTRUCTIONS, MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_brand_context_section, build_language_instruction
 
 def build_title_prompt(
     keyword: str,
@@ -237,6 +237,7 @@ Rules:
 - Structure the article in this order: introduction, 3–4 main sections with subheadings, then exactly one ending section that best fits the page intent.
 - Write the content value in Markdown source, not HTML.
 - Use Markdown headings like ## and ###.
+{BLOG_LIST_INSTRUCTIONS}
 - Use Markdown lists where helpful.
 - Include a concise table only when comparisons, specifications, timelines, or structured facts are clearer in a table. Otherwise omit tables.
 - Use Markdown pipe tables with a header and separator row; the app converts them to HTML tables for viewing and copying. Keep cells short and use only supported facts; never invent data to fill a table.

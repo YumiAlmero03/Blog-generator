@@ -527,7 +527,8 @@ def generate_content(
         target_min_words=prompt_min_words,
         progress_callback=progress_callback,
     )
-    return markdown_to_output(markdown_content, "html")
+    from app.services.article_link_service import apply_article_link_rules
+    return apply_article_link_rules(markdown_to_output(markdown_content, "html"), links, money_site_url)
 
 
 def revise_existing_content(

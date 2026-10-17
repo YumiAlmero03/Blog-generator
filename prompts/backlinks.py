@@ -1,6 +1,6 @@
 from word_bank import build_banned_words_prompt_section
 
-from prompts.shared import MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_backlink_context_section, build_brand_context_section, build_language_instruction
+from prompts.shared import BLOG_LIST_INSTRUCTIONS, MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_backlink_context_section, build_brand_context_section, build_language_instruction
 
 def build_backlink_title_prompt(
     keyword: str,
@@ -379,6 +379,7 @@ Required {cleaned_required_link_label} link rules:
     format_rules = f"""
 - Write the content value in Markdown source, even when the selected medium output type is {post_type}.
 - The app will convert the Markdown to {post_type} with Python after generation.
+{BLOG_LIST_INSTRUCTIONS}
 - Use Markdown headings like ## and ###, Markdown lists, and compact paragraphs.
 - Do not put every sentence on its own line. Keep related sentences together in the same paragraph.
 - Use only one blank line between Markdown blocks.

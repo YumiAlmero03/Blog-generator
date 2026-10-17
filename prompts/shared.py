@@ -177,3 +177,13 @@ def build_backlink_context_section(
         )
 
     return "\n" + "\n".join(lines) + "\n"
+
+
+BLOG_LIST_INSTRUCTIONS = """
+Article list formatting:
+- You may use an ordered list for a sequence, steps, rankings, or points introduced as first, second, third, and so on. Do not force these into prose paragraphs.
+- You may use an unordered bullet list for related points when their order does not matter.
+- In HTML output, use <ol><li>...</li></ol> for ordered lists and <ul><li>...</li></ul> for bullet lists.
+- In Markdown output, use numbered items (1., 2., 3.) for ordered lists and hyphen-prefixed items (-) for bullet lists; Python converts them to <ol> and <ul>.
+- Follow the requested output format. Use lists only when they improve readability; keep ordinary explanations as paragraphs.
+"""

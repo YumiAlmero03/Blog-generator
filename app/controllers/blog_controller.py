@@ -1,3 +1,5 @@
+from app.services.faq_block_service import convert_faq_blocks
+from app.services.article_link_service import apply_article_link_rules
 import json
 
 from flask import render_template, request
@@ -79,6 +81,8 @@ def index():
     state["language_options"] = language_options(state["language"])
     state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     state["suggested_category"] = suggest_category(state)
+    state["content"] = apply_article_link_rules(state["content"], state["links"], state["money_site_url"])
+    state["content"] = convert_faq_blocks(state["content"])
     return render_template("index.html", **base_template_context(), **state)
 
 
@@ -409,6 +413,7 @@ def _hydrate_blog_generation_state(state: dict) -> str:
     state["visual"] = request.form.get("visual", "").strip()
     state["content"] = request.form.get("content_html", "").strip()
     state["links"] = _extract_links_from_request()
+    state["content"] = apply_article_link_rules(state["content"], state["links"], get_setting("money_site", ""))
     state["titles"] = _json_list(request.form.get("titles_json", "").strip())
     state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", "").strip())
     state["tag_suggestions"] = _tags_from_raw(request.form.get("tags_json", "").strip())
@@ -428,6 +433,7 @@ def _hydrate_blog_generation_state(state: dict) -> str:
 
 
 def _record_completed_blog(state: dict, min_words: int, max_words: int):
+    state["content"] = apply_article_link_rules(state["content"], state["links"], state["money_site_url"])
     if not state["content"]:
         return
     state["quality_report"] = analyze_generated_content(
@@ -491,6 +497,7 @@ def _handle_save_generated_blog(state: dict):
     state["meta_descriptions"] = _json_list(request.form.get("meta_descriptions_json", ""))
     state["meta_description"] = selected_meta_description
     state["links"] = _extract_links_from_request()
+    state["content"] = apply_article_link_rules(state["content"], state["links"], get_setting("money_site", ""))
     state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
     state["generation_log_json"] = generation_log_json(state["generation_log"])
 
@@ -568,7 +575,8 @@ def _extract_links_from_request() -> list[dict]:
     link_urls = request.form.getlist("link_url[]")
     link_types = request.form.getlist("link_type[]")
 
-    for text, url, link_type in zip(link_texts, link_urls, link_types):
+    for index, (text, url) in enumerate(zip(link_texts, link_urls)):
+        link_type = link_types[index] if index < len(link_types) else "internal"
         cleaned_text = text.strip()
         cleaned_url = url.strip()
         cleaned_type = link_type.strip().lower() or "internal"

@@ -3,7 +3,7 @@ import re
 
 from logger import logger
 from prompts import build_social_media_post_prompt
-from prompts.shared import build_language_instruction
+from prompts.shared import BLOG_LIST_INSTRUCTIONS, build_language_instruction
 from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
 
@@ -861,6 +861,7 @@ Rules:
 - If the topic suggests those areas, reframe toward neutral product design, digital safety, UX, technology, entertainment, or responsible play.
 {word_rule}
 - Write content in Markdown source.
+{BLOG_LIST_INSTRUCTIONS}
 - Use Markdown headings, compact paragraphs, and lists when helpful.
 - Do not use raw HTML in content.
 - Match the structure to the selected medium type. Social mediums should be shorter and punchier; blog mediums can be fuller.

@@ -1,4 +1,4 @@
-from prompts.shared import build_language_instruction
+from prompts.shared import BLOG_LIST_INSTRUCTIONS, build_language_instruction
 
 
 def build_scoped_content_revision_prompt(
@@ -75,6 +75,7 @@ Brand/context:
 
 {language_section}
 
+{BLOG_LIST_INSTRUCTIONS}
 Selected output format:
 {output_format}
 

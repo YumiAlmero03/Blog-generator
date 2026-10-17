@@ -2,7 +2,7 @@ from datetime import date
 
 from word_bank import build_banned_words_prompt_section
 
-from prompts.shared import MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_brand_context_section, build_language_instruction
+from prompts.shared import BLOG_LIST_INSTRUCTIONS, MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_brand_context_section, build_language_instruction
 
 
 def current_news_date() -> str:
@@ -238,6 +238,7 @@ Rules:
 - Sentences must be less than 24 words.
 - Do not include the selected title as the article title, H1, H2, H3, or opening line. The CMS already has the title separately.
 - Do not use H1 headings.
+{BLOG_LIST_INSTRUCTIONS}
 - Structure the article with well-distributed Markdown H2 and H3 headings.
 - Use H2 headings for main sections and H3 headings for useful subsections under those sections.
 - Include sections for latest update, context, why it matters, and what to watch next, but vary the wording naturally.

@@ -392,3 +392,27 @@ html.dark .shadow-soft {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Make linked anchor text identifiable in the article editor. */
+#contentEditor .ql-editor a[href] {
+  color: #9a4f22;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 700;
+}
+html.dark #contentEditor .ql-editor a[href] {
+  color: #d8b999;
+}
+
+#contentEditor .faq-item {
+  margin-top: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #ead8c3;
+}
+#contentEditor .faq-item > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+html.dark #contentEditor .faq-item {
+  border-color: #55483a;
+}

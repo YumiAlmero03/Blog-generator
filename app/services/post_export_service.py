@@ -1,5 +1,7 @@
 """Shared post fields and portable JSON / WordPress WXR exports."""
 import json
+from app.services.faq_block_service import convert_faq_blocks
+from app.services.article_link_service import apply_article_link_rules
 import re
 from datetime import datetime, timezone
 from html import unescape
@@ -64,6 +66,14 @@ def normalize_post(data, *, draft=False):
             raise ValueError(f"Please enter or select a {key.replace('_', ' ')} before saving or downloading.")
     if not draft and not unescape(re.sub(r"<[^>]*>", "", post["content_html"])).strip():
         raise ValueError("Please generate article content before saving or downloading.")
+    try:
+        links = json.loads(field("links_json") or "[]")
+    except ValueError:
+        raise ValueError("Invalid links.") from None
+    if not isinstance(links, list):
+        raise ValueError("Invalid links.")
+    post["content_html"] = apply_article_link_rules(post["content_html"], links, field("money_site_url"))
+    post["content_html"] = convert_faq_blocks(post["content_html"])
     post["slug"] = slugify(post["title"])
     try:
         tags = json.loads(field("tags_json") or "[]")

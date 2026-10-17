@@ -18,7 +18,8 @@
         <label for="limit" class="mb-2 block text-sm font-bold text-sand-900">Page Limit</label>
         <input id="limit" name="limit" type="number" min="1" max="100" value="{{ limit }}" class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
       </div>
-      <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">List & Check V2</button>
+      <button type="submit" name="action" value="check" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">List & Check V2</button>
+      <button type="submit" name="action" value="issues" class="inline-flex min-h-12 items-center justify-center rounded-full border border-sand-300 bg-white px-6 py-3 text-sm font-bold text-sand-800 transition hover:bg-sand-50">Website Issues</button>
       <label class="flex items-center gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800 lg:col-span-3">
         <input type="checkbox" name="use_ai" value="1" {% if use_ai %}checked{% endif %} class="h-4 w-4 rounded border-sand-300 text-sand-600 focus:ring-sand-500" />
         <span>Use AI suggestions</span>
@@ -48,7 +49,53 @@
     {% endif %}
   </section>
 
-  {% if result and result.mode == "site" %}
+  
+  {% if result and result.mode == "issues" %}
+    <section id="seo-v2-issues" class="mx-auto mt-6 max-w-5xl scroll-mt-6 rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold uppercase tracking-[0.16em] text-sand-600">Site Audit</p>
+          <h2 class="mt-2 font-display text-3xl font-bold text-sand-950">Website Issues</h2>
+        </div>
+        <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold text-sand-700">{{ result.issues|length }} issues found</span>
+      </div>
+
+      {% if result.issues %}
+        <div class="mt-5" data-table-pagination data-page-size="20">
+          <div class="overflow-x-auto rounded-2xl border border-sand-200 bg-white">
+            <table class="min-w-full divide-y divide-sand-100 text-left text-sm" data-audit-table data-table-name="Website Issues" data-filter-column="1" data-filter-label="Type">
+              <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
+                <tr>
+                  <th class="whitespace-nowrap px-4 py-3">URL</th>
+                  <th class="whitespace-nowrap px-4 py-3">Type</th>
+                  <th class="whitespace-nowrap px-4 py-3">Issue Title</th>
+                  <th class="whitespace-nowrap px-4 py-3">Suggested Fix</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-sand-100">
+                {% for issue in result.issues %}
+                  <tr data-table-row>
+                    <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ issue.url }}</td>
+                    <td class="whitespace-nowrap px-4 py-3">
+                      <span class="rounded-full px-2 py-1 text-xs font-bold uppercase tracking-[0.1em] {% if issue.type == "error" %}bg-red-100 text-red-700{% elif issue.type == "warning" %}bg-amber-100 text-amber-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                        {{ issue.type }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 font-semibold text-sand-900">{{ issue.title }}</td>
+                    <td class="px-4 py-3 text-sand-700">{{ issue.fix }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <p class="mt-5 rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-6 text-sand-700">No issues were found.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+
+{% if result and result.mode == "site" %}
     {% set internal_links = result.internal_link_details|default({}) %}
     {% set header_footer_links = result.header_footer_link_details|default({}) %}
     {% set schemas = result.schema_details|default({}) %}

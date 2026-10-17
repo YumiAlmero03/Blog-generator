@@ -1,6 +1,8 @@
 import html
 import re
 
+from app.services.faq_block_service import convert_faq_blocks
+
 
 def markdown_to_output(content: str, output_format: str = "html") -> str:
     cleaned_format = (output_format or "html").strip().lower()
@@ -18,6 +20,7 @@ def markdown_to_html(markdown: str) -> str:
     blocks = []
     paragraph = []
     list_items = []
+    list_tag = "ul"
     quote_lines = []
 
     def flush_paragraph():
@@ -31,7 +34,7 @@ def markdown_to_html(markdown: str) -> str:
         nonlocal list_items
         if list_items:
             items = "".join(f"<li>{_inline_markdown_to_html(item)}</li>" for item in list_items)
-            blocks.append(f"<ul>{items}</ul>")
+            blocks.append(f"<{list_tag}>{items}</{list_tag}>")
             list_items = []
 
     def flush_quote():
@@ -86,6 +89,10 @@ def markdown_to_html(markdown: str) -> str:
         elif unordered or ordered:
             flush_paragraph()
             flush_quote()
+            next_list_tag = "ol" if ordered else "ul"
+            if next_list_tag != list_tag:
+                flush_list()
+            list_tag = next_list_tag
             list_items.append((unordered or ordered).group(1).strip())
         elif line.startswith(">"):
             flush_paragraph()
@@ -104,25 +111,38 @@ def markdown_to_html(markdown: str) -> str:
     flush_paragraph()
     flush_list()
     flush_quote()
-    return "".join(blocks)
+    return convert_faq_blocks("".join(blocks))
 
 
 def html_to_gutenberg(html_content: str) -> str:
-    output = html_content or ""
+    output = convert_faq_blocks(html_content or "")
+    faq_blocks = []
+    def stash_faq(match):
+        faq_blocks.append(match.group(0))
+        return f"@@FAQ_BLOCK_{len(faq_blocks) - 1}@@"
+    output = re.sub(r'<section\b[^>]*data-faq-block="true"[^>]*>.*?</section>', stash_faq, output, flags=re.I | re.S)
     output = re.sub(r"<table\b[^>]*>.*?</table>", lambda match: '<!-- wp:table --><figure class="wp-block-table">' + match.group(0) + '</figure><!-- /wp:table -->', output, flags=re.IGNORECASE | re.DOTALL)
     output = re.sub(r"<p\b([^>]*)>(.*?)</p>", r"<!-- wp:paragraph --><p\1>\2</p><!-- /wp:paragraph -->", output, flags=re.IGNORECASE | re.DOTALL)
     output = re.sub(r"<h2\b([^>]*)>(.*?)</h2>", r"<!-- wp:heading --><h2\1>\2</h2><!-- /wp:heading -->", output, flags=re.IGNORECASE | re.DOTALL)
     output = re.sub(r"<h3\b([^>]*)>(.*?)</h3>", r"<!-- wp:heading {\"level\":3} --><h3\1>\2</h3><!-- /wp:heading -->", output, flags=re.IGNORECASE | re.DOTALL)
+    output = re.sub(r"<ol\b([^>]*)>(.*?)</ol>", r'<!-- wp:list {"ordered":true} --><ol\1>\2</ol><!-- /wp:list -->', output, flags=re.IGNORECASE | re.DOTALL)
     output = re.sub(r"<ul\b([^>]*)>(.*?)</ul>", r"<!-- wp:list --><ul\1>\2</ul><!-- /wp:list -->", output, flags=re.IGNORECASE | re.DOTALL)
     output = re.sub(r"<blockquote\b([^>]*)>(.*?)</blockquote>", r"<!-- wp:quote --><blockquote\1>\2</blockquote><!-- /wp:quote -->", output, flags=re.IGNORECASE | re.DOTALL)
+    for index, block in enumerate(faq_blocks):
+        output = output.replace(f"@@FAQ_BLOCK_{index}@@", "<!-- wp:html -->" + block + "<!-- /wp:html -->")
     return output
 
 
 def html_to_markdown(html_content: str) -> str:
     text = html_content or ""
+    text = re.sub(r"<summary\b[^>]*>(.*?)</summary>", r"### \1\n\n", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<h1\b[^>]*>(.*?)</h1>", r"# \1\n\n", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<h2\b[^>]*>(.*?)</h2>", r"## \1\n\n", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<h3\b[^>]*>(.*?)</h3>", r"### \1\n\n", text, flags=re.IGNORECASE | re.DOTALL)
+    def ordered_list(match):
+        items = re.findall(r"<li\b[^>]*>(.*?)</li>", match.group(1), flags=re.IGNORECASE | re.DOTALL)
+        return "\n" + "\n".join(f"{index}. {item}" for index, item in enumerate(items, 1)) + "\n\n"
+    text = re.sub(r"<ol\b[^>]*>(.*?)</ol>", ordered_list, text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<li\b[^>]*>(.*?)</li>", r"- \1\n", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"</ul>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<p\b[^>]*>(.*?)</p>", r"\1\n\n", text, flags=re.IGNORECASE | re.DOTALL)

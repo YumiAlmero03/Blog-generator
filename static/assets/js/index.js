@@ -163,6 +163,7 @@
   }
 
   function prepareContentForm() {
+    refreshArticleLinks();
     if (quill && contentHtmlInput) {
       contentHtmlInput.value = quill.root.innerHTML;
     }
@@ -183,11 +184,14 @@
         if (urlInput) {
           urlInput.value = url;
         }
-        links.push({ text: text, url: url, type: "reference" });
+        const typeInput = field.querySelector('select[name="link_type[]"]');
+        links.push({ text: text, url: url, type: linksContainer.dataset.linkMode === "url-only" ? "reference" : (typeInput?.value || "internal") });
       }
     });
     linksJsonInput.value = JSON.stringify(links);
   }
+
+  if (linksContainer) linksContainer.addEventListener("change", refreshOutputViews);
 
   function normalizePostLink(value) {
     const cleaned = (value || "").trim();
@@ -318,6 +322,7 @@
       }
       const tag = node.tagName.toLowerCase();
       const inner = Array.from(node.childNodes).map(inlineMarkdown).join("");
+      if (tag === "summary") return "### " + inner + "\n\n";
       if (tag === "a") {
         const href = node.getAttribute("href") || "";
         return href ? "[" + inner + "](" + href + ")" : inner;
@@ -356,10 +361,16 @@
       } else if (tag === "li") {
         chunks.push("- " + text);
       } else if (tag === "ul" || tag === "ol") {
-        const items = Array.from(node.querySelectorAll(":scope > li")).map(function (item) {
-          return "- " + inlineMarkdown(item).trim();
+        const items = Array.from(node.querySelectorAll(":scope > li")).map(function (item, index) {
+          return (tag === "ol" ? (index + 1) + ". " : "- ") + inlineMarkdown(item).trim();
         });
         chunks.push(items.join("\n"));
+      } else if (node.matches('[data-faq-block="true"]')) {
+        chunks.push(htmlToMarkdown(node.innerHTML));
+      } else if (tag === "details") {
+        chunks.push(htmlToMarkdown(node.innerHTML));
+      } else if (tag === "summary") {
+        chunks.push(inlineMarkdown(node));
       } else if (tag === "table") {
         const rows = Array.from(node.rows).map(function (row) {
           return "| " + Array.from(row.cells).map(function (cell) {
@@ -386,14 +397,16 @@
     Array.from(wrapper.children).forEach(function (node) {
       const tag = node.tagName.toLowerCase();
       const outer = node.outerHTML;
-      if (tag === "p") {
+      if (node.matches('[data-faq-block="true"]')) {
+        parts.push("<!-- wp:html -->" + outer + "<!-- /wp:html -->");
+      } else if (tag === "p") {
         parts.push("<!-- wp:paragraph -->" + outer + "<!-- /wp:paragraph -->");
       } else if (tag === "h2") {
         parts.push("<!-- wp:heading -->" + outer + "<!-- /wp:heading -->");
       } else if (tag === "h3") {
         parts.push('<!-- wp:heading {"level":3} -->' + outer + "<!-- /wp:heading -->");
       } else if (tag === "ul" || tag === "ol") {
-        parts.push("<!-- wp:list -->" + outer + "<!-- /wp:list -->");
+        parts.push((tag === "ol" ? '<!-- wp:list {"ordered":true} -->' : "<!-- wp:list -->") + outer + "<!-- /wp:list -->");
       } else if (tag === "table") {
         parts.push('<!-- wp:table --><figure class="wp-block-table">' + outer + '</figure><!-- /wp:table -->');
       } else if (tag === "blockquote") {
@@ -405,10 +418,60 @@
     return parts.join("");
   }
 
+  function refreshArticleLinks() {
+    if (!quill) return;
+    const contextElement = document.getElementById("articleLinkContext");
+    const context = contextElement ? JSON.parse(contextElement.textContent) : {};
+    let records = context.links || [];
+    if (linksContainer) {
+      syncLinksJsonInput();
+      records = JSON.parse(linksJsonInput?.value || "[]");
+    }
+    function host(value) {
+      try { return new URL(value).hostname.toLowerCase().replace(/^www\./, ""); }
+      catch (_) { return ""; }
+    }
+    records = records.map(item => ({ ...item, type: item.type || "internal" }));
+    const internalHosts = new Set(records.filter(item => item.type === "internal").map(item => host(item.url)).filter(Boolean));
+    const moneyHost = host(context.moneySiteUrl);
+    const list = document.getElementById("articleLinkList");
+    if (list) list.replaceChildren();
+    quill.root.querySelectorAll("a[href]").forEach(function (anchor) {
+      const href = anchor.getAttribute("href");
+      const destinationHost = host(href.startsWith("//") ? "https:" + href : href);
+      const record = records.find(item => (item.url || "").replace(/\/$/, "") === href.replace(/\/$/, ""));
+      const relative = !/^[a-z][a-z0-9+.-]*:/i.test(href) && !href.startsWith("//");
+      const internal = relative || record?.type === "internal" || (!['external', 'reference'].includes(record?.type) && internalHosts.has(destinationHost));
+      const money = record?.type !== "internal" && moneyHost && destinationHost === moneyHost &&
+        (href.replace(/\/$/, "") === (context.moneySiteUrl || "").replace(/\/$/, "") || !internalHosts.has(destinationHost));
+      const nofollow = money || !internal;
+      const rel = new Set((anchor.getAttribute("rel") || "").split(/\s+/).filter(token => token && token.toLowerCase() !== "nofollow"));
+      if (nofollow) rel.add("nofollow");
+      if (anchor.target === "_blank") { rel.add("noopener"); rel.add("noreferrer"); }
+      const value = Array.from(rel).join(" ");
+      if (value !== (anchor.getAttribute("rel") || "")) {
+        if (value) anchor.setAttribute("rel", value); else anchor.removeAttribute("rel");
+      }
+      if (list) {
+        const row = document.createElement("div");
+        row.className = "break-words";
+        const label = document.createElement("strong");
+        label.textContent = (anchor.textContent.trim() || "Image / empty anchor") + " — " + (money ? "Money site · nofollow" : internal ? "Internal · follow" : "External · nofollow");
+        const destination = document.createElement("div");
+        destination.className = "break-all";
+        destination.textContent = href;
+        row.append(label, destination);
+        list.appendChild(row);
+      }
+    });
+    if (list && !list.childNodes.length) list.textContent = "No links in this article yet.";
+  }
+
   function refreshOutputViews() {
     if (!quill) {
       return;
     }
+    refreshArticleLinks();
     const html = quill.root.innerHTML;
     const markdown = htmlToMarkdown(html);
     const markdownView = document.getElementById("markdownOutputView");
@@ -630,6 +693,7 @@
     previewButton.addEventListener("click", function () {
       syncPreviewFields();
       if (quill) {
+        refreshArticleLinks();
         previewContentHtml.value = quill.root.innerHTML;
       }
       previewForm.submit();
@@ -644,6 +708,7 @@
       }
       syncPreviewFields();
       if (quill) {
+        refreshArticleLinks();
         downloadContentHtml.value = quill.root.innerHTML;
       }
       downloadForm.submit();
@@ -677,8 +742,8 @@
       ? rawHtml
       : convertMarkdownToHtml(editorContainer.textContent || editorContainer.innerText || rawHtml);
 
-    if (/<table\b/i.test(cleanHtml)) {
-      // Quill removes unsupported tables; preserve them in a native editor.
+    if (/<(?:table|details)\b/i.test(cleanHtml)) {
+      // Quill removes tables and FAQ details; preserve them in a native editor.
       editorContainer.innerHTML = "";
       const root = document.createElement("div");
       root.className = "ql-editor";
@@ -696,6 +761,7 @@
           ["bold", "italic", "underline"],
           ["blockquote", "code-block"],
           [{ header: [1, 2, 3, false] }],
+          [{ list: "ordered" }, { list: "bullet" }],
           ["link", "image"],
           ["clean"],
         ],
@@ -758,5 +824,6 @@
     }
   }
 
+  refreshOutputViews();
   syncSelectedCopyFields();
 })();
