@@ -26,7 +26,7 @@ from app.services.content_quality_service import analyze_generated_content
 from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.generation_log_service import append_generation_log, generation_log_json, parse_generation_log
 from app.services.locale_settings import get_default_language, language_options, normalize_language
-from app.services.ollama_web_search_service import build_web_research_context
+from app.services.web_search_service import build_web_research_context
 from app.services.provider_service import generation_error_message, get_provider
 from app.services.social_media_settings import social_post_character_limit_for_platform
 from app.services.social_publish_service import publish_facebook_page_post

@@ -6,8 +6,28 @@ from database.common import get_connection, rows_to_dicts
 HISTORY_LIST_LIMIT = 12
 
 
-def record_seo_check_history(result: dict, checker_version: str = "v1") -> int:
+def _seo_history_values(result: dict) -> list:
     summary = result.get("summary", {}) or {}
+    return [
+        result.get("source_url", ""),
+        result.get("base_url", ""),
+        int(result.get("limit", 0) or 0),
+        int(summary.get("average_score", 0) or 0),
+        summary.get("average_grade", ""),
+        int(summary.get("checked_count", 0) or 0),
+        int(summary.get("error_count", 0) or 0),
+        int(summary.get("issue_count", 0) or 0),
+        int(summary.get("not_found_link_count", 0) or 0),
+        int(summary.get("redirect_link_count", 0) or 0),
+        int(summary.get("broken_link_count", 0) or 0),
+        int(summary.get("unreachable_link_count", 0) or 0),
+        int(summary.get("internal_link_count", 0) or 0),
+        int(summary.get("schema_count", 0) or 0),
+        json.dumps(result),
+    ]
+
+
+def record_seo_check_history(result: dict, checker_version: str = "v1") -> int:
     with get_connection() as connection:
         return connection.execute(
             """
@@ -31,25 +51,42 @@ def record_seo_check_history(result: dict, checker_version: str = "v1") -> int:
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (
-                checker_version,
-                result.get("source_url", ""),
-                result.get("base_url", ""),
-                int(result.get("limit", 0) or 0),
-                int(summary.get("average_score", 0) or 0),
-                summary.get("average_grade", ""),
-                int(summary.get("checked_count", 0) or 0),
-                int(summary.get("error_count", 0) or 0),
-                int(summary.get("issue_count", 0) or 0),
-                int(summary.get("not_found_link_count", 0) or 0),
-                int(summary.get("redirect_link_count", 0) or 0),
-                int(summary.get("broken_link_count", 0) or 0),
-                int(summary.get("unreachable_link_count", 0) or 0),
-                int(summary.get("internal_link_count", 0) or 0),
-                int(summary.get("schema_count", 0) or 0),
-                json.dumps(result),
-            ),
+            [checker_version, *_seo_history_values(result)],
         ).lastrowid
+
+
+def update_seo_check_history(history_id: int, result: dict, checker_version: str = "") -> bool:
+    clauses = ["id = ?"]
+    params = [*_seo_history_values(result), int(history_id or 0)]
+    if checker_version:
+        clauses.append("checker_version = ?")
+        params.append(checker_version)
+
+    with get_connection() as connection:
+        cursor = connection.execute(
+            f"""
+            UPDATE seo_check_history
+            SET
+                source_url = ?,
+                base_url = ?,
+                page_limit = ?,
+                average_score = ?,
+                average_grade = ?,
+                checked_count = ?,
+                error_count = ?,
+                issue_count = ?,
+                not_found_link_count = ?,
+                redirect_link_count = ?,
+                broken_link_count = ?,
+                unreachable_link_count = ?,
+                internal_link_count = ?,
+                schema_count = ?,
+                result_json = ?
+            WHERE {' AND '.join(clauses)}
+            """,
+            params,
+        )
+        return cursor.rowcount > 0
 
 
 def list_seo_check_history(limit: int = HISTORY_LIST_LIMIT, base_url: str = "", checker_version: str = "") -> list[dict]:

@@ -32,6 +32,7 @@ IMAGE_EXTENSIONS = {
 class WebsitePageDiscoveryResult:
     base_url: str
     pages: list[str] = field(default_factory=list)
+    sitemap_pages: list[str] = field(default_factory=list)
     page_items: list[dict] = field(default_factory=list)
     sitemaps: list[dict] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
@@ -100,54 +101,119 @@ class PageKeywordParser(HTMLParser):
             self.heading_parts.append(text)
 
 
-def discover_website_pages(raw_url: str, limit: int = 50, allow_private: bool = False) -> WebsitePageDiscoveryResult:
+def _normalize_custom_sitemap_url(base_url: str, raw_sitemap_url: str) -> str:
+    cleaned = (raw_sitemap_url or "").strip()
+    if not cleaned:
+        return ""
+    if cleaned.startswith("/"):
+        return urljoin(base_url, cleaned)
+    if not cleaned.lower().startswith(("http://", "https://")):
+        scheme = urlparse(base_url).scheme or "https"
+        cleaned = f"{scheme}://{cleaned}"
+    parsed = urlparse(cleaned)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("Use a valid http or https sitemap URL.")
+    return cleaned
+
+
+def _rebase_url_to_base(base_url: str, page_url: str) -> str:
+    parsed_base = urlparse(base_url)
+    parsed_page = urlparse(page_url)
+    if not parsed_base.scheme or not parsed_base.netloc or not parsed_page.netloc:
+        return ""
+    rebased = parsed_page._replace(scheme=parsed_base.scheme, netloc=parsed_base.netloc).geturl()
+    return _normalize_discovered_url(rebased)
+
+
+def discover_website_pages(
+    raw_url: str,
+    limit: int = 50,
+    allow_private: bool = False,
+    sitemap_url: str = "",
+    homepage_only: bool = False,
+    include_page_items: bool = True,
+) -> WebsitePageDiscoveryResult:
     base_url = _normalize_base_url(raw_url)
     limit = max(1, min(MAX_PAGE_URLS, int(limit or 50)))
     result = WebsitePageDiscoveryResult(base_url=base_url)
 
-    sitemap_urls = _discover_sitemap_urls(base_url, result, allow_private=allow_private)
+    inferred_sitemap = ""
+    raw_cleaned = (raw_url or "").strip()
+    if not sitemap_url and raw_cleaned.lower().split("?", 1)[0].endswith(".xml"):
+        inferred_sitemap = raw_cleaned
+
+    custom_sitemap = _normalize_custom_sitemap_url(base_url, sitemap_url or inferred_sitemap)
+    if custom_sitemap:
+        sitemap_urls = [custom_sitemap]
+    elif homepage_only:
+        sitemap_urls = []
+    else:
+        sitemap_urls = _discover_sitemap_urls(base_url, result, allow_private=allow_private)
     seen_sitemaps: set[str] = set()
     pending_sitemaps = list(sitemap_urls)
     page_urls: list[str] = []
     seen_pages: set[str] = set()
 
     while pending_sitemaps and len(seen_sitemaps) < MAX_SITEMAPS and len(page_urls) < MAX_PAGE_URLS:
-        sitemap_url = pending_sitemaps.pop(0)
-        if sitemap_url in seen_sitemaps:
+        current_sitemap_url = pending_sitemaps.pop(0)
+        if current_sitemap_url in seen_sitemaps:
             continue
-        seen_sitemaps.add(sitemap_url)
+        seen_sitemaps.add(current_sitemap_url)
         try:
-            sitemap_page_urls, nested_sitemaps = _read_sitemap(sitemap_url, allow_private=allow_private)
+            sitemap_page_urls, nested_sitemaps = _read_sitemap(current_sitemap_url, allow_private=allow_private)
             result.sitemaps.append(
                 {
-                    "url": sitemap_url,
+                    "url": current_sitemap_url,
                     "status": "found",
                     "page_count": len(sitemap_page_urls),
                     "sitemap_count": len(nested_sitemaps),
                 }
             )
         except Exception as exc:
-            result.sitemaps.append({"url": sitemap_url, "status": "error", "page_count": 0, "sitemap_count": 0})
-            result.errors.append(f"{sitemap_url}: {exc}")
+            result.sitemaps.append({"url": current_sitemap_url, "status": "error", "page_count": 0, "sitemap_count": 0})
+            result.errors.append(f"{current_sitemap_url}: {exc}")
             continue
 
         for nested_sitemap in nested_sitemaps:
             if nested_sitemap not in seen_sitemaps and nested_sitemap not in pending_sitemaps:
                 pending_sitemaps.append(nested_sitemap)
 
-        for page_url in sitemap_page_urls:
-            normalized_url = _normalize_discovered_url(page_url)
-            if normalized_url and _same_site(base_url, normalized_url) and normalized_url not in seen_pages:
+        normalized_candidates = [
+            normalized
+            for page_url in sitemap_page_urls
+            if (normalized := _normalize_discovered_url(page_url))
+        ]
+        same_site_candidates = [url for url in normalized_candidates if _same_site(base_url, url)]
+        if not same_site_candidates and normalized_candidates and (_same_site(base_url, current_sitemap_url) or custom_sitemap):
+            same_site_candidates = [
+                rebased
+                for url in normalized_candidates
+                if (rebased := _rebase_url_to_base(base_url, url))
+            ]
+
+        for normalized_url in same_site_candidates:
+            if normalized_url not in seen_pages:
                 seen_pages.add(normalized_url)
                 page_urls.append(normalized_url)
                 if len(page_urls) >= MAX_PAGE_URLS:
                     break
 
-    if not page_urls:
-        page_urls = _discover_homepage_links(base_url, MAX_PAGE_URLS, result, allow_private=allow_private)
+    result.sitemap_pages = _sort_first_layer_pages(base_url, page_urls)[:limit]
+
+    if not page_urls and not custom_sitemap:
+        homepage_links = _discover_homepage_links(base_url, MAX_PAGE_URLS, result, allow_private=allow_private)
+        if homepage_only:
+            home_url = _normalize_discovered_url(base_url)
+            combined_pages = [home_url] if home_url else []
+            for link_url in homepage_links:
+                if link_url not in combined_pages:
+                    combined_pages.append(link_url)
+            page_urls = combined_pages[:MAX_PAGE_URLS]
+        else:
+            page_urls = homepage_links
 
     result.pages = _sort_first_layer_pages(base_url, page_urls)[:limit]
-    result.page_items = _build_page_items(result.pages, result, allow_private=allow_private)
+    result.page_items = _build_page_items(result.pages, result, allow_private=allow_private) if include_page_items else []
     return result
 
 

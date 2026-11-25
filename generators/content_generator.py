@@ -1,8 +1,9 @@
 import json
 import re
-from app.services.ollama_web_search_service import append_web_research_context
+from app.services.web_search_service import append_web_research_context
 from generation_retry_policy import max_generation_attempts, publish_generation_draft, raise_if_generation_cancelled, wait_before_retry
 from prompts import build_backlink_content_prompt, build_content_prompt, build_scoped_content_revision_prompt
+from prompts.shared import build_visual_language_instruction
 from utils import extract_json_string
 from logger import logger
 from word_bank import find_banned_terms_in_text
@@ -182,6 +183,7 @@ def generate_blog_visual_ideas(
     language: str = "English",
     progress_callback=None,
 ) -> list[str]:
+    language_section = build_visual_language_instruction(language)
     prompt = f"""
 You are creating practical image directions for a generated blog article.
 
@@ -190,17 +192,16 @@ Return valid JSON only.
 Selected title: {title}
 Topic keyword: {keyword}
 Brand: {brand}
-Required language: {language}
 Context:
 {context}
+{language_section}
 
 Rules:
 - Generate exactly {count} distinct visual or image descriptions.
-- Write visual descriptions in {language}.
 - Use the selected title as the anchor for both visual ideas.
 - Make each idea useful for a designer, AI image tool, or publisher selecting a header image.
 - Keep them neutral and editorial, not promotional.
-- Do not include text overlays, logos, watermarks, brand marks, or UI screenshots unless the article specifically requires them.
+- Avoid unnecessary text overlays, logos, watermarks, brand marks, or UI screenshots unless the article specifically requires them; if visible text is needed in the image, keep it brief inside quotes ("...") in {language} while keeping the rest of the description in English.
 - Avoid gambling, betting, casino, jackpot, wagering, sportsbook, lottery, poker, roulette, or bonus-focused imagery.
 - Keep each visual idea to 1-2 sentences.
 - No explanations before or after the JSON.
@@ -494,10 +495,12 @@ def generate_content(
     min_words: int = MIN_BLOG_WORDS,
     max_words: int = 1400,
     language: str = "English",
+    reference_context: str = "",
     progress_callback=None,
 ):
     from app.services.content_format_service import markdown_to_output
 
+    cleaned_reference = (reference_context or "").strip()
     prompt_min_words = _prompt_min_words_with_buffer(min_words)
     prompt = build_content_prompt(
         title=title,
@@ -513,12 +516,14 @@ def generate_content(
         min_words=prompt_min_words,
         max_words=max_words,
         language=language,
+        reference_context=cleaned_reference,
     )
-    prompt = append_web_research_context(
-        prompt,
-        " ".join(part for part in [brand, title, keyword, supporting_keyword] if part).strip(),
-        progress_callback=progress_callback,
-    )
+    if not cleaned_reference:
+        prompt = append_web_research_context(
+            prompt,
+            " ".join(part for part in [brand, title, keyword, supporting_keyword] if part).strip(),
+            progress_callback=progress_callback,
+        )
     markdown_content = _generate_content_from_prompt(
         provider,
         prompt,
@@ -540,9 +545,11 @@ def revise_existing_content(
     output_format: str = "html",
     keyword: str = "",
     brand: str = "",
+    links: list | None = None,
     required_url: str = "",
     required_anchor_text: str = "",
     language: str = "English",
+    reference_context: str = "",
     progress_callback=None,
 ):
     prompt = build_scoped_content_revision_prompt(
@@ -553,9 +560,11 @@ def revise_existing_content(
         output_format=output_format,
         keyword=keyword,
         brand=brand,
+        links=links,
         required_url=required_url,
         required_anchor_text=required_anchor_text,
         language=language,
+        reference_context=reference_context,
     )
 
     def validator(content: str) -> str:
@@ -572,6 +581,15 @@ def revise_existing_content(
         validator=validator if required_url or required_anchor_text else None,
         progress_callback=progress_callback,
     )
+    if (output_format or "html").strip().lower() == "html" and revised_content:
+        from app.services.content_format_service import convert_markdown_tables_to_html
+
+        revised_content = convert_markdown_tables_to_html(revised_content)
+        revised_content = re.sub(
+            r"\[([^\]]+)\]\((https?://[^)\s]+)\)",
+            r'<a href="\2">\1</a>',
+            revised_content,
+        )
     return keep_required_url_once(revised_content, required_url)
 
 

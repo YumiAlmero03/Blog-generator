@@ -4,12 +4,15 @@ import os
 import time
 from threading import Lock
 
+from config import get_current_provider
 from logger import logger
 
 
 DEFAULT_RETRY_DELAY_SECONDS = 0
 DEFAULT_STRICT_ATTEMPTS = 3
 DEFAULT_MAX_ATTEMPTS = 8
+OPENROUTER_DEFAULT_STRICT_ATTEMPTS = 1
+OPENROUTER_DEFAULT_MAX_ATTEMPTS = 2
 _CANCELLED_TOKENS: set[str] = set()
 _CANCEL_LOCK = Lock()
 
@@ -23,11 +26,21 @@ def retry_delay_seconds() -> int:
 
 
 def strict_attempts() -> int:
-    return _int_env("GENERATION_STRICT_ATTEMPTS", DEFAULT_STRICT_ATTEMPTS, minimum=1, maximum=20)
+    default = (
+        OPENROUTER_DEFAULT_STRICT_ATTEMPTS
+        if get_current_provider() == "openrouter"
+        else DEFAULT_STRICT_ATTEMPTS
+    )
+    return _int_env("GENERATION_STRICT_ATTEMPTS", default, minimum=1, maximum=20)
 
 
 def max_generation_attempts() -> int:
-    return _int_env("GENERATION_MAX_ATTEMPTS", DEFAULT_MAX_ATTEMPTS, minimum=1, maximum=50)
+    default = (
+        OPENROUTER_DEFAULT_MAX_ATTEMPTS
+        if get_current_provider() == "openrouter"
+        else DEFAULT_MAX_ATTEMPTS
+    )
+    return _int_env("GENERATION_MAX_ATTEMPTS", default, minimum=1, maximum=50)
 
 
 def wait_before_retry(attempt: int, progress_callback=None, reason: str = "") -> None:

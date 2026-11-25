@@ -1,6 +1,8 @@
 from app.services.faq_block_service import convert_faq_blocks
 from app.services.article_link_service import apply_article_link_rules
 import json
+import time
+from urllib.parse import urlsplit
 
 from flask import render_template, request
 
@@ -17,7 +19,11 @@ from app.services.generation_log_service import append_generation_log, generatio
 from app.services.generation_status_service import clear_generation_status, publish_generation_draft, publish_generation_prompt, publish_generation_status
 from app.services.locale_settings import get_default_language, language_options, normalize_language
 from app.services.provider_service import generation_error_message, get_provider
+from app.services.reference_link_service import fetch_reference_context, merge_reference_context_parts
 from app.services.word_limit_settings import get_blog_word_limits
+
+
+BLOG_REFERENCE_CACHE_SECONDS = 15 * 60
 
 
 def index():
@@ -26,6 +32,10 @@ def index():
         "brand": "",
         "supporting_keyword": "",
         "suggested_h2s": "",
+        "reference_url": "",
+        "reference_notes": "",
+        "reference_fetches": [],
+        "reference_fetch_summary": None,
         "language": get_default_language(),
         "tone": "natural",
         "count": 10,
@@ -80,6 +90,7 @@ def index():
 
     state["language_options"] = language_options(state["language"])
     state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
+    state["reference_fetch_summary"] = _reference_fetch_summary(state.get("reference_fetches", []))
     state["suggested_category"] = suggest_category(state)
     state["content"] = apply_article_link_rules(state["content"], state["links"], state["money_site_url"])
     state["content"] = convert_faq_blocks(state["content"])
@@ -92,6 +103,7 @@ def _handle_generate_titles(state: dict):
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
     state["suggested_h2s"] = request.form.get("suggested_h2s", "").strip()
+    _hydrate_blog_reference_state(state)
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
@@ -123,6 +135,7 @@ def _handle_generate_titles(state: dict):
         provider = get_provider()
         brand_context = get_brand_context(state["brand"])
         progress = _progress_callback("Title", request.form.get("generation_status_token", ""), state["generation_log"])
+        reference_context = _resolve_blog_reference_context(state, progress)
         progress("Starting title generation...")
         state["titles"] = generate_titles(
             provider,
@@ -132,6 +145,7 @@ def _handle_generate_titles(state: dict):
             brand=state["brand"],
             brand_context=brand_context,
             language=state["language"],
+            reference_context=reference_context,
             progress_callback=progress,
         )
         progress("Titles passed validation.")
@@ -156,6 +170,9 @@ def _load_history_item(state: dict, history_id: int):
     state["keyword"] = item.get("primary_keyword", "") or ""
     state["supporting_keyword"] = prompt_inputs.get("supporting_keyword", "")
     state["suggested_h2s"] = prompt_inputs.get("suggested_h2s", "")
+    state["reference_url"] = prompt_inputs.get("reference_url", "")
+    state["reference_notes"] = prompt_inputs.get("reference_notes", "")
+    state["reference_fetches"] = prompt_inputs.get("reference_fetches", []) if isinstance(prompt_inputs.get("reference_fetches"), list) else []
     state["language"] = prompt_inputs.get("language", state["language"]) or "English"
     state["tone"] = prompt_inputs.get("tone", state["tone"])
     state["include_money_site"] = bool(prompt_inputs.get("include_money_site", False))
@@ -193,6 +210,7 @@ def _handle_generate_content(state: dict):
         min_words, max_words = get_blog_word_limits()
         brand_context = get_brand_context(state["brand"])
         is_minor_revision = bool(existing_content and state["change_request"])
+        reference_context = "" if action == "generate_tags" else _resolve_blog_reference_context(state, progress)
 
         if action == "generate_meta_descriptions":
             progress("Generating meta descriptions...")
@@ -204,6 +222,7 @@ def _handle_generate_content(state: dict):
                 brand=state["brand"],
                 brand_context=brand_context,
                 language=state["language"],
+                reference_context=reference_context,
                 progress_callback=progress,
             )
             state["meta_description"] = ""
@@ -213,12 +232,13 @@ def _handle_generate_content(state: dict):
 
         if action == "generate_visual":
             progress("Generating 2 visual ideas...")
+            visual_context = "\n\n".join(part for part in [brand_context, reference_context] if part)
             state["visual"] = _visual_text(generate_blog_visual_ideas(
                 provider,
                 title=state["selected_title"],
                 keyword=state["keyword"],
                 brand=state["brand"],
-                context=brand_context,
+                context=visual_context,
                 count=2,
                 language=state["language"],
                 progress_callback=progress,
@@ -259,8 +279,10 @@ def _handle_generate_content(state: dict):
                 output_format="html",
                 keyword=state["keyword"],
                 brand=state["brand"],
+                links=state["links"],
                 required_url=state["money_site_url"] if state["include_money_site"] else "",
                 language=state["language"],
+                reference_context=reference_context,
                 progress_callback=progress,
             )
         else:
@@ -281,6 +303,7 @@ def _handle_generate_content(state: dict):
                 min_words=min_words,
                 max_words=max_words,
                 language=state["language"],
+                reference_context=reference_context,
                 progress_callback=progress,
             )
         clear_generation_status(request.form.get("generation_status_token", ""))
@@ -309,6 +332,7 @@ def _handle_generate_all(state: dict):
         state["money_site_url"] = get_setting("money_site", "")
         min_words, max_words = get_blog_word_limits()
         brand_context = get_brand_context(state["brand"])
+        reference_context = _resolve_blog_reference_context(state, progress)
         scoped_change_request = _scoped_change_request(state["change_request"], state["regenerate_scope"])
 
         progress("Generating article content...")
@@ -327,6 +351,7 @@ def _handle_generate_all(state: dict):
             min_words=min_words,
             max_words=max_words,
             language=state["language"],
+            reference_context=reference_context,
             progress_callback=progress,
         )
 
@@ -343,6 +368,7 @@ def _handle_generate_all(state: dict):
                     brand=state["brand"],
                     brand_context=brand_context,
                     language=state["language"],
+                    reference_context=reference_context,
                     progress_callback=progress,
                 )
                 state["meta_description"] = ""
@@ -355,12 +381,13 @@ def _handle_generate_all(state: dict):
         else:
             try:
                 progress("Generating visual ideas...")
+                visual_context = "\n\n".join(part for part in [brand_context, reference_context] if part)
                 state["visual"] = _visual_text(generate_blog_visual_ideas(
                     provider,
                     title=state["selected_title"],
                     keyword=state["keyword"],
                     brand=state["brand"],
-                    context=brand_context,
+                    context=visual_context,
                     count=2,
                     language=state["language"],
                     progress_callback=progress,
@@ -404,6 +431,7 @@ def _hydrate_blog_generation_state(state: dict) -> str:
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
     state["suggested_h2s"] = request.form.get("suggested_h2s", "").strip()
+    _hydrate_blog_reference_state(state)
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["change_request"] = request.form.get("change_request", "").strip()
@@ -457,6 +485,9 @@ def _record_completed_blog(state: dict, min_words: int, max_words: int):
             "category_mode": "auto" if state.get("category", "Auto") == "Auto" else "manual",
             "supporting_keyword": state["supporting_keyword"],
             "suggested_h2s": state["suggested_h2s"],
+            "reference_url": state.get("reference_url", ""),
+            "reference_notes": state.get("reference_notes", ""),
+            "reference_fetches": state.get("reference_fetches", []),
             "language": state["language"],
             "tone": state["tone"],
             "include_money_site": state["include_money_site"],
@@ -484,6 +515,7 @@ def _handle_save_generated_blog(state: dict):
     state["brand"] = request.form.get("brand", "").strip()
     state["supporting_keyword"] = request.form.get("supporting_keyword", "").strip()
     state["suggested_h2s"] = request.form.get("suggested_h2s", "").strip()
+    _hydrate_blog_reference_state(state)
     state["language"] = _language_from_request()
     state["tone"] = request.form.get("tone", "natural").strip() or "natural"
     state["change_request"] = request.form.get("change_request", "").strip()
@@ -547,6 +579,9 @@ def _handle_save_generated_blog(state: dict):
             "category_mode": "auto" if state.get("category", "Auto") == "Auto" else "manual",
             "supporting_keyword": state["supporting_keyword"],
             "suggested_h2s": state["suggested_h2s"],
+            "reference_url": state.get("reference_url", ""),
+            "reference_notes": state.get("reference_notes", ""),
+            "reference_fetches": state.get("reference_fetches", []),
             "language": state["language"],
             "tone": state["tone"],
             "include_money_site": state["include_money_site"],
@@ -651,3 +686,116 @@ def _progress_callback(label: str, token: str, log_entries: list[dict] | None = 
 
     publish.generation_token = token
     return publish
+
+
+def _hydrate_blog_reference_state(state: dict) -> None:
+    state["reference_url"] = _normalize_reference_url(request.form.get("reference_url", ""))
+    state["reference_notes"] = request.form.get("reference_notes", "").strip()
+    state["reference_fetches"] = _json_list(request.form.get("reference_fetches_json", "").strip())
+
+
+def _normalize_reference_url(value: str) -> str:
+    cleaned = (value or "").strip()
+    if not cleaned:
+        return ""
+    if cleaned.startswith("www."):
+        return "https://" + cleaned
+    return cleaned
+
+
+def _validate_reference_url(url: str) -> None:
+    try:
+        parsed = urlsplit(url)
+        valid = parsed.scheme in {"http", "https"} and parsed.hostname and not parsed.username and not parsed.password
+        parsed.port
+    except ValueError:
+        valid = False
+    if not valid or len(url) > 2048:
+        raise ValueError("Enter a valid http or https reference URL without credentials.")
+
+
+def _resolve_blog_reference_context(state: dict, progress) -> str:
+    ref_url = _normalize_reference_url(state.get("reference_url", ""))
+    ref_notes = (state.get("reference_notes", "") or "").strip()
+    state["reference_url"] = ref_url
+    state["reference_notes"] = ref_notes
+
+    url_context = ""
+    if ref_url:
+        _validate_reference_url(ref_url)
+        cached_context = _reference_context_from_cached_fetches(ref_url, state.get("reference_fetches", []))
+        if cached_context:
+            progress("Reusing cached reference page data.")
+            url_context = cached_context
+        else:
+            progress(f"Reading reference URL: {ref_url}...")
+            url_context, fetched = fetch_reference_context(
+                [{"url": ref_url, "type": "reference"}],
+                merge_context=True,
+                use_browser=True,
+                browser_wait_seconds=2,
+            )
+            fetched_at = time.time()
+            for item in fetched:
+                if item.get("status") == "fetched":
+                    item["fetched_at"] = fetched_at
+            state["reference_fetches"] = fetched
+            if not url_context or not fetched or not fetched[0].get("excerpt", "").strip():
+                raise ValueError(
+                    "Could not read the reference page. Check that it is publicly accessible and contains readable text, or remove the reference URL."
+                )
+            progress(
+                f"Reference URL read ({fetched[0].get('character_count', len(url_context))} chars, "
+                f"reader: {fetched[0].get('fetch_method', 'http')})."
+            )
+    else:
+        state["reference_fetches"] = []
+
+    parts = []
+    if url_context:
+        parts.append(url_context)
+    if ref_notes:
+        parts.append(f"Reference notes provided by the user:\n{ref_notes}")
+    return "\n\n".join(parts).strip()
+
+
+def _reference_context_from_cached_fetches(ref_url: str, fetched: list[dict]) -> str:
+    if not ref_url or not fetched:
+        return ""
+    target = ref_url.lower()
+    for item in fetched:
+        if not isinstance(item, dict):
+            continue
+        if (item.get("url") or "").strip().lower() != target:
+            continue
+        if item.get("status") != "fetched" or not item.get("excerpt"):
+            continue
+        if not _reference_cache_is_current(item):
+            continue
+        return merge_reference_context_parts(
+            [
+                {
+                    "index": 1,
+                    "source_label": item.get("source_label") or item.get("title") or item.get("url"),
+                    "url": item.get("url"),
+                    "excerpt": item.get("excerpt"),
+                }
+            ]
+        )
+    return ""
+
+
+def _reference_cache_is_current(item: dict) -> bool:
+    try:
+        age = time.time() - float(item.get("fetched_at", 0))
+    except (TypeError, ValueError, OverflowError):
+        return False
+    return 0 <= age < BLOG_REFERENCE_CACHE_SECONDS
+
+
+def _reference_fetch_summary(fetched: list[dict]) -> dict | None:
+    if not fetched:
+        return None
+    total = len(fetched)
+    fetched_count = len([item for item in fetched if isinstance(item, dict) and item.get("status") == "fetched"])
+    return {"total": total, "fetched": fetched_count}

@@ -18,10 +18,18 @@
   const customTitleRadio = document.getElementById("customTitleRadio");
   const editorContainer = document.getElementById("contentEditor");
   const editorWordCount = document.getElementById("editorWordCount");
+  const titlesForm = document.getElementById("titlesForm");
   const existingLinksElement = document.getElementById("existingLinksData");
   const linksJsonInput = document.getElementById("linksJsonInput");
   const linksContainer = document.getElementById("linksContainer");
   const addLinkButton = document.getElementById("addLinkButton");
+  const existingArticleLinksElement = document.getElementById("existingArticleLinksData");
+  const articleLinksJsonInput = document.getElementById("articleLinksJsonInput");
+  const articleLinksContainer = document.getElementById("articleLinksContainer");
+  const addArticleLinkButton = document.getElementById("addArticleLinkButton");
+  const titlesArticleLinksJsonInput = document.getElementById("titlesArticleLinksJsonInput");
+  const titlesIncludeMoneySiteInput = document.getElementById("titlesIncludeMoneySiteInput");
+  const includeMoneySiteCheckbox = document.getElementById("include_money_site");
   const generateContentButton = document.getElementById("generateContentButton");
   const generateActionButtons = Array.from(document.querySelectorAll("[data-generate-action]"));
   const generateMetaDescriptionsButton = document.getElementById("generateMetaDescriptionsButton");
@@ -170,28 +178,52 @@
     syncLinksJsonInput();
   }
 
-  function syncLinksJsonInput() {
-    if (!linksJsonInput || !linksContainer) {
-      return;
+  function readLinkGroup(container, options) {
+    if (!container) {
+      return [];
     }
+    const fieldPrefix = (options && options.fieldPrefix) || "link_";
     const links = [];
-    linksContainer.querySelectorAll("[id^='linkField_']").forEach(function (field) {
-      const textInput = field.querySelector('input[name="link_text[]"]');
-      const urlInput = field.querySelector('input[name="link_url[]"]');
+    container.querySelectorAll("[data-link-row], [id^='linkField_']").forEach(function (field) {
+      const textInput = field.querySelector('input[name="' + fieldPrefix + 'text[]"]');
+      const urlInput = field.querySelector('input[name="' + fieldPrefix + 'url[]"]');
       const text = textInput ? textInput.value.trim() : "";
       const url = urlInput ? normalizePostLink(urlInput.value) : "";
       if (url) {
         if (urlInput) {
           urlInput.value = url;
         }
-        const typeInput = field.querySelector('select[name="link_type[]"]');
-        links.push({ text: text, url: url, type: linksContainer.dataset.linkMode === "url-only" ? "reference" : (typeInput?.value || "internal") });
+        const typeInput = field.querySelector('select[name="' + fieldPrefix + 'type[]"]');
+        links.push({ text: text, url: url, type: container.dataset.linkMode === "url-only" ? "reference" : (typeInput?.value || "internal") });
       }
     });
-    linksJsonInput.value = JSON.stringify(links);
+    return links;
+  }
+
+  function syncLinkGroupJson(container, jsonInput, options) {
+    if (!container) {
+      return jsonInput ? JSON.parse(jsonInput.value || "[]") : [];
+    }
+    const links = readLinkGroup(container, options);
+    if (jsonInput) {
+      jsonInput.value = JSON.stringify(links);
+    }
+    return links;
+  }
+
+  function syncLinksJsonInput() {
+    syncLinkGroupJson(linksContainer, linksJsonInput);
+    const articleLinks = syncLinkGroupJson(articleLinksContainer, articleLinksJsonInput, { fieldPrefix: "article_link_" });
+    if (titlesArticleLinksJsonInput && articleLinksContainer) {
+      titlesArticleLinksJsonInput.value = JSON.stringify(articleLinks);
+    }
+    if (titlesIncludeMoneySiteInput && includeMoneySiteCheckbox) {
+      titlesIncludeMoneySiteInput.value = includeMoneySiteCheckbox.checked ? "1" : "";
+    }
   }
 
   if (linksContainer) linksContainer.addEventListener("change", refreshOutputViews);
+  if (articleLinksContainer) articleLinksContainer.addEventListener("change", refreshOutputViews);
 
   function normalizePostLink(value) {
     const cleaned = (value || "").trim();
@@ -423,9 +455,11 @@
     const contextElement = document.getElementById("articleLinkContext");
     const context = contextElement ? JSON.parse(contextElement.textContent) : {};
     let records = context.links || [];
-    if (linksContainer) {
+    if (linksContainer || articleLinksContainer) {
       syncLinksJsonInput();
-      records = JSON.parse(linksJsonInput?.value || "[]");
+      records = []
+        .concat(articleLinksContainer ? readLinkGroup(articleLinksContainer, { fieldPrefix: "article_link_" }) : [])
+        .concat(linksContainer ? readLinkGroup(linksContainer) : []);
     }
     function host(value) {
       try { return new URL(value).hostname.toLowerCase().replace(/^www\./, ""); }
@@ -521,45 +555,49 @@
       .replace(/>/g, "&gt;");
   }
 
-  function addLinkField(link) {
-    if (!linksContainer) {
+  function addLinkField(link, options) {
+    const config = options || {};
+    const targetContainer = config.container || linksContainer;
+    const fieldPrefix = config.fieldPrefix || "link_";
+    if (!targetContainer) {
       return;
     }
     const currentLink = link || {};
     const linkType = currentLink.type === "external" ? "external" : "internal";
     const linkText = currentLink.text || "";
     const linkUrl = currentLink.url || "";
-    const urlOnly = linksContainer.dataset.linkMode === "url-only";
+    const urlOnly = targetContainer.dataset.linkMode === "url-only";
 
     linkFieldCounter += 1;
     const linkField = document.createElement("div");
     linkField.className = "flex flex-wrap items-end gap-3 rounded-[22px] border border-sand-200 bg-white/80 p-4";
     linkField.id = "linkField_" + linkFieldCounter;
+    linkField.dataset.linkRow = "1";
     linkField.innerHTML = urlOnly ? [
       '<div class="min-w-[260px] flex-1">',
-      '  <label for="link_url_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">News Link</label>',
-      '  <input type="url" id="link_url_' + linkFieldCounter + '" name="link_url[]" value="' + escapeHtml(linkUrl) + '" placeholder="https://news-site.com/article" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />',
+      '  <label for="' + fieldPrefix + 'url_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">News Link</label>',
+      '  <input type="url" id="' + fieldPrefix + 'url_' + linkFieldCounter + '" name="' + fieldPrefix + 'url[]" value="' + escapeHtml(linkUrl) + '" placeholder="https://news-site.com/article" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />',
       "</div>",
       '<button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700" data-remove-link="' + linkFieldCounter + '">Remove</button>',
     ].join("") : [
       '<div class="w-full sm:w-[150px]">',
-      '  <label for="link_type_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">Link Type</label>',
-      '  <select id="link_type_' + linkFieldCounter + '" name="link_type[]" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">',
+      '  <label for="' + fieldPrefix + 'type_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">Link Type</label>',
+      '  <select id="' + fieldPrefix + 'type_' + linkFieldCounter + '" name="' + fieldPrefix + 'type[]" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">',
       '    <option value="internal"' + (linkType === "internal" ? " selected" : "") + ">Internal</option>",
       '    <option value="external"' + (linkType === "external" ? " selected" : "") + ">External</option>",
       "  </select>",
       "</div>",
       '<div class="min-w-[220px] flex-1">',
-      '  <label for="link_text_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">Link Text</label>',
-      '  <input type="text" id="link_text_' + linkFieldCounter + '" name="link_text[]" value="' + escapeHtml(linkText) + '" placeholder="e.g. Best Practices" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />',
+      '  <label for="' + fieldPrefix + 'text_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">Link Text</label>',
+      '  <input type="text" id="' + fieldPrefix + 'text_' + linkFieldCounter + '" name="' + fieldPrefix + 'text[]" value="' + escapeHtml(linkText) + '" placeholder="e.g. Best Practices" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />',
       "</div>",
       '<div class="min-w-[260px] flex-[1.4]">',
-      '  <label for="link_url_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">URL</label>',
-      '  <input type="url" id="link_url_' + linkFieldCounter + '" name="link_url[]" value="' + escapeHtml(linkUrl) + '" placeholder="https://example.com" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />',
+      '  <label for="' + fieldPrefix + 'url_' + linkFieldCounter + '" class="mb-2 block text-sm font-bold text-sand-900">URL</label>',
+      '  <input type="url" id="' + fieldPrefix + 'url_' + linkFieldCounter + '" name="' + fieldPrefix + 'url[]" value="' + escapeHtml(linkUrl) + '" placeholder="https://example.com" class="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />',
       "</div>",
       '<button type="button" class="inline-flex min-h-11 items-center justify-center rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700" data-remove-link="' + linkFieldCounter + '">Remove</button>',
     ].join("");
-    linksContainer.appendChild(linkField);
+    targetContainer.appendChild(linkField);
   }
 
   document.addEventListener("click", function (event) {
@@ -595,6 +633,8 @@
     const target = document.getElementById("linkField_" + removeButton.dataset.removeLink);
     if (target) {
       target.remove();
+      syncLinksJsonInput();
+      refreshOutputViews();
     }
   });
 
@@ -715,6 +755,12 @@
     });
   }
 
+  if (titlesForm) {
+    titlesForm.addEventListener("submit", function () {
+      syncLinksJsonInput();
+    });
+  }
+
   if (contentForm) {
     contentForm.addEventListener("submit", function () {
       syncCustomTitleRadio();
@@ -805,24 +851,38 @@
     });
   });
 
-  if (addLinkButton) {
-    addLinkButton.addEventListener("click", function () {
-      addLinkField({});
-    });
-  }
-
-  if (existingLinksElement) {
-    try {
-      const existingLinks = JSON.parse(existingLinksElement.textContent || "[]");
-      if (Array.isArray(existingLinks)) {
-        existingLinks.forEach(function (link) {
-          addLinkField(link);
-        });
+  function initLinkGroup(config) {
+    if (config.addButton && config.container) {
+      config.addButton.addEventListener("click", function () {
+        addLinkField({}, { container: config.container, fieldPrefix: config.fieldPrefix });
+      });
+    }
+    if (config.existingElement && config.container) {
+      try {
+        const existing = JSON.parse(config.existingElement.textContent || "[]");
+        if (Array.isArray(existing)) {
+          existing.forEach(function (link) {
+            addLinkField(link, { container: config.container, fieldPrefix: config.fieldPrefix });
+          });
+        }
+      } catch (error) {
+        console.error("Could not parse existing links JSON.", error);
       }
-    } catch (error) {
-      console.error("Could not parse existing links JSON.", error);
     }
   }
+
+  initLinkGroup({
+    container: linksContainer,
+    addButton: addLinkButton,
+    existingElement: existingLinksElement,
+    fieldPrefix: "link_",
+  });
+  initLinkGroup({
+    container: articleLinksContainer,
+    addButton: addArticleLinkButton,
+    existingElement: existingArticleLinksElement,
+    fieldPrefix: "article_link_",
+  });
 
   refreshOutputViews();
   syncSelectedCopyFields();

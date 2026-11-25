@@ -13,7 +13,22 @@ LANGUAGE_OPTIONS = (
     "English",
     "Taglish",
     "Tagalog",
+    "Brazilian Portuguese",
 )
+
+LANGUAGE_ALIASES = {
+    "brazil portugues": "Brazilian Portuguese",
+    "brazil portuguese": "Brazilian Portuguese",
+    "brazilian portugues": "Brazilian Portuguese",
+    "brazilian portuguese": "Brazilian Portuguese",
+    "portuguese (brazil)": "Brazilian Portuguese",
+    "portugues (brasil)": "Brazilian Portuguese",
+    "português (brasil)": "Brazilian Portuguese",
+    "portugues brasileiro": "Brazilian Portuguese",
+    "português brasileiro": "Brazilian Portuguese",
+    "pt-br": "Brazilian Portuguese",
+    "pt_br": "Brazilian Portuguese",
+}
 
 
 def get_default_country_target() -> str:
@@ -32,8 +47,11 @@ def normalize_country_target(value: str) -> str:
 
 def normalize_language(value: str) -> str:
     cleaned = " ".join(str(value or "English").split()).strip() or "English"
+    lowered = cleaned.lower()
+    if lowered in LANGUAGE_ALIASES:
+        return LANGUAGE_ALIASES[lowered]
     options_by_lower = {item.lower(): item for item in LANGUAGE_OPTIONS}
-    return options_by_lower.get(cleaned.lower(), cleaned)
+    return options_by_lower.get(lowered, cleaned)
 
 
 def country_options(selected: str | None = None) -> list[str]:

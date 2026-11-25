@@ -40,10 +40,10 @@ def save_post():
         if existing and (existing["content_type"] != GENERATORS[post["generator"]]
                          or bool(inputs.get("news_generator")) != (post["generator"] == "news")):
             raise ValueError("This history entry belongs to a different generator.")
-        for key in ("supporting_keyword", "supporting_keywords", "suggested_h2s", "language", "tone", "visual", "source_url", "source_title", "old_brand", "rework_content_type", "manual_supporting_keywords", "focus_keyword", "target_audience", "target_country", "current_date"):
+        for key in ("supporting_keyword", "supporting_keywords", "suggested_h2s", "reference_url", "reference_notes", "language", "tone", "visual", "source_url", "source_title", "old_brand", "rework_content_type", "manual_supporting_keywords", "focus_keyword", "target_audience", "target_country", "current_date"):
             if key in data and isinstance(data[key], str):
                 inputs[key] = data[key].strip()
-        for key, field in (("links", "links_json"), ("generation_log", "generation_log_json"), ("reference_fetches", "reference_fetches_json")):
+        for key, field in (("links", "links_json"), ("article_links", "article_links_json"), ("generation_log", "generation_log_json"), ("reference_fetches", "reference_fetches_json")):
             if field in data:
                 value = json.loads(data[field] or "[]")
                 if not isinstance(value, list):

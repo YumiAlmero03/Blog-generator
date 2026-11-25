@@ -3,11 +3,13 @@ from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from app.services.sportsbook_odds_extractor import extract_sportsbook_odds_from_page
 from logger import logger
 
 
 MAX_LINKS = 6
 MAX_TEXT_PER_LINK = 5000
+MAX_ODDS_TEXT_PER_LINK = 16000
 MAX_TOTAL_TEXT = 18000
 
 
@@ -18,10 +20,13 @@ class _ReadableTextParser(HTMLParser):
         self._skip_depth = 0
         self._title_depth = 0
         self._article_depth = 0
+        self._main_depth = 0
+        self.has_main = False
         self._content_depth = 0
         self.title_parts: list[str] = []
         self.text_parts: list[str] = []
         self.article_parts: list[str] = []
+        self.main_parts: list[str] = []
         self.filtered_parts: list[str] = []
         self.filtered_article_parts: list[str] = []
 
@@ -33,6 +38,9 @@ class _ReadableTextParser(HTMLParser):
             self._title_depth += 1
         if cleaned_tag == "article":
             self._article_depth += 1
+        if cleaned_tag == "main":
+            self._main_depth += 1
+            self.has_main = True
         if cleaned_tag in self._content_tags:
             self._content_depth += 1
 
@@ -44,6 +52,8 @@ class _ReadableTextParser(HTMLParser):
             self._title_depth -= 1
         if cleaned_tag == "article" and self._article_depth:
             self._article_depth -= 1
+        if cleaned_tag == "main" and self._main_depth:
+            self._main_depth -= 1
         if cleaned_tag in self._content_tags and self._content_depth:
             self._content_depth -= 1
 
@@ -57,6 +67,8 @@ class _ReadableTextParser(HTMLParser):
             self.text_parts.append(text)
             if self._article_depth:
                 self.article_parts.append(text)
+            if self._main_depth:
+                self.main_parts.append(text)
             if self._content_depth:
                 self.filtered_parts.append(text)
                 if self._article_depth:
@@ -107,11 +119,12 @@ def fetch_reference_context(
         remaining = MAX_TOTAL_TEXT - total_length
         if remaining <= 0:
             break
-        excerpt = article["text"][: min(MAX_TEXT_PER_LINK, remaining)]
+        per_link_limit = MAX_ODDS_TEXT_PER_LINK if article.get("structured_odds") else MAX_TEXT_PER_LINK
+        excerpt = article["text"][: min(per_link_limit, remaining)]
         total_length += len(excerpt)
         source_label = label or article["title"] or url
         context_parts.append({"index": index, "source_label": source_label, "url": url, "excerpt": excerpt})
-        fetched.append({
+        fetched_item = {
             **link,
             "status": "fetched",
             "title": article["title"],
@@ -119,7 +132,10 @@ def fetch_reference_context(
             "character_count": len(article["text"]),
             "excerpt": excerpt,
             "fetch_method": fetch_method,
-        })
+        }
+        if article.get("structured_odds"):
+            fetched_item["structured_odds"] = True
+        fetched.append(fetched_item)
     if merge_context:
         return merge_reference_context_parts(context_parts), fetched
     return "\n\n---\n\n".join(_reference_context_part_text(item) for item in context_parts).strip(), fetched
@@ -185,8 +201,9 @@ def _fetch_url_rendered_html(url: str, wait_seconds: float = 0, timeout: int = 6
             browser = playwright.chromium.launch(headless=True)
             try:
                 page = browser.new_page(
+                    viewport={"width": 1440, "height": 900},
                     user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
                 )
                 response = page.goto(url, wait_until="domcontentloaded", timeout=timeout * 1000)
                 try:
@@ -195,18 +212,24 @@ def _fetch_url_rendered_html(url: str, wait_seconds: float = 0, timeout: int = 6
                     pass
                 if wait_seconds:
                     page.wait_for_timeout(wait_seconds * 1000)
+                structured_article = extract_sportsbook_odds_from_page(page, url=page.url)
                 html = page.content()
                 content_type = ""
                 if response:
                     content_type = response.headers.get("content-type", "")
-                return {
+                result = {
                     "content_type": content_type,
                     "html": html,
                     "byte_count": len(html.encode("utf-8")),
                     "character_count": len(html),
                     "final_url": page.url,
                     "rendered": True,
+                    "status_code": response.status if response else 0,
+                    "cf_mitigated": response.headers.get("cf-mitigated", "") if response else "",
                 }
+                if structured_article:
+                    result["structured_article"] = structured_article
+                return result
             finally:
                 browser.close()
     except PlaywrightError as exc:
@@ -253,6 +276,8 @@ def _fetch_url_text(url: str, timeout: int = 12, content_tags: set[str] | tuple[
         text = _clean_text(decoded)
         return {"title": "", "text": text}
 
+    if "main" in {str(tag).strip().lower() for tag in (content_tags or [])} and _has_pending_streamed_content(decoded):
+        raise ValueError("The source page streams its main content with JavaScript and needs the browser reader.")
     return _extract_readable_text_from_html(decoded, content_tags=content_tags)
 
 
@@ -269,6 +294,16 @@ def _fetch_url_rendered_text(
     content_tags: set[str] | tuple[str, ...] | list[str] | None = None,
 ) -> dict:
     rendered = _fetch_url_rendered_html(url, wait_seconds=wait_seconds, timeout=timeout)
+    if rendered.get("status_code", 0) >= 400:
+        raise ValueError(_http_status_error_message(
+            rendered["status_code"],
+            {"cf-mitigated": rendered.get("cf_mitigated", "")},
+        ))
+    if rendered.get("structured_article"):
+        article = dict(rendered["structured_article"])
+        article["final_url"] = rendered.get("final_url", url)
+        article["rendered"] = True
+        return article
     article = _extract_readable_text_from_html(rendered.get("html", ""), content_tags=content_tags)
     article["final_url"] = rendered.get("final_url", url)
     article["rendered"] = True
@@ -291,7 +326,19 @@ def _extract_readable_text_from_html(html: str, content_tags: set[str] | tuple[s
     parser = _ReadableTextParser(content_tags=cleaned_content_tags)
     parser.feed(html or "")
     title = _clean_text(" ".join(parser.title_parts))
-    if cleaned_content_tags:
+    if _is_challenge_page(html or "", title, " ".join(parser.text_parts)):
+        raise ValueError(
+            "The source page returned an automated-access verification challenge instead of source content. "
+            "Use a source URL that can be read without a browser challenge."
+        )
+    if "main" in cleaned_content_tags and parser.has_main:
+        text = _clean_text(" ".join(parser.main_parts))
+        if len(text) < 200:
+            raise ValueError(
+                "The source page's main content has no readable data yet. "
+                "It may still be loading or display no data available."
+            )
+    elif cleaned_content_tags:
         article_text = _clean_text(" ".join(parser.filtered_article_parts))
         text = article_text if len(article_text) >= 200 else _clean_text(" ".join(parser.filtered_parts))
     else:
@@ -315,14 +362,51 @@ def _build_request(url: str) -> Request:
 
 
 def _http_error_message(exc: HTTPError) -> str:
-    if exc.code == 403:
-        if (exc.headers.get("cf-mitigated") or "").lower() == "challenge":
+    return _http_status_error_message(exc.code, exc.headers)
+
+
+def _http_status_error_message(status: int, headers=None) -> str:
+    if status == 403:
+        if ((headers or {}).get("cf-mitigated") or "").lower() == "challenge":
             return (
                 "The source page is protected by Cloudflare and blocked automated fetching "
                 "(HTTP 403). Use a source URL that can be fetched without a browser challenge."
             )
         return "The source page blocked automated fetching (HTTP 403)."
-    return f"HTTP {exc.code}"
+    return f"HTTP {status}"
+
+
+def _is_challenge_page(html: str, title: str, text: str) -> bool:
+    challenge_title = re.match(
+        r"^(just a moment|attention required|access denied|security verification|security check|"
+        r"verify (?:that )?you are human|checking your browser)(?:\b|[.!])",
+        title.lower(),
+    )
+    if not challenge_title:
+        return False
+    challenge_marker = re.search(
+        r"/cdn-cgi/challenge-platform/|cf_chl_opt|__cf_chl|challenges\.cloudflare\.com/|"
+        r"id\s*=\s*[\"'](?:challenge-form|challenge-running|cf-challenge-running|human-verification)[\"']",
+        html,
+        flags=re.IGNORECASE,
+    )
+    verification_text = re.search(
+        r"verify (?:that )?you are human|checking your browser|performing security verification|"
+        r"enable javascript and cookies to continue|checking if the site connection is secure",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return bool(challenge_marker or verification_text)
+
+
+def _has_pending_streamed_content(html: str) -> bool:
+    pending_placeholder = re.search(r"<template\b[^>]*\bid\s*=\s*[\"']B:[^\"']+[\"']", html, flags=re.IGNORECASE)
+    hidden_fragment = re.search(
+        r"<div\b(?=[^>]*\bhidden(?:\s|=|>))[^>]*\bid\s*=\s*[\"']S:[^\"']+[\"']",
+        html,
+        flags=re.IGNORECASE,
+    )
+    return bool(pending_placeholder and hidden_fragment)
 
 
 def _charset_from_content_type(content_type: str) -> str:

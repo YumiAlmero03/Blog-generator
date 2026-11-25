@@ -60,3 +60,25 @@ def test_explicit_internal_money_url_stays_followable_in_export():
         'money_site_url': 'https://money.test/',
     })
     assert 'nofollow' not in post['content_html']
+
+
+def test_news_article_links_json_applies_follow_rules_in_export():
+    import json
+    from app.services.post_export_service import normalize_post
+    post = normalize_post({
+        'generator': 'news',
+        'selected_title': 'Breaking Fixtures Update',
+        'meta_description_choice': 'Matchday schedule and coverage details.',
+        'category': 'News',
+        'content_html': (
+            '<p><a href="https://site.test/guide" rel="nofollow">Guide</a> '
+            '<a href="https://outside.test/source">Source</a> '
+            '<a href="https://money.test/">Brand Home</a></p>'
+        ),
+        'links_json': json.dumps([{'url': 'https://outside.test/source', 'type': 'reference'}]),
+        'article_links_json': json.dumps([{'url': 'https://site.test/guide', 'text': 'Guide', 'type': 'internal'}]),
+        'money_site_url': 'https://money.test/',
+    })
+    assert '<a href="https://site.test/guide">Guide</a>' in post['content_html']
+    assert '<a href="https://outside.test/source" rel="nofollow">Source</a>' in post['content_html']
+    assert '<a href="https://money.test/" rel="nofollow">Brand Home</a>' in post['content_html']

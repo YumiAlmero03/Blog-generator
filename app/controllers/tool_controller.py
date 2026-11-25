@@ -7,7 +7,7 @@ import time
 from datetime import date, timedelta
 
 from flask import Response, redirect, render_template, request, url_for
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urldefrag, urlparse
 
 from app.controllers.helpers import base_template_context
 from app.services.banned_word_checker_service import check_website_banned_words
@@ -48,7 +48,7 @@ from app.services.generation_log_service import append_generation_log, generatio
 from app.services.website_page_discovery_service import discover_website_pages
 from app.services.website_index_scheduler import submit_website_index_urls_to_indexnow, trigger_website_index_batch
 from app.services.website_planner_service import DEFAULT_KEYWORD_CATEGORIES, build_keyword_website_plan_v2, build_website_plan, default_keyword_categories_text, enrich_keyword_website_plan_v2_with_ai, get_main_pages_setting, get_trust_pages_setting, parse_ahrefs_keyword_csv, parse_keyword_categories
-from database import get_brand_context, get_brand_record, get_previous_seo_check_history, get_seo_check_history_result, get_setting, list_backlinks, list_brand_names, list_brand_records, list_seo_check_history, record_seo_check_history, set_setting
+from database import get_brand_context, get_brand_record, get_previous_seo_check_history, get_seo_check_history_result, get_setting, list_backlinks, list_brand_names, list_brand_records, list_seo_check_history, record_seo_check_history, set_setting, update_seo_check_history
 from database import delete_website_index_url, delete_website_index_urls, delete_website_index_urls_by_domain, list_due_website_index_submission_urls, list_due_website_index_urls, list_website_index_urls, mark_website_index_urls_checking, update_website_index_bing_yahoo_weekly_result, update_website_index_google_result, upsert_website_index_urls, website_index_stats
 from logger import logger
 
@@ -1075,6 +1075,7 @@ def seo_checker():
     checker_version = "v1"
     state = {
         "url": "",
+        "sitemap_url": "",
         "ignore_ssl_errors": False,
         "allow_private_urls": False,
         "limit": 10,
@@ -1089,6 +1090,7 @@ def seo_checker():
 
     if request.method == "POST":
         state["url"] = request.form.get("url", "").strip()
+        state["sitemap_url"] = request.form.get("sitemap_url", "").strip()
         state["ignore_ssl_errors"] = request.form.get("ignore_ssl_errors") == "1"
         state["allow_private_urls"] = request.form.get("allow_private_urls") == "1" or _is_local_dev_url(state["url"])
         state["generation_log"] = parse_generation_log(request.form.get("generation_log_json", ""))
@@ -1099,12 +1101,14 @@ def seo_checker():
             state["limit"] = 10
         try:
             progress = _seo_checker_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
+            extra_kwargs = {"sitemap_url": state["sitemap_url"], "sitemap_only": True} if state["sitemap_url"] else {}
             state["result"] = _run_site_seo_checks(
                 state["url"],
                 limit=state["limit"],
                 verify_ssl=not state["ignore_ssl_errors"],
                 allow_private=state["allow_private_urls"],
                 progress_callback=progress,
+                **extra_kwargs,
             )
             history_id = record_seo_check_history(state["result"], checker_version=checker_version)
             state["previous_check"] = get_previous_seo_check_history(
@@ -1132,17 +1136,23 @@ def seo_checker_v2():
     checker_version = "v2"
     state = {
         "url": "",
+        "sitemap_url": "",
+        "single_page_only": False,
         "ignore_ssl_errors": False,
         "allow_private_urls": False,
         "use_ai": False,
         "check_google_issues": False,
         "limit": 10,
         "result": None,
+        "history_id": None,
         "history": list_seo_check_history(checker_version=checker_version),
         "previous_check": None,
         "comparison": None,
         "loaded_history": None,
         "error": None,
+        "recheck_message": "",
+        "recheck_scrolled": False,
+        "active_page_index": 0,
         "generation_log": [],
         "generation_log_json": "[]",
     }
@@ -1157,11 +1167,23 @@ def seo_checker_v2():
             
         if snapshot:
             state["loaded_history"] = snapshot
+            state["history_id"] = snapshot["id"]
             state["result"] = snapshot["result"]
             state["url"] = snapshot.get("source_url", "") or state["result"].get("source_url", "")
+            state["sitemap_url"] = state["result"].get("sitemap_url", "") or ""
+            state["single_page_only"] = bool(state["result"].get("single_page_only", False))
             state["limit"] = int(snapshot.get("page_limit", 0) or state["result"].get("limit", 10) or 10)
             state["use_ai"] = bool(state["result"].get("use_ai", True))
             state["check_google_issues"] = bool(state["result"].get("check_google_issues", False))
+            state["ignore_ssl_errors"] = not bool(state["result"].get("verify_ssl", True))
+            state["allow_private_urls"] = bool(state["result"].get("allow_private", False)) or _is_local_dev_url(state["url"])
+            pages_list = state["result"].get("pages", []) or []
+            try:
+                requested_page_index = int(request.args.get("page_index", "0"))
+            except ValueError:
+                requested_page_index = 0
+            if 0 <= requested_page_index < len(pages_list):
+                state["active_page_index"] = requested_page_index
             
             state["previous_check"] = get_previous_seo_check_history(
                 state["result"].get("base_url", ""),
@@ -1178,7 +1200,10 @@ def seo_checker_v2():
             state["error"] = "The saved V2 report could not be found or its JSON data is invalid."
 
     if request.method == "POST":
+        action = request.form.get("action", "check")
         state["url"] = request.form.get("url", "").strip()
+        state["sitemap_url"] = request.form.get("sitemap_url", "").strip()
+        state["single_page_only"] = request.form.get("single_page_only") == "1" or action == "check_page"
         state["ignore_ssl_errors"] = request.form.get("ignore_ssl_errors") == "1"
         state["allow_private_urls"] = request.form.get("allow_private_urls") == "1" or _is_local_dev_url(state["url"])
         state["use_ai"] = request.form.get("use_ai") == "1"
@@ -1190,30 +1215,56 @@ def seo_checker_v2():
         except ValueError:
             state["limit"] = 10
         
-        action = request.form.get("action", "check")
+        has_custom_sitemap = bool(state["sitemap_url"])
+        sitemap_kwargs = {"sitemap_url": state["sitemap_url"]} if has_custom_sitemap else {}
         
         try:
-            if action == "check":
+            if action in {"check", "check_page"}:
                 progress = _seo_checker_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
-                state["result"] = _run_site_seo_checks(
-                    state["url"],
-                    limit=state["limit"],
-                    verify_ssl=not state["ignore_ssl_errors"],
-                    allow_private=state["allow_private_urls"],
-                    use_ai=state["use_ai"],
-                    progress_callback=progress,
-                )
+                if state["single_page_only"]:
+                    state["result"] = _run_single_page_seo_check(
+                        state["url"],
+                        verify_ssl=not state["ignore_ssl_errors"],
+                        allow_private=state["allow_private_urls"],
+                        use_ai=state["use_ai"],
+                        progress_callback=progress,
+                    )
+                else:
+                    state["result"] = _run_site_seo_checks(
+                        state["url"],
+                        limit=state["limit"],
+                        verify_ssl=not state["ignore_ssl_errors"],
+                        allow_private=state["allow_private_urls"],
+                        use_ai=state["use_ai"],
+                        sitemap_only=has_custom_sitemap,
+                        progress_callback=progress,
+                        **sitemap_kwargs,
+                    )
                 add_google_issues(
                     state["result"], enabled=state["check_google_issues"],
                     access_token=get_setting("google_oauth_access_token", ""),
                     service_account_json=get_setting("google_service_account_json", ""),
                 )
-                record_seo_check_history(
-                    state["url"], 
+                saved_history_id = record_seo_check_history(
                     state["result"], 
-                    checker_version=checker_version, 
-                    page_limit=state["limit"]
+                    checker_version=checker_version
                 )
+                state["history_id"] = saved_history_id
+                state["previous_check"] = get_previous_seo_check_history(
+                    state["result"].get("base_url", ""),
+                    saved_history_id,
+                    checker_version=checker_version,
+                )
+                state["comparison"] = _seo_history_comparison(state["result"], state["previous_check"])
+                state["history"] = list_seo_check_history(
+                    checker_version=checker_version,
+                    base_url=state["result"].get("base_url", ""),
+                )
+                publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker: Check complete.")
+                append_generation_log(state["generation_log"], "status", "Check complete.")
+            elif action == "recheck_page":
+                progress = _seo_checker_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
+                _recheck_seo_v2_page(state, checker_version=checker_version, progress=progress)
             elif action == "issues":
                 progress = _seo_checker_progress_callback(request.form.get("generation_status_token", ""), state["generation_log"])
                 audit_result = _run_site_seo_checks(
@@ -1222,18 +1273,20 @@ def seo_checker_v2():
                     verify_ssl=not state["ignore_ssl_errors"],
                     allow_private=state["allow_private_urls"],
                     use_ai=state["use_ai"],
+                    sitemap_only=has_custom_sitemap,
                     progress_callback=progress,
+                    **sitemap_kwargs,
                 )
                 
                 all_issues = []
-                for page in audit_result.pages:
-                    url = page.url
-                    if page.status != "checked":
+                for page in audit_result['pages']:
+                    url = page['url']
+                    if page['status'] != "checked":
                         all_issues.append({"url": url, "type": "error", "title": "Page unreachable", "fix": "Check server logs or URL"})
                         continue
                     
-                    res = page.result
-                    for check in res.checks:
+                    res = page['result']
+                    for check in res['checks']:
                         if check["status"] != "pass":
                             type_str = "error" if check["status"] == "fail" else "warning"
                             all_issues.append({
@@ -1243,39 +1296,275 @@ def seo_checker_v2():
                                 "fix": check["recommendation"]
                             })
                 
-                for link in audit_result.link_health_details.get("not_found_links", []):
+                for link in audit_result.get("link_health_details", {}).get("not_found_links", []):
                     all_issues.append({
                         "url": link["source_page"],
-                        "type": "404",
-                        "title": f"Broken link to {link['url']}",
-                        "fix": f"Check anchor text \"{link['text'] or link['image_alt'] or 'No anchor text'}\" if URL exists"
+                        "type": "error",
+                        "title": "Broken link to " + link.get("url", ""),
+                        "fix": "Check anchor text " + (link.get("text", "") or link.get("image_alt", "No anchor text")),
                     })
                 
                 state["result"] = {
                     "mode": "issues",
-                    "issues": all_issues
+                    "source_url": audit_result.get("source_url", state["url"]),
+                    "base_url": audit_result.get("base_url", state["url"]),
+                    "limit": state["limit"],
+                    "issues": all_issues,
+                    "link_health_details": _site_link_health_details(audit_result['pages'])
                 }
+                state["history_id"] = record_seo_check_history(
+                    state["result"],
+                    checker_version=checker_version,
+                )
+                publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker: Check complete.")
+                append_generation_log(state["generation_log"], "status", "Check complete.")
             else:
                 state["error"] = "Invalid action."
                 
         except Exception as exc:
             logger.exception("seo_checker_v2 action failed")
+            append_generation_log(state["generation_log"], "error", str(exc) or "SEO Checker V2 action failed.")
             state["error"] = str(exc) or "SEO Checker V2 action failed."
 
+    state["generation_log_json"] = generation_log_json(state.get("generation_log", []))
     return render_template("seo_checker_v2.html", **base_template_context(), **state)
 
 
+def _seo_result_from_request() -> dict:
+    history_id = (request.form.get("history_id") or request.args.get("history_id") or "").strip()
+    if history_id:
+        try:
+            snapshot = get_seo_check_history_result(int(history_id))
+            if snapshot and isinstance(snapshot.get("result"), dict):
+                return snapshot["result"]
+        except ValueError:
+            pass
+    return _json_dict(request.form.get("result_json", ""))
+
+
+def seo_checker_v2_table_data():
+    table_name = (request.args.get("table") or "").strip()
+    search_query = " ".join((request.args.get("search") or "").split()).strip().lower()
+    selected_filter = (request.args.get("filter") or "").strip()
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+    except ValueError:
+        page = 1
+    try:
+        page_size = max(1, min(100, int(request.args.get("page_size", "10"))))
+    except ValueError:
+        page_size = 10
+
+    normalized_rows = []
+
+    if table_name == "history":
+        base_url = (request.args.get("base_url") or "").strip()
+        history_items = list_seo_check_history(limit=200, base_url=base_url, checker_version="v2")
+        for item in history_items:
+            site = item.get("base_url") or item.get("source_url") or ""
+            row = {
+                "id": item.get("id"),
+                "created_at": item.get("created_at", ""),
+                "site": site,
+                "average_grade": item.get("average_grade", ""),
+                "average_score": item.get("average_score", 0),
+                "checked_count": item.get("checked_count", 0),
+                "issue_count": item.get("issue_count", 0),
+                "not_found_link_count": item.get("not_found_link_count", 0),
+                "redirect_link_count": item.get("redirect_link_count", 0),
+                "schema_count": item.get("schema_count", 0),
+                "report_url": url_for("web.seo_checker_v2", history_id=item.get("id")),
+                "_filter_value": str(site).strip(),
+                "_search_text": (
+                    f"{item.get('created_at', '')} {site} {item.get('average_grade', '')} "
+                    f"{item.get('average_score', 0)}/100 {item.get('checked_count', 0)} "
+                    f"{item.get('issue_count', 0)} {item.get('not_found_link_count', 0)} "
+                    f"{item.get('redirect_link_count', 0)} {item.get('schema_count', 0)}"
+                ).lower(),
+            }
+            normalized_rows.append(row)
+    else:
+        history_id = (request.args.get("history_id") or "").strip()
+        snapshot = None
+        if history_id:
+            try:
+                snapshot = get_seo_check_history_result(int(history_id), checker_version="v2")
+                if not snapshot:
+                    snapshot = get_seo_check_history_result(int(history_id))
+            except ValueError:
+                snapshot = None
+        if not snapshot or not isinstance(snapshot.get("result"), dict):
+            return {"error": "Saved report not found."}, 404
+
+        result = snapshot["result"]
+
+        if table_name == "issues":
+            for item in result.get("issues", []) or []:
+                if not isinstance(item, dict):
+                    continue
+                issue_type = str(item.get("type", "") or "").strip()
+                row = {
+                    "url": item.get("url", "") or "",
+                    "type": issue_type,
+                    "title": item.get("title", "") or "",
+                    "fix": item.get("fix", "") or "",
+                    "_filter_value": issue_type,
+                    "_search_text": f"{item.get('url', '')} {issue_type} {item.get('title', '')} {item.get('fix', '')}".lower(),
+                }
+                normalized_rows.append(row)
+        elif table_name == "header_footer_links":
+            rows = (result.get("header_footer_link_details") or {}).get("rows", []) or []
+            for item in rows:
+                if not isinstance(item, dict):
+                    continue
+                region = str(item.get("region", "") or "").strip().title()
+                is_image = bool(item.get("is_image"))
+                image_alt = (item.get("image_alt", "") or "Missing alt text") if is_image else (item.get("image_alt", "") or "")
+                anchor_text = item.get("anchor_text", "") or ""
+                element_id = item.get("element_id", "") or ""
+                image_id = item.get("image_id", "") or ""
+                url = item.get("url", "") or ""
+                source_page = item.get("source_page", "") or ""
+                row = {
+                    "is_image": is_image,
+                    "image_alt": image_alt,
+                    "anchor_text": anchor_text,
+                    "element_id": element_id,
+                    "image_id": image_id,
+                    "url": url,
+                    "region": region,
+                    "source_page": source_page,
+                    "_filter_value": region,
+                    "_search_text": f"{'image alt: ' + image_alt if is_image else ''} {anchor_text} {element_id} {image_id} {url} {region} {source_page}".lower(),
+                }
+                normalized_rows.append(row)
+        elif table_name == "schemas":
+            rows = (result.get("schema_details") or {}).get("rows", []) or []
+            for idx, item in enumerate(rows):
+                if not isinstance(item, dict):
+                    continue
+                valid = bool(item.get("valid"))
+                status_label = "Valid" if valid else "Invalid"
+                error_text = item.get("error", "") or "None"
+                preview = item.get("preview", "") or ""
+                content = item.get("content", "") or preview
+                row = {
+                    "index": idx,
+                    "page": item.get("page", "") or "",
+                    "type": item.get("type", "") or "",
+                    "valid": valid,
+                    "status": status_label,
+                    "error": error_text,
+                    "preview": preview,
+                    "content": content,
+                    "_filter_value": status_label,
+                    "_search_text": f"{item.get('page', '')} {item.get('type', '')} {status_label} {error_text} {preview}".lower(),
+                }
+                normalized_rows.append(row)
+        elif table_name == "page_links":
+            try:
+                page_index = int(request.args.get("page_index", "0"))
+            except ValueError:
+                page_index = 0
+            pages = result.get("pages", []) or []
+            sample_checks = []
+            if 0 <= page_index < len(pages) and isinstance(pages[page_index], dict):
+                sample_checks = (
+                    (((pages[page_index].get("result") or {}).get("stats") or {}).get("links") or {}).get("sample_checks", [])
+                    or []
+                )
+            for item in sample_checks:
+                if not isinstance(item, dict):
+                    continue
+                redirected = bool(item.get("redirected"))
+                status_label = "redirect" if redirected else str(item.get("status", "") or "").strip()
+                is_image = bool(item.get("is_image"))
+                image_alt = (item.get("image_alt", "") or "Missing alt text") if is_image else (item.get("image_alt", "") or "")
+                text = item.get("text", "") or ""
+                link_id = item.get("id", "") or ""
+                image_id = item.get("image_id", "") or ""
+                url = item.get("url", "") or ""
+                final_url = item.get("final_url", "") or "n/a"
+                status_code = item.get("status_code") or "n/a"
+                row = {
+                    "is_image": is_image,
+                    "image_alt": image_alt,
+                    "text": text,
+                    "id": link_id,
+                    "image_id": image_id,
+                    "url": url,
+                    "final_url": final_url,
+                    "status_code": status_code,
+                    "status": status_label,
+                    "redirected": redirected,
+                    "_filter_value": status_label,
+                    "_search_text": f"{image_alt} {text or 'no anchor text'} {link_id} {image_id} {url} {final_url} {status_code} {status_label}".lower(),
+                }
+                normalized_rows.append(row)
+        elif table_name == "all_404_links":
+            rows = (result.get("link_health_details") or {}).get("not_found_links", []) or []
+            for item in rows:
+                if not isinstance(item, dict):
+                    continue
+                source_page = item.get("source_page", "") or ""
+                text = item.get("text", "") or item.get("image_alt", "") or "No anchor text"
+                link_id = item.get("id", "") or ""
+                url = item.get("url", "") or ""
+                status_code = item.get("status_code") or 404
+                row = {
+                    "source_page": source_page,
+                    "text": text,
+                    "id": link_id,
+                    "url": url,
+                    "status_code": status_code,
+                    "_filter_value": str(source_page).strip(),
+                    "_search_text": f"{source_page} {text} {link_id} {url} {status_code}".lower(),
+                }
+                normalized_rows.append(row)
+        else:
+            return {"error": "Unknown table."}, 400
+
+    filter_options = sorted({row["_filter_value"] for row in normalized_rows if row.get("_filter_value")})
+    total_count = len(normalized_rows)
+    filtered_rows = [
+        row
+        for row in normalized_rows
+        if (not selected_filter or row.get("_filter_value") == selected_filter)
+        and (not search_query or search_query in row.get("_search_text", ""))
+    ]
+    filtered_count = len(filtered_rows)
+    page_count = max(1, (filtered_count + page_size - 1) // page_size)
+    current_page = min(max(1, page), page_count)
+    start = (current_page - 1) * page_size
+    end = min(start + page_size, filtered_count)
+    page_rows = [
+        {key: value for key, value in row.items() if not key.startswith("_")}
+        for row in filtered_rows[start:end]
+    ]
+
+    return {
+        "table": table_name,
+        "rows": page_rows,
+        "total_count": total_count,
+        "filtered_count": filtered_count,
+        "page": current_page,
+        "page_size": page_size,
+        "page_count": page_count,
+        "start": start + 1 if filtered_count else 0,
+        "end": end,
+        "filter_options": filter_options,
+    }
 
 
 def download_seo_checker_report():
-    result = _json_dict(request.form.get("result_json", ""))
+    result = _seo_result_from_request()
     if not result:
         return redirect(url_for("web.seo_checker"))
     return build_seo_checker_report_response(result)
 
 
 def download_seo_performance_summary():
-    result = _json_dict(request.form.get("result_json", ""))
+    result = _seo_result_from_request()
     if not result:
         return redirect(url_for("web.seo_checker_v2"))
     return build_seo_performance_summary_response(result)
@@ -1336,74 +1625,69 @@ def _seo_delta_direction(delta: int, higher_is_better: bool) -> str:
     return "better" if improved else "worse"
 
 
-def _run_site_seo_checks(
-    raw_url: str,
-    limit: int = 10,
+def _audit_single_site_page(
+    page_url: str,
+    index: int,
+    total_pages: int,
+    *,
     verify_ssl: bool = True,
     allow_private: bool = False,
     use_ai: bool = True,
+    tab_label: str = "",
     progress_callback=None,
-) -> dict:
-    allow_private = allow_private or _is_local_dev_url(raw_url)
-    _publish_seo_progress(progress_callback, "Listing pages...")
-    discovery = discover_website_pages(raw_url, limit=limit, allow_private=allow_private)
-    page_urls = discovery.pages[:limit] or [discovery.base_url]
-    page_results = []
-    checked_pages = []
-    total_pages = len(page_urls)
+    action_verb: str = "Checking",
+) -> tuple[dict, dict]:
+    resolved_tab_label = tab_label or _seo_page_tab_label(page_url)
+    _publish_seo_progress(progress_callback, f"{action_verb} page {index}/{total_pages}: {page_url}")
+    try:
+        audit = run_seo_audit(page_url, verify_ssl=verify_ssl, allow_private=allow_private, use_ai=use_ai)
+        page_entry = {
+            "index": index,
+            "url": page_url,
+            "tab_label": resolved_tab_label,
+            "status": "checked",
+            "result": audit,
+            "error": "",
+        }
+        _publish_seo_progress(progress_callback, f"Checked page {index}/{total_pages}: {page_url}")
+    except Exception as exc:
+        logger.exception("seo_checker page audit failed: url=%s", page_url)
+        page_entry = {
+            "index": index,
+            "url": page_url,
+            "tab_label": resolved_tab_label,
+            "status": "error",
+            "result": None,
+            "error": str(exc) or "Could not complete this page check.",
+        }
+        _publish_seo_progress(progress_callback, f"Page {index}/{total_pages} failed: {page_url}")
+    return page_entry, _checked_page_summary(page_entry, index)
 
-    _publish_seo_progress(progress_callback, f"Found {total_pages} page(s). Starting page checks...")
 
-    for index, page_url in enumerate(page_urls, start=1):
-        tab_label = _seo_page_tab_label(page_url)
-        _publish_seo_progress(progress_callback, f"Checking page {index}/{total_pages}: {page_url}")
-        try:
-            audit = run_seo_audit(page_url, verify_ssl=verify_ssl, allow_private=allow_private, use_ai=use_ai)
-            page_results.append(
-                {
-                    "index": index,
-                    "url": page_url,
-                    "tab_label": tab_label,
-                    "status": "checked",
-                    "result": audit,
-                    "error": "",
-                }
-            )
-            checked_pages.append(
-                {
-                    "index": index,
-                    "url": page_url,
-                    "status": "checked",
-                    "score": audit.get("score", 0),
-                    "grade": audit.get("grade", ""),
-                    "error": "",
-                }
-            )
-            _publish_seo_progress(progress_callback, f"Checked page {index}/{total_pages}: {page_url}")
-        except Exception as exc:
-            logger.exception("seo_checker page audit failed: url=%s", page_url)
-            page_results.append(
-                {
-                    "index": index,
-                    "url": page_url,
-                    "tab_label": tab_label,
-                    "status": "error",
-                    "result": None,
-                    "error": str(exc) or "Could not complete this page check.",
-                }
-            )
-            checked_pages.append(
-                {
-                    "index": index,
-                    "url": page_url,
-                    "status": "error",
-                    "score": None,
-                    "grade": "",
-                    "error": str(exc) or "Could not complete this page check.",
-                }
-            )
-            _publish_seo_progress(progress_callback, f"Page {index}/{total_pages} failed: {page_url}")
+def _checked_page_summary(page_entry: dict, fallback_index: int) -> dict:
+    index = page_entry.get("index", fallback_index)
+    page_url = page_entry.get("url", "")
+    audit = page_entry.get("result")
+    if page_entry.get("status") == "checked" and isinstance(audit, dict):
+        return {
+            "index": index,
+            "url": page_url,
+            "status": "checked",
+            "score": audit.get("score", 0),
+            "grade": audit.get("grade", ""),
+            "error": "",
+        }
+    return {
+        "index": index,
+        "url": page_url,
+        "status": "error",
+        "score": None,
+        "grade": "",
+        "error": page_entry.get("error", "") or "Could not complete this page check.",
+    }
 
+
+def _build_site_seo_aggregates(page_results: list[dict], discovered_count: int | None = None) -> dict:
     checked_results = [item["result"] for item in page_results if item.get("result")]
     average_score = round(sum(item["score"] for item in checked_results) / len(checked_results)) if checked_results else 0
     issue_count = sum(
@@ -1428,19 +1712,10 @@ def _run_site_seo_checks(
     internal_link_details = _site_internal_link_details(page_results)
     header_footer_link_details = _site_header_footer_link_details(page_results)
     schema_details = _site_schema_details(page_results)
+    total_discovered = len(page_results) if discovered_count is None else discovered_count
     return {
-        "mode": "site",
-        "source_url": raw_url,
-        "base_url": discovery.base_url,
-        "limit": limit,
-        "use_ai": bool(use_ai),
-        "discovered_pages": page_urls,
-        "discovery_errors": discovery.errors,
-        "sitemaps": discovery.sitemaps,
-        "pages": page_results,
-        "checked_pages": checked_pages,
         "summary": {
-            "discovered_count": len(page_urls),
+            "discovered_count": total_discovered,
             "checked_count": len(checked_results),
             "error_count": len(page_results) - len(checked_results),
             "average_score": average_score,
@@ -1460,6 +1735,309 @@ def _run_site_seo_checks(
         "internal_link_details": internal_link_details,
         "header_footer_link_details": header_footer_link_details,
         "schema_details": schema_details,
+    }
+
+
+def _recheck_flag_from_request(field_name: str, default: bool) -> bool:
+    if field_name not in request.form:
+        return bool(default)
+    return request.form.get(field_name) == "1"
+
+
+def _resolve_recheck_page_index(pages: list[dict], raw_index: str, page_url: str) -> int | None:
+    try:
+        parsed_index = int(raw_index)
+    except (TypeError, ValueError):
+        parsed_index = None
+
+    if parsed_index is not None and 0 <= parsed_index < len(pages):
+        candidate_url = str((pages[parsed_index] or {}).get("url", "") or "").strip()
+        if not page_url or candidate_url == page_url:
+            return parsed_index
+
+    if page_url:
+        for idx, item in enumerate(pages):
+            if str((item or {}).get("url", "") or "").strip() == page_url:
+                return idx
+
+    if parsed_index is not None and 0 <= parsed_index < len(pages) and not page_url:
+        return parsed_index
+    return None
+
+
+def _recheck_seo_v2_page(state: dict, checker_version: str = "v2", progress=None) -> None:
+    raw_history_id = (request.form.get("history_id") or request.args.get("history_id") or "").strip()
+    saved_history_id = None
+    existing_result = None
+
+    if raw_history_id:
+        try:
+            snapshot = get_seo_check_history_result(int(raw_history_id), checker_version=checker_version)
+        except ValueError:
+            snapshot = None
+        if snapshot and isinstance(snapshot.get("result"), dict):
+            saved_history_id = snapshot["id"]
+            existing_result = snapshot["result"]
+
+    if existing_result is None:
+        fallback_result = _json_dict(request.form.get("result_json", ""))
+        if fallback_result:
+            existing_result = fallback_result
+
+    if not existing_result:
+        state["error"] = "Could not find the saved SEO Checker V2 report for this recheck."
+        return
+
+    pages = existing_result.get("pages")
+    if existing_result.get("mode") != "site" or not isinstance(pages, list) or not pages:
+        state["error"] = "This SEO Checker V2 report has no individual pages to recheck."
+        return
+
+    if not state["url"]:
+        state["url"] = existing_result.get("source_url", "") or existing_result.get("base_url", "")
+    if "sitemap_url" not in request.form:
+        state["sitemap_url"] = existing_result.get("sitemap_url", "") or ""
+    if "limit" not in request.form:
+        try:
+            state["limit"] = max(1, min(100, int(existing_result.get("limit", 10) or 10)))
+        except (TypeError, ValueError):
+            state["limit"] = 10
+
+    state["single_page_only"] = bool(existing_result.get("single_page_only", False))
+    state["use_ai"] = _recheck_flag_from_request("use_ai", existing_result.get("use_ai", True))
+    state["check_google_issues"] = _recheck_flag_from_request("check_google_issues", existing_result.get("check_google_issues", False))
+    state["ignore_ssl_errors"] = _recheck_flag_from_request("ignore_ssl_errors", not bool(existing_result.get("verify_ssl", True)))
+    state["allow_private_urls"] = _recheck_flag_from_request("allow_private_urls", bool(existing_result.get("allow_private", False)))
+
+    raw_page_index = request.form.get("page_index", "").strip()
+    requested_page_url = request.form.get("page_url", "").strip()
+    target_index = _resolve_recheck_page_index(pages, raw_page_index, requested_page_url)
+    if target_index is None:
+        state["result"] = existing_result
+        state["history_id"] = saved_history_id
+        state["error"] = "The selected page could not be found in this SEO Checker V2 report."
+        return
+
+    existing_page = pages[target_index] or {}
+    target_url = str(existing_page.get("url", "") or requested_page_url).strip()
+    state["allow_private_urls"] = state["allow_private_urls"] or _is_local_dev_url(target_url) or _is_local_dev_url(state["url"])
+    display_index = existing_page.get("index", target_index + 1)
+    tab_label = existing_page.get("tab_label") or _seo_page_tab_label(target_url)
+
+    updated_page, _ = _audit_single_site_page(
+        target_url,
+        display_index,
+        len(pages),
+        verify_ssl=not state["ignore_ssl_errors"],
+        allow_private=state["allow_private_urls"],
+        use_ai=state["use_ai"],
+        tab_label=tab_label,
+        progress_callback=progress,
+        action_verb="Re-checking",
+    )
+
+    single_page_holder = {"pages": [updated_page]}
+    add_google_issues(
+        single_page_holder,
+        enabled=state["check_google_issues"],
+        access_token=get_setting("google_oauth_access_token", ""),
+        service_account_json=get_setting("google_service_account_json", ""),
+        progress_callback=progress,
+    )
+
+    updated_pages = list(pages)
+    updated_pages[target_index] = updated_page
+    discovered_count = len(existing_result.get("discovered_pages") or updated_pages)
+    aggregates = _build_site_seo_aggregates(updated_pages, discovered_count=discovered_count)
+
+    updated_result = dict(existing_result)
+    updated_result["pages"] = updated_pages
+    updated_result["checked_pages"] = [
+        _checked_page_summary(item, idx) for idx, item in enumerate(updated_pages, start=1)
+    ]
+    updated_result["use_ai"] = bool(state["use_ai"])
+    updated_result["check_google_issues"] = bool(state["check_google_issues"])
+    updated_result["verify_ssl"] = not state["ignore_ssl_errors"]
+    updated_result["allow_private"] = bool(state["allow_private_urls"])
+    updated_result["google_issues_checked_at"] = single_page_holder.get(
+        "google_issues_checked_at",
+        existing_result.get("google_issues_checked_at", ""),
+    )
+    updated_result.update(aggregates)
+
+    if saved_history_id is not None:
+        update_seo_check_history(saved_history_id, updated_result, checker_version=checker_version)
+        state["history_id"] = saved_history_id
+        state["previous_check"] = get_previous_seo_check_history(
+            updated_result.get("base_url", ""),
+            saved_history_id,
+            checker_version=checker_version,
+        )
+        state["comparison"] = _seo_history_comparison(updated_result, state["previous_check"])
+        state["history"] = list_seo_check_history(
+            checker_version=checker_version,
+            base_url=updated_result.get("base_url", ""),
+        )
+
+    state["result"] = updated_result
+    state["active_page_index"] = target_index
+    state["recheck_scrolled"] = True
+    if updated_page.get("status") == "checked" and updated_page.get("result"):
+        audit = updated_page["result"]
+        state["recheck_message"] = (
+            f"Rechecked {target_url} — Grade {audit.get('grade', '')} ({audit.get('score', 0)}/100)."
+        )
+    else:
+        state["error"] = f"Recheck failed for {target_url}: {updated_page.get('error', 'Could not complete this page check.')}"
+
+    publish_generation_status(request.form.get("generation_status_token", ""), "Website SEO Checker: Page recheck complete.")
+    append_generation_log(state["generation_log"], "status", f"Page recheck complete: {target_url}")
+
+
+def _normalize_single_page_url(raw_url: str) -> str:
+    cleaned = (raw_url or "").strip()
+    if not cleaned:
+        raise ValueError("Enter a page URL to check.")
+    if not re.match(r"^https?://", cleaned, flags=re.IGNORECASE):
+        cleaned = f"https://{cleaned}"
+    cleaned, _fragment = urldefrag(cleaned)
+    parsed = urlparse(cleaned)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("Use a valid http or https page URL.")
+    return parsed._replace(path=parsed.path or "/").geturl()
+
+
+def _run_single_page_seo_check(
+    raw_url: str,
+    verify_ssl: bool = True,
+    allow_private: bool = False,
+    use_ai: bool = True,
+    progress_callback=None,
+) -> dict:
+    page_url = _normalize_single_page_url(raw_url)
+    allow_private = allow_private or _is_local_dev_url(page_url)
+    _publish_seo_progress(progress_callback, f"Checking specific page: {page_url}")
+
+    page_entry, checked_entry = _audit_single_site_page(
+        page_url,
+        1,
+        1,
+        verify_ssl=verify_ssl,
+        allow_private=allow_private,
+        use_ai=use_ai,
+        progress_callback=progress_callback,
+    )
+    page_results = [page_entry]
+    aggregates = _build_site_seo_aggregates(page_results, discovered_count=1)
+    audit = page_entry.get("result") or {}
+    sitemaps = (audit.get("stats") or {}).get("sitemaps", []) if isinstance(audit, dict) else []
+    return {
+        "mode": "site",
+        "source_url": raw_url,
+        "sitemap_url": "",
+        "base_url": page_url,
+        "limit": 1,
+        "single_page_only": True,
+        "use_ai": bool(use_ai),
+        "verify_ssl": bool(verify_ssl),
+        "allow_private": bool(allow_private),
+        "page_source": "single_page",
+        "discovered_pages": [page_url],
+        "discovery_errors": [],
+        "sitemaps": sitemaps,
+        "pages": page_results,
+        "checked_pages": [checked_entry],
+        "summary": aggregates["summary"],
+        "link_health_details": aggregates["link_health_details"],
+        "internal_link_details": aggregates["internal_link_details"],
+        "header_footer_link_details": aggregates["header_footer_link_details"],
+        "schema_details": aggregates["schema_details"],
+    }
+
+
+def _run_site_seo_checks(
+    raw_url: str,
+    limit: int = 10,
+    verify_ssl: bool = True,
+    allow_private: bool = False,
+    use_ai: bool = True,
+    progress_callback=None,
+    sitemap_only: bool = False,
+    sitemap_url: str = "",
+) -> dict:
+    cleaned_sitemap_url = (sitemap_url or "").strip()
+    if not cleaned_sitemap_url and (raw_url or "").strip().lower().split("?", 1)[0].endswith(".xml"):
+        cleaned_sitemap_url = (raw_url or "").strip()
+    use_sitemap = bool(sitemap_only or cleaned_sitemap_url)
+    allow_private = allow_private or _is_local_dev_url(raw_url)
+    page_source = "sitemap" if use_sitemap else "discovery"
+    listing_message = "Listing pages from XML sitemap..." if use_sitemap else "Reading homepage and mapping links..."
+    _publish_seo_progress(progress_callback, listing_message)
+    try:
+        discovery = discover_website_pages(
+            raw_url,
+            limit=limit,
+            allow_private=allow_private,
+            sitemap_url=cleaned_sitemap_url,
+            homepage_only=not use_sitemap,
+            include_page_items=False,
+        )
+    except TypeError:
+        try:
+            discovery = discover_website_pages(
+                raw_url,
+                limit=limit,
+                allow_private=allow_private,
+                sitemap_url=cleaned_sitemap_url,
+                homepage_only=not use_sitemap,
+            )
+        except TypeError:
+            discovery = discover_website_pages(raw_url, limit=limit, allow_private=allow_private)
+    sitemap_pages = getattr(discovery, "sitemap_pages", None)
+    discovered_pages = sitemap_pages if use_sitemap and sitemap_pages is not None else discovery.pages
+    page_urls = discovered_pages[:limit]
+    if not use_sitemap and not page_urls:
+        page_urls = [discovery.base_url]
+    page_results = []
+    checked_pages = []
+    total_pages = len(page_urls)
+
+    _publish_seo_progress(progress_callback, f"Found {total_pages} page(s). Starting page checks...")
+
+    for index, page_url in enumerate(page_urls, start=1):
+        page_entry, checked_entry = _audit_single_site_page(
+            page_url,
+            index,
+            total_pages,
+            verify_ssl=verify_ssl,
+            allow_private=allow_private,
+            use_ai=use_ai,
+            progress_callback=progress_callback,
+        )
+        page_results.append(page_entry)
+        checked_pages.append(checked_entry)
+
+    aggregates = _build_site_seo_aggregates(page_results, discovered_count=len(page_urls))
+    return {
+        "mode": "site",
+        "source_url": raw_url,
+        "sitemap_url": cleaned_sitemap_url,
+        "base_url": discovery.base_url,
+        "limit": limit,
+        "use_ai": bool(use_ai),
+        "verify_ssl": bool(verify_ssl),
+        "allow_private": bool(allow_private),
+        "page_source": page_source,
+        "discovered_pages": page_urls,
+        "discovery_errors": discovery.errors,
+        "sitemaps": discovery.sitemaps,
+        "pages": page_results,
+        "checked_pages": checked_pages,
+        "summary": aggregates["summary"],
+        "link_health_details": aggregates["link_health_details"],
+        "internal_link_details": aggregates["internal_link_details"],
+        "header_footer_link_details": aggregates["header_footer_link_details"],
+        "schema_details": aggregates["schema_details"],
     }
 
 
@@ -1785,6 +2363,147 @@ def website_pages():
             state["error"] = str(exc) or "Could not list website pages."
 
     return render_template("website_pages.html", **base_template_context(), **state)
+
+
+
+def download_seo_issues_csv():
+    result = _seo_result_from_request()
+    if not result:
+        result_json = request.form.get("result_json", "").strip()
+        if not result_json:
+            return {"error": "No report data provided."}, 400
+        return {"error": "Invalid report data."}, 400
+
+    issues = result.get("issues", [])
+    
+    # If issues list is empty, we might be in "site" mode. 
+    # We need to extract issues from pages and link_health_details
+    if not issues and result.get("mode") == "site":
+        all_issues = []
+        for page in result.get("pages", []):
+            url = page.get("url", "")
+            if page.get("status") != "checked":
+                all_issues.append({"url": url, "type": "error", "title": "Page unreachable", "fix": "Check server logs or URL"})
+                continue
+            
+            res = page.get("result", {})
+            for check in res.get("checks", []):
+                if check.get("status") != "pass":
+                    type_str = "error" if check.get("status") == "fail" else "warning"
+                    all_issues.append({
+                        "url": url,
+                        "type": type_str,
+                        "title": check.get("name", ""),
+                        "fix": check.get("recommendation", "")
+                    })
+        
+        lh = result.get("link_health_details", {})
+        for link in lh.get("not_found_links", []):
+            all_issues.append({
+                "url": link.get("source_page", ""),
+                "type": "error",
+                "title": "Broken link to " + link.get("url", ""),
+                "fix": "Check anchor text " + (link.get("text", "") or link.get("image_alt", "No anchor text")),
+            })
+        issues = all_issues
+    
+    if not issues:
+        return {"error": "No issues found to export."}, 400
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Url", "Rating", "Issue Title", "Issue Desc", "Fixes"])
+    
+    for issue in issues:
+        writer.writerow([
+            issue.get("url", ""),
+            issue.get("type", ""),
+            issue.get("title", ""),
+            "",
+            issue.get("fix", ""),
+        ])
+
+    safe_name = "export"
+    if result.get("base_url"):
+        safe_name = result.get("base_url")
+        import re
+        safe_name = re.sub(r"[^\w.-]", "-", safe_name)
+    filename = f"seo-issues-{safe_name}.csv"
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+SEO_TITLE_SEPARATOR_PATTERN = re.compile(r"\s+[|\-–—:·»]\s+")
+
+
+def _seo_possible_main_keyword(page_url: str, title: str, h1: str) -> str:
+    """Best-effort guess of a page's main keyword from H1, title, or URL slug."""
+    for candidate in (h1, title):
+        text = " ".join(str(candidate or "").split()).strip()
+        if not text:
+            continue
+        # Drop brand/site suffixes such as "Best Slots | Brand".
+        parts = [part.strip() for part in SEO_TITLE_SEPARATOR_PATTERN.split(text) if part.strip()]
+        primary = max(parts, key=len) if len(parts) > 1 else text
+        primary = re.sub(r"[^\w\s'&+-]", " ", primary)
+        primary = " ".join(primary.split()).lower()
+        if primary:
+            return primary
+    path = unquote(urlparse(page_url or "").path).strip("/")
+    if not path:
+        return ""
+    slug = path.split("/")[-1]
+    slug = re.sub(r"\.\w{2,5}$", "", slug)
+    return " ".join(re.sub(r"[-_]+", " ", slug).split()).lower()
+
+
+def _seo_pages_inventory_rows(result: dict) -> list[dict]:
+    rows = []
+    for page in result.get("pages", []) or []:
+        if not isinstance(page, dict):
+            continue
+        page_url = page.get("url", "")
+        audit = page.get("result") or {}
+        stats = audit.get("stats") or {}
+        h1_list = (stats.get("heading_outline") or {}).get("h1") or []
+        if not h1_list:
+            h1_list = [item.get("text", "") for item in stats.get("heading_sequence") or [] if isinstance(item, dict) and item.get("level") == "h1"]
+        h1 = h1_list[0] if h1_list else ""
+        title = stats.get("title", "") or ""
+        description = stats.get("meta_description", "") or ""
+        rows.append(
+            {
+                "url": audit.get("url") or page_url,
+                "status": page.get("status", ""),
+                "title": title,
+                "description": description,
+                "h1": h1,
+                "main_keyword": _seo_possible_main_keyword(page_url, title, h1),
+            }
+        )
+    return rows
+
+
+def download_seo_pages_inventory_csv():
+    result = _seo_result_from_request()
+    if not result:
+        return redirect(url_for("web.seo_checker_v2"))
+
+    rows = _seo_pages_inventory_rows(result)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["URL", "Title", "Meta Description", "Possible Main Keyword", "H1", "Status"])
+    for row in rows:
+        writer.writerow([row["url"], row["title"], row["description"], row["main_keyword"], row["h1"], row["status"]])
+
+    safe_name = re.sub(r"[^\w.-]", "-", urlparse(result.get("base_url", "") or "").netloc or "export")
+    return Response(
+        "\ufeff" + output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=seo-pages-{safe_name}.csv"},
+    )
 
 
 def download_website_pages_csv():

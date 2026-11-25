@@ -1,8 +1,19 @@
 from datetime import date
 
+from app.services.sportsbook_odds_extractor import is_sportsbook_odds_context
 from word_bank import build_banned_words_prompt_section
 
-from prompts.shared import BLOG_LIST_INSTRUCTIONS, MAX_BLOG_WORDS, MIN_BLOG_WORDS, build_brand_context_section, build_language_instruction
+from prompts.shared import (
+    BLOG_LIST_INSTRUCTIONS,
+    BLOG_TABLE_INSTRUCTIONS,
+    MAX_BLOG_WORDS,
+    MIN_BLOG_WORDS,
+    build_brand_context_section,
+    build_language_instruction,
+    build_links_prompt_section,
+    build_money_site_prompt_section,
+    build_visual_language_instruction,
+)
 
 
 def current_news_date() -> str:
@@ -142,7 +153,7 @@ def build_news_visual_prompt(
     language: str = "English",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
-    language_section = build_language_instruction(language)
+    language_section = build_visual_language_instruction(language)
     reference_section = _reference_context_section(reference_context)
     current_date_text = current_date or current_news_date()
     return f"""
@@ -166,7 +177,7 @@ Rules:
 - If the target country/region is Worldwide, suggest images that work for a global audience.
 - Do not describe outdated 2020-2025 scenes.
 - Keep every description factual, neutral, and editorial.
-- Do not include text overlays, logos, watermarks, UI screenshots, or fabricated official documents.
+- Avoid unnecessary text overlays, logos, watermarks, UI screenshots, or fabricated official documents; if the image requires visible text (such as a sign, headline, or label), keep it brief inside quotes ("...") in {language} while keeping the rest of the description in English.
 - Avoid showing graphic harm, exploitative tragedy, or misleading staged evidence.
 - Keep each visual idea to 1-2 sentences.
 - No explanations before or after the JSON.
@@ -192,16 +203,32 @@ def build_news_content_prompt(
     max_words: int | str = MAX_BLOG_WORDS,
     current_date: str = "",
     language: str = "English",
+    change_request: str = "",
+    links: list | None = None,
+    money_site_url: str = "",
 ) -> str:
     context_section = build_brand_context_section(brand_context)
     language_section = build_language_instruction(language)
     banned_words_section = build_banned_words_prompt_section()
     reference_section = _reference_context_section(reference_context)
+    links_section = build_links_prompt_section(links, heading="Links to Include in Content:")
+    money_site_section = build_money_site_prompt_section(money_site_url)
     current_date_text = current_date or current_news_date()
     min_word_count = _positive_int(min_words, MIN_BLOG_WORDS)
     max_word_count = _positive_int(max_words, MAX_BLOG_WORDS)
     if max_word_count < min_word_count:
         max_word_count = min_word_count
+    change_request_section = ""
+    cleaned_change_request = (change_request or "").strip()
+    if cleaned_change_request:
+        change_request_section = f"""
+Minor change suggestions / content needed from the user:
+{cleaned_change_request}
+
+Instructions for user content & change suggestions:
+- Prioritize incorporating the requested contents, topics, sections, angles, or adjustments above when writing the article.
+- Stay truthful to the supplied reference source content when provided and do not fabricate unverified facts, figures, or quotes.
+"""
 
     return f"""
 You are a professional news writer creating current-events coverage.
@@ -215,6 +242,9 @@ Target country/region: {target_country or "Worldwide"}
 Brand/publication: {brand}
 {context_section}
 {reference_section}
+{links_section}
+{money_site_section}
+{change_request_section}
 {language_section}
 {banned_words_section}
 
@@ -225,6 +255,8 @@ Rules:
 - If reference source content is provided, use only that source content for facts, names, dates, figures, claims, and timeline.
 - If reference source content is provided, do not add outside facts, background, examples, or assumptions that are not supported by the supplied sources.
 - If reference source content is provided but a detail is missing, say that the supplied source does not state it or omit the detail.
+- When Links to Include in Content or a Money Site URL are provided, weave every provided link naturally across the TOP, MIDDLE, and END sections using Markdown links like [anchor text](URL) without inventing unverified news facts around them.
+- External link attributes are added later during Python conversion.
 - Write for the target audience and target country/region.
 - If the target country/region is Worldwide, explain the global relevance and avoid assuming a single country's laws, politics, currency, or institutions.
 - If a specific country is selected, include the local relevance, reader impact, and country-specific context only when it is safe and natural.
@@ -246,8 +278,7 @@ Rules:
 - Keep the tone neutral, timely, and informative.
 - If a brand is provided, align with that publication voice without forcing the brand name.
 - Write the content value in Markdown source, not HTML.
-- Include a concise table only when comparisons, specifications, timelines, or structured facts are clearer in a table. Otherwise omit tables.
-- Use Markdown pipe tables with a header and separator row; the app converts them to HTML tables for viewing and copying. Keep cells short and use only supported facts; never invent data to fill a table.
+{BLOG_TABLE_INSTRUCTIONS}
 - Return only valid JSON with this format: {{"content":"## Heading\\n\\nParagraph..."}}.
 - Do not add any explanation, notes, or text before or after the JSON object.
 - Start the response with "{{" and end it with "}}".
@@ -326,6 +357,15 @@ def _reference_context_section(reference_context: str) -> str:
     cleaned = (reference_context or "").strip()
     if not cleaned:
         return ""
+    odds_rules = ""
+    if is_sportsbook_odds_context(cleaned):
+        odds_rules = """
+Displayed odds writing rules:
+- Base all match analysis, favorites, underdogs, goal expectations, handicap leans, half-time angles, and predictions strictly on the displayed odds and betting split percentages above.
+- Quote the exact displayed decimal odds and handicap or goal lines accurately without altering or inventing numbers.
+- Interpret decimal odds accurately: lower decimal odds indicate a stronger market favorite / higher implied probability, and higher decimal odds indicate an underdog.
+- Present key displayed odds (such as 1X2, Asian Handicap, Goals Over/Under, Both Teams to Score, Double Chance, Draw No Bet, and key Correct Score or half-time markets) in concise Markdown tables alongside clear written analysis.
+- Do not invent lineups, injuries, recent form, head-to-head stats, or guaranteed outcomes not stated in the supplied reference source; frame predictions cautiously as odds-based market readings."""
     return f"""
 Reference source content:
 {cleaned}
@@ -333,5 +373,5 @@ Reference source content:
 Reference rules:
 - Treat the reference source content above as the only factual source for this news item.
 - Do not use outside knowledge or unstated assumptions.
-- Do not claim that you visited or verified a link beyond the supplied extracted text.
+- Do not claim that you visited or verified a link beyond the supplied extracted text.{odds_rules}
 """

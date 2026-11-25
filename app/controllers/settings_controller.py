@@ -14,6 +14,12 @@ from app.services.locale_settings import (
     normalize_language,
 )
 from app.services.indexnow_service import DEFAULT_INDEXNOW_ENDPOINT
+from app.services.gemini_web_search_service import (
+    GEMINI_WEB_SEARCH_MAX_RESULTS_SETTING,
+    GEMINI_WEB_SEARCH_MODEL_SETTING,
+    get_gemini_web_search_max_results,
+    get_gemini_web_search_model,
+)
 from app.services.ollama_web_search_service import (
     OLLAMA_API_KEY_SETTING,
     OLLAMA_WEB_SEARCH_ENABLED_SETTING,
@@ -22,6 +28,13 @@ from app.services.ollama_web_search_service import (
     get_ollama_web_search_enabled,
     get_ollama_web_search_max_results,
 )
+from app.services.web_search_service import (
+    VALID_WEB_SEARCH_PROVIDERS,
+    WEB_SEARCH_PROVIDER_SETTING,
+    describe_active_web_search,
+    get_configured_web_search_provider,
+)
+from providers.gemini_provider import GEMINI_API_KEY_SETTING, resolve_gemini_api_key
 from app.services.social_media_settings import (
     DEFAULT_SOCIAL_MEDIA_MAX_CHARACTERS,
     SOCIAL_MEDIA_MAX_CHARACTERS_KEY,
@@ -57,6 +70,7 @@ from app.services.website_planner_service import (
 def settings():
     blog_min_words, blog_max_words = get_blog_word_limits()
     page_min_words, page_max_words = get_page_word_limits()
+    saved_gemini_key = get_setting(GEMINI_API_KEY_SETTING, "").strip()
     state = {
         "money_site": get_setting("money_site", ""),
         "indexnow_key": get_setting("indexnow_key", ""),
@@ -64,6 +78,13 @@ def settings():
         "indexnow_endpoint": get_setting("indexnow_endpoint", DEFAULT_INDEXNOW_ENDPOINT),
         "google_service_account_json": get_setting("google_service_account_json", ""),
         "google_oauth_access_token": get_setting("google_oauth_access_token", ""),
+        "web_search_provider": get_configured_web_search_provider(),
+        "web_search_status": describe_active_web_search(),
+        "gemini_has_saved_key": bool(saved_gemini_key),
+        "gemini_has_env_key": bool(not saved_gemini_key and resolve_gemini_api_key(require=False)),
+        "gemini_web_search_model": get_setting(GEMINI_WEB_SEARCH_MODEL_SETTING, "").strip(),
+        "gemini_search_model_placeholder": get_gemini_web_search_model(),
+        "gemini_web_search_max_results": get_gemini_web_search_max_results(),
         "ollama_api_key": get_ollama_api_key(),
         "ollama_web_search_enabled": get_ollama_web_search_enabled(),
         "ollama_web_search_max_results": get_ollama_web_search_max_results(),
@@ -90,10 +111,24 @@ def settings():
         state["indexnow_endpoint"] = request.form.get("indexnow_endpoint", DEFAULT_INDEXNOW_ENDPOINT).strip() or DEFAULT_INDEXNOW_ENDPOINT
         state["google_service_account_json"] = request.form.get("google_service_account_json", "").strip()
         state["google_oauth_access_token"] = request.form.get("google_oauth_access_token", "").strip()
+        web_search_provider = request.form.get("web_search_provider", "auto").strip().lower()
+        state["web_search_provider"] = web_search_provider if web_search_provider in VALID_WEB_SEARCH_PROVIDERS else "auto"
+        submitted_gemini_key = request.form.get("gemini_api_key", "").strip()
+        clear_gemini_key = request.form.get("clear_gemini_api_key") == "1"
+        if clear_gemini_key:
+            saved_gemini_key = ""
+        elif submitted_gemini_key:
+            saved_gemini_key = submitted_gemini_key
+        state["gemini_web_search_model"] = request.form.get("gemini_web_search_model", "").strip()
+        state["gemini_web_search_max_results"] = _normalize_max_results(
+            request.form.get("gemini_web_search_max_results", ""),
+            fallback=get_gemini_web_search_max_results(),
+        )
         state["ollama_api_key"] = request.form.get("ollama_api_key", "").strip()
         state["ollama_web_search_enabled"] = request.form.get("ollama_web_search_enabled") == "1"
-        state["ollama_web_search_max_results"] = _normalize_ollama_max_results(
-            request.form.get("ollama_web_search_max_results", "")
+        state["ollama_web_search_max_results"] = _normalize_max_results(
+            request.form.get("ollama_web_search_max_results", ""),
+            fallback=get_ollama_web_search_max_results(),
         )
         state["social_media_max_characters"] = normalize_social_media_max_characters(
             request.form.get("social_media_max_characters", DEFAULT_SOCIAL_MEDIA_MAX_CHARACTERS)
@@ -123,9 +158,17 @@ def settings():
         set_setting("indexnow_endpoint", state["indexnow_endpoint"])
         set_setting("google_service_account_json", state["google_service_account_json"])
         set_setting("google_oauth_access_token", state["google_oauth_access_token"])
+        set_setting(WEB_SEARCH_PROVIDER_SETTING, state["web_search_provider"])
+        set_setting(GEMINI_API_KEY_SETTING, saved_gemini_key)
+        set_setting(GEMINI_WEB_SEARCH_MODEL_SETTING, state["gemini_web_search_model"])
+        set_setting(GEMINI_WEB_SEARCH_MAX_RESULTS_SETTING, str(state["gemini_web_search_max_results"]))
         set_setting(OLLAMA_API_KEY_SETTING, state["ollama_api_key"])
         set_setting(OLLAMA_WEB_SEARCH_ENABLED_SETTING, "true" if state["ollama_web_search_enabled"] else "false")
         set_setting(OLLAMA_WEB_SEARCH_MAX_RESULTS_SETTING, str(state["ollama_web_search_max_results"]))
+        state["gemini_has_saved_key"] = bool(saved_gemini_key)
+        state["gemini_has_env_key"] = bool(not saved_gemini_key and resolve_gemini_api_key(require=False))
+        state["gemini_search_model_placeholder"] = get_gemini_web_search_model()
+        state["web_search_status"] = describe_active_web_search()
         set_setting(SOCIAL_MEDIA_MAX_CHARACTERS_KEY, str(state["social_media_max_characters"]))
         set_setting(FACEBOOK_GRAPH_VERSION_KEY, state["facebook_graph_api_version"])
         set_setting(DEFAULT_COUNTRY_TARGET_KEY, state["default_country_target"])
@@ -245,11 +288,11 @@ def _write_banned_words_file(raw_terms: list[str]) -> list[str]:
     return cleaned_terms
 
 
-def _normalize_ollama_max_results(value: str) -> int:
+def _normalize_max_results(value: str, fallback: int = 5) -> int:
     try:
         return max(1, min(10, int(value)))
     except (TypeError, ValueError):
-        return get_ollama_web_search_max_results()
+        return max(1, min(10, int(fallback or 5)))
 
 
 def _parse_int(value: str) -> int | None:

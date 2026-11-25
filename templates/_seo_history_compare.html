@@ -44,7 +44,7 @@
       </div>
       <span class="rounded-full bg-sand-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-sand-700">{{ history|length }} saved</span>
     </div>
-    <div class="mt-5" {% if active_page == "seo-v2" %}data-table-pagination data-page-size="10"{% endif %}>
+    <div class="mt-5" {% if active_page == "seo-v2" %}data-table-pagination data-page-size="10" data-ajax-table="history" data-total-rows="{{ history|length }}" data-base-url="{{ result.base_url if result and result.base_url else '' }}"{% endif %}>
     <div class="overflow-x-auto rounded-2xl border border-sand-200 bg-white">
       <table class="min-w-full divide-y divide-sand-100 text-left text-sm" {% if active_page == "seo-v2" %}data-audit-table data-table-name="SEO checker history" data-filter-column="1" data-filter-label="Site"{% endif %}>
         <thead class="bg-sand-50 text-xs font-extrabold uppercase tracking-[0.12em] text-sand-600">
@@ -61,7 +61,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-sand-100">
-          {% for item in history %}
+          {% for item in (history[:10] if active_page == "seo-v2" else history) %}
             <tr {% if active_page == "seo-v2" %}data-table-row{% endif %}>
               <td class="whitespace-nowrap px-4 py-3 text-sand-700">{{ item.created_at }}</td>
               <td class="max-w-[340px] break-words px-4 py-3 text-sand-700">{{ item.base_url or item.source_url }}</td>

@@ -43,6 +43,7 @@ def test_discover_website_pages_reads_sitemap_index(monkeypatch):
 
     assert result.base_url == "https://example.com"
     assert result.pages == ["https://example.com/about", "https://example.com/contact"]
+    assert result.sitemap_pages == ["https://example.com/about", "https://example.com/contact"]
     assert result.page_items[0]["url"] == "https://example.com/about"
     assert "about" in result.page_items[0]["keywords"]
     assert any(item["url"] == "https://example.com/page-sitemap.xml" for item in result.sitemaps)
@@ -169,6 +170,66 @@ def test_homepage_link_discovery_skips_image_urls(monkeypatch):
     result = service.discover_website_pages("https://example.com")
 
     assert result.pages == ["https://example.com/about"]
+    assert result.sitemap_pages == []
+
+
+def test_discover_website_pages_with_custom_sitemap_or_homepage_only(monkeypatch):
+    responses = {
+        "https://example.com": '<a href="/mapped-link">Mapped Link</a>',
+        "https://example.com/custom-sitemap.xml": """
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://example.com/from-custom-sitemap</loc></url>
+            </urlset>
+        """,
+    }
+
+    def fake_fetch(url, verify_ssl=True):
+        if url not in responses:
+            raise ValueError("not found")
+        content_type = "application/xml" if url.endswith(".xml") else "text/html"
+        return FakeFetchResult(url=url, status_code=200, content_type=content_type, text=responses[url])
+
+    monkeypatch.setattr(service, "fetch_url", fake_fetch)
+
+    custom_result = service.discover_website_pages("https://example.com", sitemap_url="/custom-sitemap.xml")
+    assert custom_result.sitemap_pages == ["https://example.com/from-custom-sitemap"]
+    assert custom_result.pages == ["https://example.com/from-custom-sitemap"]
+
+    homepage_result = service.discover_website_pages("https://example.com", homepage_only=True)
+    assert homepage_result.sitemap_pages == []
+    assert homepage_result.pages == ["https://example.com/", "https://example.com/mapped-link"]
+
+
+def test_discover_website_pages_rebases_staging_sitemap_loc_hosts(monkeypatch):
+    responses = {
+        "http://thechikin.chickenkiller.com/sitemap.xml": """
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://2bet.com/</loc></url>
+              <url><loc>https://2bet.com/tutorial</loc></url>
+            </urlset>
+        """,
+    }
+
+    def fake_fetch(url, verify_ssl=True):
+        if url not in responses:
+            raise ValueError("not found")
+        return FakeFetchResult(url=url, status_code=200, content_type="application/xml", text=responses[url])
+
+    monkeypatch.setattr(service, "fetch_url", fake_fetch)
+
+    result = service.discover_website_pages(
+        "http://thechikin.chickenkiller.com",
+        sitemap_url="http://thechikin.chickenkiller.com/sitemap.xml",
+        include_page_items=False,
+    )
+    assert result.sitemap_pages == [
+        "http://thechikin.chickenkiller.com/",
+        "http://thechikin.chickenkiller.com/tutorial",
+    ]
+    assert result.pages == [
+        "http://thechikin.chickenkiller.com/",
+        "http://thechikin.chickenkiller.com/tutorial",
+    ]
 
 
 def test_website_pages_lists_saved_domain_and_downloads_csv():

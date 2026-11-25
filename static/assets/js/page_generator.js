@@ -93,6 +93,19 @@
     syncGenerationLogFields();
   }
 
+  function scrollGenerationLogToBottom() {
+    if (!generationLogBox) {
+      return;
+    }
+    const applyScroll = function () {
+      generationLogBox.scrollTop = generationLogBox.scrollHeight;
+    };
+    applyScroll();
+    if (window.requestAnimationFrame) {
+      window.requestAnimationFrame(applyScroll);
+    }
+  }
+
   function renderGenerationLog() {
     if (!generationLogBox) {
       return;
@@ -118,7 +131,7 @@
       wrapper.appendChild(body);
       generationLogBox.appendChild(wrapper);
     });
-    generationLogBox.scrollTop = generationLogBox.scrollHeight;
+    scrollGenerationLogToBottom();
   }
 
   function syncTitle() {
@@ -360,5 +373,6 @@
   syncTitle();
   syncMeta();
   syncGenerationLogFields();
+  scrollGenerationLogToBottom();
   renderSectionInsertControls();
 })();

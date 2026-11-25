@@ -378,14 +378,18 @@ html.dark .shadow-soft {
   }
 }
 
-/* Keep generated article tables readable within the existing editor. */
-#contentEditor .ql-editor table {
+/* Keep generated article tables readable within the existing editor and preview. */
+#contentEditor .ql-editor table,
+.preview-page .section table {
   width: 100%;
   border-collapse: collapse;
+  margin: 1rem 0;
 }
 
 #contentEditor .ql-editor th,
-#contentEditor .ql-editor td {
+#contentEditor .ql-editor td,
+.preview-page .section th,
+.preview-page .section td {
   border: 1px solid currentColor;
   padding: 0.5rem 0.75rem;
   text-align: left;

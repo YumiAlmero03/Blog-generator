@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% set active_page = "unlimited-rebate" %}
+
+{% block title %}1.5% Unlimited Rebate{% endblock %}
+{% block eyebrow %}Daily Slot Rebate · All Members{% endblock %}
+{% block hero_title %}1.5% Unlimited Rebate{% endblock %}
+{% block hero_text %}Play slots and receive a daily rebate based on the previous day’s settled valid bets. The rebate is credited automatically, so there is no need to claim it.{% endblock %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8" aria-labelledby="promotion-period-heading">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div class="flex min-w-0 items-start gap-4">
+          <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sand-100 text-sand-700" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 11 14-5v12L3 13z" />
+              <path d="M7 14v5a2 2 0 0 0 2 2h2" />
+              <path d="M17 9a3 3 0 0 1 0 6" />
+            </svg>
+          </span>
+          <div>
+            <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-sand-500">Promotion</p>
+            <h2 class="mt-1 font-display text-2xl font-bold text-sand-950">Daily Slot Rebate</h2>
+            <p class="mt-2 text-sm leading-6 text-sand-700">Available to all members on PC, mobile, and the app.</p>
+          </div>
+        </div>
+        <div class="rounded-2xl bg-moss-100 px-4 py-3 text-sm leading-6 text-moss-800 sm:max-w-sm">
+          <p id="promotion-period-heading" class="font-extrabold">Promotion period</p>
+          <p class="mt-1">July 8, 2026 at 12:00 PM – December 31, 2026 at 11:59 PM (GMT+08:00)</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8" aria-labelledby="qualification-heading">
+      <h2 id="qualification-heading" class="font-display text-2xl font-bold text-sand-950">Qualifications</h2>
+      <div class="mt-5 overflow-hidden rounded-[22px] border border-sand-200">
+        <dl class="grid sm:grid-cols-[220px_minmax(0,1fr)]">
+          <dt class="bg-sand-100 px-5 py-4 text-sm font-extrabold text-sand-900">Registration platform</dt>
+          <dd class="px-5 py-4 text-sm leading-6 text-sand-700">PC, mobile, and app sport</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8" aria-labelledby="event-content-heading">
+      <h2 id="event-content-heading" class="font-display text-2xl font-bold text-sand-950">Event Content</h2>
+      <p class="mt-4 max-w-4xl text-sm leading-7 text-sand-700 sm:text-base">
+        Play slots and get a 1.5% daily rebate, no matter your VIP level. Rebates are based on your settled valid bets from the previous day and are credited automatically. No need to claim.
+      </p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-[22px] bg-sand-100 px-5 py-5">
+          <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Rebate</p>
+          <p class="mt-2 font-display text-3xl font-bold text-sand-950">1.5%</p>
+        </div>
+        <div class="rounded-[22px] bg-sand-100 px-5 py-5">
+          <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Eligible members</p>
+          <p class="mt-2 text-lg font-extrabold text-sand-950">All VIP levels</p>
+        </div>
+        <div class="rounded-[22px] bg-sand-100 px-5 py-5">
+          <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-sand-500">Calculation</p>
+          <p class="mt-2 text-lg font-extrabold text-sand-950">Previous day’s settled valid bets</p>
+        </div>
+        <div class="rounded-[22px] bg-moss-100 px-5 py-5">
+          <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-moss-700">Credit method</p>
+          <p class="mt-2 text-lg font-extrabold text-moss-800">Automatic</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8" aria-labelledby="promotion-terms-heading">
+        <h2 id="promotion-terms-heading" class="font-display text-2xl font-bold text-sand-950">Promotion T&amp;C</h2>
+        <ol class="mt-5 grid list-decimal gap-3 pl-5 text-sm leading-6 text-sand-700">
+          <li>Bind your phone number.</li>
+          <li>Bind your email.</li>
+          <li>Complete your profile information.</li>
+          <li>Accounts with the same name and surname are not applicable.</li>
+          <li>Accounts using the same IP address are not applicable.</li>
+        </ol>
+      </section>
+
+      <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8" aria-labelledby="promotion-rules-heading">
+        <h2 id="promotion-rules-heading" class="font-display text-2xl font-bold text-sand-950">Rules</h2>
+        <ul class="mt-5 grid gap-3 text-sm leading-6 text-sand-700">
+          <li class="flex gap-3"><span class="font-extrabold text-moss-700" aria-hidden="true">•</span><span>Open to KYC-verified members only.</span></li>
+          <li class="flex gap-3"><span class="font-extrabold text-moss-700" aria-hidden="true">•</span><span>Slot rebates can be used on all games.</span></li>
+          <li class="flex gap-3"><span class="font-extrabold text-moss-700" aria-hidden="true">•</span><span>Slot rebates must meet a 1x turnover requirement before withdrawal.</span></li>
+          <li class="flex gap-3"><span class="font-extrabold text-moss-700" aria-hidden="true">•</span><span>BYBET reserves the right to modify, suspend, or cancel this promotion at any time.</span></li>
+          <li class="flex gap-3"><span class="font-extrabold text-moss-700" aria-hidden="true">•</span><span>BYBET General Terms and Conditions apply.</span></li>
+        </ul>
+      </section>
+    </div>
+
+    <p class="px-2 text-sm font-bold text-moss-700">Terms and Conditions for Promotion</p>
+  </div>
+{% endblock %}

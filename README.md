@@ -13,7 +13,7 @@ Auto Blog Generator is a local Flask workspace for creating and managing SEO con
 - Website SEO Checker for on-page checks, robots.txt, sitemap, headings, social cards, links, and image alt text
 - Generation dashboard and history
 - Quality reports for generated content
-- Provider support for Ollama, OpenAI, and Gemini
+- Provider support for OpenRouter, Ollama, OpenAI, and Gemini
 
 ## Run Locally
 
@@ -41,11 +41,39 @@ Provider and model configuration lives in `config.py` and environment variables,
 
 The app supports:
 
+- `openrouter` (default model: `baidu/ernie-5.5-flash-preview:free`)
 - `ollama`
 - `openai`
 - `gemini`
 
-For cloud providers, set the required API keys in your environment.
+Example `.env` configuration for OpenRouter:
+
+```env
+PROVIDER=openrouter
+MODEL=baidu/ernie-5.5-flash-preview:free
+OPENROUTER_API_KEY=your_openrouter_api_key
+TAVILY_API_KEY=your_tavily_api_key
+TAVILY_SEARCH_MAX_RESULTS=5
+TAVILY_SEARCH_TIME_RANGE=week
+```
+
+For cloud providers (`openrouter`, `openai`, `gemini`), set the required API keys (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or `GEMINI_API_KEY`) in your environment or `.env` file. Never commit real API keys to git.
+
+News Generator uses Tavily Search to find recent sources, then passes their URLs,
+publication dates, and excerpts to the selected writing model. The default search
+uses the `news` topic, `basic` depth, five results, and the past week. Set
+`TAVILY_SEARCH_TIME_RANGE=day` for the past day. Basic search uses one Tavily credit
+per request; no automatic advanced searches or retries are enabled. See
+[Tavily's Search API](https://docs.tavily.com/documentation/api-reference/endpoint/search)
+and [credit pricing](https://docs.tavily.com/documentation/api-credits).
+
+When reference URLs are supplied, the existing HTTP/browser reader supplies the
+source text and Tavily is skipped. Without reference URLs, missing credentials,
+failed searches, or empty results stop news generation with an actionable error
+instead of writing current news without sources. Other generators retain their
+existing Ollama search configuration. After updating code, restart the app to
+load the Tavily integration; `.env` model and Tavily settings refresh on the next
+request.
 
 ## Project Structure
 

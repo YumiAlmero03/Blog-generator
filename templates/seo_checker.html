@@ -8,8 +8,8 @@
 
 {% block content %}
   <section class="rounded-[30px] border border-sand-200/70 bg-white/85 p-6 shadow-soft backdrop-blur-md sm:p-8">
-    <form method="post" data-loading-message="Listing pages and running SEO checks..." data-inline-loading data-inline-status-target="#seoCheckerStatus" data-inline-error-target="#seoCheckerError" data-background-submit class="grid gap-4 lg:grid-cols-[1fr_160px_auto] lg:items-end">
-      <textarea name="generation_log_json" class="hidden-form lg:col-span-3" aria-hidden="true">{{ generation_log_json | e }}</textarea>
+    <form method="post" data-loading-message="Listing pages and running SEO checks..." data-inline-loading data-inline-status-target="#seoCheckerStatus" data-inline-error-target="#seoCheckerError" data-background-submit class="grid gap-4 lg:grid-cols-[1fr_1fr_140px_auto] lg:items-end">
+      <textarea name="generation_log_json" class="hidden-form lg:col-span-4" aria-hidden="true">{{ generation_log_json | e }}</textarea>
       <div>
         <label for="url" class="mb-2 block text-sm font-bold text-sand-900">Website URL <span class="text-red-600">*</span></label>
         <input
@@ -19,6 +19,17 @@
           value="{{ url }}"
           placeholder="https://example.com or http://localhost:3000"
           required
+          class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+        />
+      </div>
+      <div>
+        <label for="sitemap_url" class="mb-2 block text-sm font-bold text-sand-900">Sitemap Link <span class="text-xs font-normal text-sand-600">(Optional)</span></label>
+        <input
+          id="sitemap_url"
+          name="sitemap_url"
+          type="text"
+          value="{{ sitemap_url }}"
+          placeholder="https://example.com/sitemap.xml (empty = homepage links)"
           class="min-h-12 w-full rounded-[22px] border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
         />
       </div>
@@ -35,7 +46,7 @@
         />
       </div>
       <button type="submit" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-6 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">List & Check</button>
-      <label class="flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800 lg:col-span-3">
+      <label class="flex items-start gap-3 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-800 lg:col-span-4">
           <input
             type="checkbox"
             name="ignore_ssl_errors"
@@ -45,7 +56,7 @@
           />
           <span>Ignore SSL certificate errors for this check</span>
       </label>
-      <label class="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800 lg:col-span-3">
+      <label class="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800 lg:col-span-4">
           <input
             type="checkbox"
             name="allow_private_urls"

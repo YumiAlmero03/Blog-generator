@@ -21,36 +21,69 @@ class HtmlToDocxParser(HTMLParser):
         self.bold_depth = 0
         self.list_stack: list[str] = []
         self.in_list_item = False
+        self.in_table = False
+        self.table_rows: list[list[dict]] = []
+        self.current_row: list[dict] = []
+        self.current_cell: dict | None = None
 
     def handle_starttag(self, tag, attrs):
         attrs_dict = dict(attrs)
 
-        if tag == "h1":
+        if tag == "table":
+            self.in_table = True
+            self.table_rows = []
+            self.current_row = []
+            self.current_cell = None
+            self.current_paragraph = None
+        elif self.in_table and tag == "tr":
+            self.current_row = []
+        elif self.in_table and tag in {"th", "td"}:
+            self.current_cell = {"is_header": tag == "th", "segments": []}
+        elif tag == "h1":
             self._start_paragraph(style="Heading 1")
         elif tag == "h2":
             self._start_paragraph(style="Heading 2")
         elif tag == "h3":
             self._start_paragraph(style="Heading 3")
-        elif tag == "p":
+        elif tag == "p" and not self.in_table:
             self._start_paragraph()
-        elif tag == "ul":
+        elif tag == "ul" and not self.in_table:
             self.list_stack.append("bullet")
-        elif tag == "ol":
+        elif tag == "ol" and not self.in_table:
             self.list_stack.append("number")
-        elif tag == "li":
+        elif tag == "li" and not self.in_table:
             style = "List Bullet" if self._current_list_type() == "bullet" else "List Number"
             self._start_paragraph(style=style)
             self.in_list_item = True
         elif tag == "br":
-            if self.current_paragraph is None:
-                self._start_paragraph()
-            self.current_paragraph.add_run().add_break()
+            if self.current_cell is not None:
+                self.current_cell["segments"].append(("\n", False, None))
+            else:
+                if self.current_paragraph is None:
+                    self._start_paragraph()
+                self.current_paragraph.add_run().add_break()
         elif tag in {"strong", "b"}:
             self.bold_depth += 1
         elif tag == "a":
             self.current_href = attrs_dict.get("href", "")
 
     def handle_endtag(self, tag):
+        if self.in_table and tag in {"th", "td"}:
+            if self.current_cell is not None:
+                self.current_row.append(self.current_cell)
+                self.current_cell = None
+            return
+        if self.in_table and tag == "tr":
+            if self.current_row:
+                self.table_rows.append(self.current_row)
+            self.current_row = []
+            return
+        if tag == "table" and self.in_table:
+            self._flush_table()
+            self.in_table = False
+            self.current_row = []
+            self.current_cell = None
+            return
         if tag in {"h1", "h2", "h3", "p", "li"}:
             self.current_paragraph = None
         if tag == "li":
@@ -67,18 +100,44 @@ class HtmlToDocxParser(HTMLParser):
         if not text:
             return
 
+        if self.in_table:
+            if self.current_cell is not None:
+                self.current_cell["segments"].append((text, self.bold_depth > 0 or self.current_cell["is_header"], self.current_href))
+            return
+
         if self.current_paragraph is None:
             if not text.strip():
                 return
             self._start_paragraph()
 
-        if self.current_href:
-            self._add_hyperlink(self.current_paragraph, text, self.current_href, bold=self.bold_depth > 0)
-            return
+        self._append_text_segment(self.current_paragraph, text, self.bold_depth > 0, self.current_href)
 
-        run = self.current_paragraph.add_run(text)
-        if self.bold_depth > 0:
+    def _append_text_segment(self, paragraph, text: str, bold: bool, href: str | None):
+        if href:
+            self._add_hyperlink(paragraph, text, href, bold=bold)
+            return
+        run = paragraph.add_run(text)
+        if bold:
             run.bold = True
+
+    def _flush_table(self):
+        if not self.table_rows:
+            return
+        col_count = max(len(row) for row in self.table_rows)
+        if col_count <= 0:
+            self.table_rows = []
+            return
+        table = self.doc.add_table(rows=len(self.table_rows), cols=col_count)
+        table.style = "Table Grid"
+        for row_idx, row in enumerate(self.table_rows):
+            for col_idx, cell in enumerate(row):
+                paragraph = table.cell(row_idx, col_idx).paragraphs[0]
+                for text, bold, href in cell["segments"]:
+                    if text == "\n":
+                        paragraph.add_run().add_break()
+                    else:
+                        self._append_text_segment(paragraph, text, bold, href)
+        self.table_rows = []
 
     def _start_paragraph(self, style=None):
         self.current_paragraph = self.doc.add_paragraph(style=style)

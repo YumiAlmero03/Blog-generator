@@ -4,16 +4,52 @@ MIN_BLOG_WORDS = "1300"
 MAX_BLOG_WORDS = "1400"
 
 
+def _is_brazilian_portuguese(language: str) -> bool:
+    cleaned = " ".join(str(language or "English").split()).strip().lower()
+    return cleaned in {
+        "brazilian portuguese",
+        "brazil portugues",
+        "brazil portuguese",
+        "brazilian portugues",
+        "portuguese (brazil)",
+        "portugues (brasil)",
+        "português (brasil)",
+        "pt-br",
+        "pt_br",
+    }
+
+
 def build_language_instruction(language: str = "English") -> str:
     cleaned = " ".join(str(language or "English").split()).strip() or "English"
+    extra_rules = ""
+    if _is_brazilian_portuguese(cleaned):
+        extra_rules = "\n- Use natural Brazilian Portuguese (pt-BR) vocabulary, spelling, grammar, and phrasing (not European Portuguese)."
     return f"""
 Required language:
 {cleaned}
 
 Language rules:
-- Write the content in {cleaned}.
+- Write the content in {cleaned}.{extra_rules}
 - Keep brand names, URLs, required anchor text, product names, and proper nouns unchanged unless the user-provided language naturally requires a common localized form.
 - Preserve the requested JSON keys exactly in English.
+"""
+
+
+def build_visual_language_instruction(language: str = "English") -> str:
+    cleaned = " ".join(str(language or "English").split()).strip() or "English"
+    quoted_language_note = ""
+    if _is_brazilian_portuguese(cleaned):
+        quoted_language_note = " (using natural Brazilian Portuguese / pt-BR vocabulary and spelling)"
+    return f"""
+Selected language for any visible text inside the image:
+{cleaned}
+
+Visual language rules:
+- Write the Visual / Image Descriptions strictly in English (subject, scene, setting, action, colors, lighting, composition, and style), even when the selected article language is {cleaned}.
+- Only if visible text is needed inside the image itself (such as a sign, headline, button, label, badge, or callout), put that exact in-image text in double quotes ("...") and write only the text inside those quotes in {cleaned}{quoted_language_note}.
+- Keep everything outside double quotes strictly in English.
+- Escape any double quotes around in-image text inside JSON strings (for example \\"Text\\") so the JSON stays valid.
+- Preserve the requested JSON keys strictly in English.
 """
 
 
@@ -179,6 +215,75 @@ def build_backlink_context_section(
     return "\n" + "\n".join(lines) + "\n"
 
 
+def link_target_label(index: int, total: int) -> str:
+    if total <= 1:
+        return "TOP or MIDDLE body section (not the last paragraph)"
+    if index == 0:
+        return "TOP section (introduction or 1st H2 section)"
+    if index == total - 1:
+        return "END section (final H2 section)"
+    return "MIDDLE section (2nd or 3rd H2 section)"
+
+
+def build_links_prompt_section(
+    links: list | None = None,
+    *,
+    heading: str = "Reference Links to Include:",
+) -> str:
+    if not links:
+        return ""
+    valid_links = [
+        link
+        for link in links
+        if isinstance(link, dict) and link.get("text") and link.get("url")
+    ]
+    total_links = len(valid_links)
+    links_list = "\n".join(
+        (
+            f"- Link {idx + 1} [Target placement: {link_target_label(idx, total_links)}] | "
+            f"Type: {(link.get('type') or 'internal').strip()} | "
+            f"Text: '{link.get('text', '').strip()}' -> URL: {link.get('url', '').strip()}"
+        )
+        for idx, link in enumerate(valid_links)
+    )
+    if not links_list:
+        return ""
+    return f"""
+{heading}
+{links_list}
+
+Instructions for including links:
+- Include every provided link at least once using the exact anchor text
+- Use the provided text as anchor text for the link
+- Format links in Markdown as [anchor text](URL)
+- Follow each link's [Target placement] above so links are spread evenly across the TOP, MIDDLE, and END sections of the article
+- Never cluster, group, or dump multiple anchor links together in the final paragraph or conclusion
+- Place at most one link in any single paragraph so links feel natural and evenly spaced from top to bottom
+- For external links, brand-name anchor text is allowed when natural.
+- For internal and money site links, do not use the brand name, website name, or domain as anchor text.
+- For internal and money site links, use natural descriptive anchor text that fits the sentence and page topic.
+"""
+
+
+def build_money_site_prompt_section(money_site_url: str = "") -> str:
+    cleaned_money_site_url = (money_site_url or "").strip()
+    if not cleaned_money_site_url:
+        return ""
+    return f"""
+Money Site URL:
+- {cleaned_money_site_url}
+
+Instructions for the money site:
+- Include the money site URL exactly once using a natural internal-style anchor text that fits the brand and article topic
+- Format it in Markdown as [anchor text]({cleaned_money_site_url})
+- Do not use generic anchor text like 'click here'
+- Place it naturally where it helps the reader and matches the surrounding content
+- For external links, brand-name anchor text is allowed when natural.
+- For internal and money site links, do not use the brand name, website name, or domain as anchor text.
+- For internal and money site links, use natural descriptive anchor text that fits the sentence and page topic.
+"""
+
+
 BLOG_LIST_INSTRUCTIONS = """
 Article list formatting:
 - You may use an ordered list for a sequence, steps, rankings, or points introduced as first, second, third, and so on. Do not force these into prose paragraphs.
@@ -186,4 +291,13 @@ Article list formatting:
 - In HTML output, use <ol><li>...</li></ol> for ordered lists and <ul><li>...</li></ul> for bullet lists.
 - In Markdown output, use numbered items (1., 2., 3.) for ordered lists and hyphen-prefixed items (-) for bullet lists; Python converts them to <ol> and <ul>.
 - Follow the requested output format. Use lists only when they improve readability; keep ordinary explanations as paragraphs.
+"""
+
+BLOG_TABLE_INSTRUCTIONS = """
+Article table formatting:
+- Create a concise table whenever schedules, fixtures, dates, scores, standings, odds, comparisons, specifications, timelines, pricing, statistics, or structured multi-item facts are clearer in a table.
+- Otherwise keep ordinary explanations as short paragraphs or lists.
+- In Markdown output, use Markdown pipe tables with a header and separator row (`| Column | Column |` and `| --- | --- |`); the app converts them to HTML tables for viewing, editing, and exporting.
+- In HTML output, use clean semantic `<table><thead><tr><th scope="col">...</th></tr></thead><tbody><tr><td>...</td></tr></tbody></table>` markup (or Markdown pipe tables, which the app converts to HTML).
+- Keep cells short and factual, and use only supported facts; never invent data to fill a table.
 """

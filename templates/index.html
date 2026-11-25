@@ -51,6 +51,36 @@
         <label for="suggested_h2s" class="mb-2 block text-sm font-bold text-sand-900">Suggested H2s</label>
         <textarea id="suggested_h2s" name="suggested_h2s" rows="5" placeholder="Add one suggested H2 per line, or paste a short outline." class="mb-4 min-h-[130px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ suggested_h2s }}</textarea>
 
+        <label for="reference_url" class="mb-2 block text-sm font-bold text-sand-900">Reference URL (optional)</label>
+        <input id="reference_url" name="reference_url" type="url" value="{{ reference_url }}" placeholder="https://example.com/reference-article" aria-describedby="blogReferenceUrlHelp" class="mb-2 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        <p id="blogReferenceUrlHelp" class="mb-4 text-xs leading-5 text-sand-600">Optional public page to read as factual source data (uses browser reader fallback when needed).</p>
+
+        <label for="reference_notes" class="mb-2 block text-sm font-bold text-sand-900">Reference notes / source text (optional)</label>
+        <textarea id="reference_notes" name="reference_notes" rows="4" placeholder="Paste facts, stats, product details, or excerpts the AI should reference when generating titles and content." class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ reference_notes }}</textarea>
+        <input type="hidden" name="reference_fetches_json" value='{{ reference_fetches | tojson }}' />
+
+        {% if reference_fetches %}
+          <div class="mb-4 rounded-[24px] border border-sand-200 bg-white/85 p-4">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-sand-950">Reference Fetch Status</h3>
+              {% if reference_fetch_summary %}
+                <span class="rounded-full bg-sand-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-sand-700">{{ reference_fetch_summary.fetched }}/{{ reference_fetch_summary.total }} fetched</span>
+              {% endif %}
+            </div>
+            {% for item in reference_fetches %}
+              <div class="rounded-2xl border {% if item.status == 'fetched' %}border-moss-200 bg-moss-50{% else %}border-red-200 bg-red-50{% endif %} px-3 py-2 text-xs leading-5">
+                <div class="font-bold {% if item.status == 'fetched' %}text-moss-800{% else %}text-red-700{% endif %}">{{ item.status|title }}</div>
+                <div class="break-all text-sand-800">{{ item.url }}</div>
+                {% if item.error %}
+                  <div class="mt-1 font-semibold text-red-700">{{ item.error }}</div>
+                {% elif item.character_count %}
+                  <div class="mt-1 font-semibold text-moss-800">{{ item.character_count }} readable character(s) extracted{% if item.fetch_method %} · Reader: {{ item.fetch_method }}{% endif %}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
         <label for="tone" class="mb-2 block text-sm font-bold text-sand-900">Tone</label>
         <select id="tone" name="tone" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
           <option value="natural" {% if tone == 'natural' %}selected{% endif %}>Natural</option>
@@ -152,6 +182,13 @@
           <div class="rounded-[24px] border border-sand-200 bg-sand-50/80 p-5">
             <label for="contentSuggestedH2s" class="mb-2 block text-sm font-bold text-sand-900">Suggested H2s</label>
             <textarea id="contentSuggestedH2s" name="suggested_h2s" rows="5" placeholder="Add one suggested H2 per line, or paste a short outline." class="mb-5 min-h-[130px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ suggested_h2s }}</textarea>
+
+            <label for="content_reference_url" class="mb-2 block text-sm font-bold text-sand-900">Reference URL (optional)</label>
+            <input id="content_reference_url" name="reference_url" type="url" value="{{ reference_url }}" placeholder="https://example.com/reference-article" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+
+            <label for="content_reference_notes" class="mb-2 block text-sm font-bold text-sand-900">Reference notes / source text (optional)</label>
+            <textarea id="content_reference_notes" name="reference_notes" rows="4" placeholder="Paste facts, stats, product details, or excerpts the AI should reference when writing content." class="mb-5 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ reference_notes }}</textarea>
+            <input type="hidden" name="reference_fetches_json" value='{{ reference_fetches | tojson }}' />
 
             <h3 class="font-display text-2xl text-sand-950">Links to Include in Content</h3>
             <p class="mt-2 text-sm leading-6 text-sand-700">Add links that should be naturally incorporated into the article. They stay in the form after generation so you can keep refining and rerunning.</p>

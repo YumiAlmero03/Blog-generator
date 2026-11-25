@@ -1,6 +1,6 @@
 import os
 
-from config import MODEL, PROVIDER
+from config import MODEL, PROVIDER, get_current_model, get_current_provider
 from logger import logger
 from providers.base import ProviderError
 from utils import extract_json_string
@@ -24,19 +24,26 @@ def generation_error_message(default_message: str, exc: Exception) -> str:
 
 
 def get_provider():
-    if PROVIDER == "ollama":
+    provider_name = get_current_provider().lower()
+    model_name = get_current_model()
+    if provider_name == "openrouter":
+        from providers.openrouter_provider import OpenRouterProvider
+
+        return RetryingJsonProvider(OpenRouterProvider(model_name))
+    if provider_name == "ollama":
         from providers.ollama_provider import OllamaProvider
 
-        return RetryingJsonProvider(OllamaProvider(MODEL))
-    if PROVIDER == "openai":
+        return RetryingJsonProvider(OllamaProvider(model_name))
+    if provider_name == "openai":
         from providers.openai_provider import OpenAIProvider
 
-        return RetryingJsonProvider(OpenAIProvider(MODEL))
-    if PROVIDER == "gemini":
+        return RetryingJsonProvider(OpenAIProvider(model_name))
+    if provider_name == "gemini":
         from providers.gemini_provider import GeminiProvider
 
-        return RetryingJsonProvider(GeminiProvider(MODEL))
-    raise ValueError(f"Unsupported provider: {PROVIDER}")
+        return RetryingJsonProvider(GeminiProvider(model_name))
+
+    raise ValueError(f"Unsupported provider: {provider_name}")
 
 
 class RetryingJsonProvider:
@@ -44,7 +51,7 @@ class RetryingJsonProvider:
         self.provider = provider
 
     def generate_json(self, prompt: str) -> str:
-        attempts = _json_retry_attempts()
+        attempts = _json_retry_attempts(self.provider)
         last_error: Exception | None = None
         for attempt in range(1, attempts + 1):
             retry_prompt = prompt if attempt == 1 else f"{prompt}{JSON_RETRY_INSTRUCTION}"
@@ -62,9 +69,14 @@ class RetryingJsonProvider:
         raise ValueError("Could not parse JSON from model output.") from last_error
 
 
-def _json_retry_attempts() -> int:
-    raw_value = os.getenv("JSON_GENERATION_ATTEMPTS", "2").strip()
-    try:
-        return max(1, min(5, int(raw_value)))
-    except ValueError:
-        return 2
+def _json_retry_attempts(provider=None) -> int:
+    raw_value = os.getenv("JSON_GENERATION_ATTEMPTS", "").strip()
+    if raw_value:
+        try:
+            return max(1, min(5, int(raw_value)))
+        except ValueError:
+            pass
+    provider_class_name = type(provider).__name__.lower() if provider is not None else ""
+    if "openrouter" in provider_class_name or get_current_provider().lower() == "openrouter":
+        return 1
+    return 2

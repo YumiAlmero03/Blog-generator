@@ -8,6 +8,7 @@ from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
+from urllib.robotparser import RobotFileParser
 
 import certifi
 
@@ -31,6 +32,7 @@ class FetchResult:
     text: str
     ssl_verified: bool = True
     ssl_warning: str = ""
+    x_robots_tag: str = ""
 
 
 class PageSeoParser(HTMLParser):
@@ -55,6 +57,8 @@ class PageSeoParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.title_parts = []
         self.meta_description = ""
+        self.meta_robots = ""
+        self.googlebot_robots = ""
         self.canonical = ""
         self.open_graph = {}
         self.twitter_cards = {}
@@ -88,6 +92,10 @@ class PageSeoParser(HTMLParser):
             content = attrs_dict.get("content", "").strip()
             if meta_name == "description":
                 self.meta_description = content
+            elif meta_name == "robots" and content:
+                self.meta_robots = f"{self.meta_robots}, {content}" if self.meta_robots else content
+            elif meta_name == "googlebot" and content:
+                self.googlebot_robots = f"{self.googlebot_robots}, {content}" if self.googlebot_robots else content
             elif meta_property.startswith("og:"):
                 self.open_graph[meta_property] = content
             elif meta_name.startswith("twitter:"):
@@ -200,11 +208,12 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = F
     parsed_url = urlparse(page.url)
     base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
     robots_result = _fetch_optional_text(urljoin(base_url, "/robots.txt"), verify_ssl=page.ssl_verified, allow_private=allow_private)
+    robots_indexing = _evaluate_robots_indexing(parser, page, robots_result)
     sitemap_result = _check_sitemaps(base_url, robots_result.get("text", ""), verify_ssl=page.ssl_verified, allow_private=allow_private)
     link_report = _build_link_report(parser.links, page.url, base_url, verify_ssl=page.ssl_verified, allow_private=allow_private)
     scrape_report = _build_scrape_report(parser, link_report)
     social_preview = _build_social_preview(parser, page.url)
-    checks = _build_checks(parser, page, sitemap_result, robots_result, link_report)
+    checks = _build_checks(parser, page, sitemap_result, robots_result, link_report, robots_indexing=robots_indexing)
     score = _score_checks(checks)
     ai_summary = (
         _generate_ai_summary(parser, checks, score, page.url, scrape_report)
@@ -240,6 +249,13 @@ def run_seo_audit(raw_url: str, verify_ssl: bool = True, allow_private: bool = F
             "robots_url": robots_result.get("url", ""),
             "robots_status_code": robots_result.get("status_code"),
             "robots_sitemap_count": len(_sitemap_urls_from_robots(robots_result.get("text", ""))),
+            "meta_robots": parser.meta_robots,
+            "googlebot_robots": parser.googlebot_robots,
+            "x_robots_tag": page.x_robots_tag,
+            "robots_indexable": robots_indexing["indexable"],
+            "robots_indexing_status": robots_indexing["status_label"],
+            "robots_indexing_detail": robots_indexing["detail"],
+            "robots_disallowed": robots_indexing["blocked_by_robots_txt"],
             "sitemaps": sitemap_result["sitemaps"],
             "heading_outline": parser.headings,
             "heading_sequence": parser.heading_sequence,
@@ -258,6 +274,7 @@ def fetch_url(url: str, verify_ssl: bool = True, allow_private: bool = False, _t
     try:
         with urlopen(request, timeout=FETCH_TIMEOUT, context=ssl_context) as response:
             content_type = response.headers.get("content-type", "")
+            x_robots_tag = response.headers.get("x-robots-tag", "").strip()
             charset = response.headers.get_content_charset() or "utf-8"
             raw = response.read(2_000_000)
             return FetchResult(
@@ -266,15 +283,17 @@ def fetch_url(url: str, verify_ssl: bool = True, allow_private: bool = False, _t
                 content_type=content_type,
                 text=raw.decode(charset, errors="replace"),
                 ssl_verified=verify_ssl,
+                x_robots_tag=x_robots_tag,
             )
     except HTTPError as exc:
         body = exc.read(200_000).decode("utf-8", errors="replace")
         return FetchResult(
             url=url,
             status_code=exc.code,
-            content_type=exc.headers.get("content-type", ""),
+            content_type=exc.headers.get("content-type", "") if exc.headers else "",
             text=body,
             ssl_verified=verify_ssl,
+            x_robots_tag=exc.headers.get("x-robots-tag", "").strip() if exc.headers else "",
         )
     except URLError as exc:
         docker_host_url = _docker_host_fallback_url(url)
@@ -419,7 +438,75 @@ def _check_sitemaps(base_url: str, robots_text: str, verify_ssl: bool = True, al
     return {"sitemaps": sitemaps, "found": any(item["found"] for item in sitemaps)}
 
 
-def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict, robots_result: dict, link_report: dict) -> list[dict]:
+def _robots_tokens(raw_directives: str) -> set[str]:
+    tokens = set()
+    for part in re.split(r"[,;\s]+", (raw_directives or "").lower()):
+        token = part.strip()
+        if token:
+            tokens.add(token)
+    return tokens
+
+
+def _is_disallowed_by_robots_txt(page_url: str, robots_text: str) -> bool:
+    cleaned_text = (robots_text or "").strip()
+    if not cleaned_text or not page_url:
+        return False
+    parser = RobotFileParser()
+    try:
+        parser.parse(cleaned_text.splitlines())
+        return not parser.can_fetch("*", page_url) or not parser.can_fetch("Googlebot", page_url)
+    except Exception:
+        return False
+
+
+def _evaluate_robots_indexing(parser: PageSeoParser, page: FetchResult, robots_result: dict) -> dict:
+    meta_tokens = _robots_tokens(parser.meta_robots)
+    googlebot_tokens = _robots_tokens(parser.googlebot_robots)
+    header_tokens = _robots_tokens(getattr(page, "x_robots_tag", ""))
+    blocked_by_robots_txt = bool(robots_result.get("found")) and _is_disallowed_by_robots_txt(page.url, robots_result.get("text", ""))
+
+    reasons = []
+    if {"noindex", "none"} & meta_tokens:
+        reasons.append(f"meta robots ({parser.meta_robots})")
+    if {"noindex", "none"} & googlebot_tokens:
+        reasons.append(f"meta googlebot ({parser.googlebot_robots})")
+    if {"noindex", "none"} & header_tokens:
+        reasons.append(f"X-Robots-Tag ({page.x_robots_tag})")
+    if blocked_by_robots_txt:
+        reasons.append("disallowed in robots.txt")
+    if getattr(page, "status_code", 200) >= 400:
+        reasons.append(f"HTTP {page.status_code}")
+
+    indexable = len(reasons) == 0
+    if not indexable:
+        reason_text = ", ".join(reasons)
+        detail = f"Not indexed / blocked: {reason_text}"
+        status_label = "Blocked"
+    else:
+        directives = [val for val in (parser.meta_robots, parser.googlebot_robots, getattr(page, "x_robots_tag", "")) if val]
+        directive_note = f" ({'; '.join(directives)})" if directives else ""
+        detail = f"Indexed / allowed by robots{directive_note}"
+        status_label = "Indexable"
+
+    return {
+        "indexable": indexable,
+        "status_label": status_label,
+        "detail": detail,
+        "reasons": reasons,
+        "blocked_by_robots_txt": blocked_by_robots_txt,
+    }
+
+
+def _build_checks(
+    parser: PageSeoParser,
+    page: FetchResult,
+    sitemap_result: dict,
+    robots_result: dict,
+    link_report: dict,
+    robots_indexing: dict | None = None,
+) -> list[dict]:
+    if robots_indexing is None:
+        robots_indexing = _evaluate_robots_indexing(parser, page, robots_result)
     word_count = _word_count(parser.body_text)
     missing_alt_count = sum(1 for image in parser.images if not image["has_alt"])
     title_length = len(parser.title)
@@ -481,6 +568,17 @@ def _build_checks(parser: PageSeoParser, page: FetchResult, sitemap_result: dict
             "Robots.txt found" if robots_result.get("found") else "Robots.txt not found",
             "Add robots.txt with sitemap references and crawler rules.",
             8,
+        ),
+        _check(
+            "Robots indexing",
+            "pass" if robots_indexing["indexable"] else "fail",
+            robots_indexing["detail"],
+            (
+                "Page is allowed to be indexed by search engine crawlers."
+                if robots_indexing["indexable"]
+                else "Remove noindex directives or robots.txt Disallow rules if this page should appear in search results."
+            ),
+            10,
         ),
         _check(
             "Social cards",

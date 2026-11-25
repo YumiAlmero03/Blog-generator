@@ -3,7 +3,7 @@ import re
 
 from logger import logger
 from prompts import build_social_media_post_prompt
-from prompts.shared import BLOG_LIST_INSTRUCTIONS, build_language_instruction
+from prompts.shared import BLOG_LIST_INSTRUCTIONS, build_language_instruction, build_visual_language_instruction
 from utils import extract_json_string
 from word_bank import find_banned_terms_in_text
 
@@ -755,7 +755,7 @@ Return JSON only in this format:
 
 def _build_neutral_blog_visual_prompt(title: str, topic: str, medium: dict, suggested_content: str = "", language: str = "English") -> str:
     context = _neutral_medium_prompt_context(topic, medium)
-    language_section = build_language_instruction(language)
+    language_section = build_visual_language_instruction(language)
     return f"""
 You are creating image directions for a neutral editorial blog/post.
 
@@ -783,7 +783,7 @@ Rules:
 - Make each idea useful for a designer, AI image tool, or publisher selecting a featured image.
 - Keep each idea to 1-2 sentences.
 - Keep the ideas neutral and editorial, not promotional.
-- Do not include text overlays, logos, watermarks, brand marks, or UI screenshots unless the article specifically requires them.
+- Avoid unnecessary text overlays, logos, watermarks, brand marks, or UI screenshots unless the article specifically requires them; if visible text is needed in the image, keep it brief inside quotes ("...") in {language} while keeping the rest of the description in English.
 - Avoid gambling, betting, casino, jackpot, wagering, sportsbook, lottery, poker, roulette, or bonus-focused imagery.
 - No explanations before or after the JSON.
 

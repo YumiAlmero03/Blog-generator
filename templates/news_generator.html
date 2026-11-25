@@ -109,14 +109,20 @@
           <option value="promotional" {% if tone == 'promotional' %}selected{% endif %}>Promotional</option>
         </select>
 
+        <label for="custom_title" class="mb-2 block text-sm font-bold text-sand-900">Custom title (optional)</label>
+        <input id="custom_title" name="custom_title" type="text" value="{{ custom_title }}" placeholder="Enter your own news title" aria-describedby="customTitleHelp" class="mb-2 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200" />
+        <p id="customTitleHelp" class="mb-4 text-xs leading-5 text-sand-600">Choose Use Custom Title to skip AI title suggestions and continue with your title.</p>
+
         <label for="count" class="mb-2 block text-sm font-bold text-sand-900">Number of Titles</label>
         <select id="count" name="count" class="mb-5 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
           <option value="10" {% if count == 10 %}selected{% endif %}>10 titles</option>
           <option value="20" {% if count == 20 %}selected{% endif %}>20 titles</option>
         </select>
 
-        <input type="hidden" name="action" value="generate_titles" />
-        <button type="submit" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if titles %}Regenerate Titles{% else %}Generate Titles{% endif %}</button>
+        <input type="hidden" id="titlesArticleLinksJsonInput" name="article_links_json" value='{{ article_links | tojson }}' />
+        <input type="hidden" id="titlesIncludeMoneySiteInput" name="include_money_site" value="{% if include_money_site %}1{% endif %}" />
+        <button type="submit" name="action" value="generate_titles" class="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if titles %}Regenerate Titles{% else %}Generate Titles{% endif %}</button>
+        <button type="submit" name="action" value="use_custom_title" data-loading-message="Using custom title..." class="mt-3 inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-stone-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-black">Use Custom Title</button>
         <p id="newsGenerationStatus" class="mt-3 hidden text-sm font-bold leading-6 text-moss-700"></p>
         <p id="newsGenerationError" class="mt-2 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700"></p>
         <div id="newsGenerationActions" class="mt-2 hidden">
@@ -175,7 +181,7 @@
             <p class="mb-4 rounded-2xl bg-sand-100 px-4 py-3 text-sm font-bold leading-6 text-sand-700">Choose or write the exact title first. The selected title and SEO keywords below are what the article generator will use.</p>
             <div class="mb-4 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4">
               <label for="customTitleRadio" class="mb-3 flex cursor-pointer items-center gap-3 text-sm font-bold text-sand-900">
-                <input id="customTitleRadio" name="selected_title" type="radio" value="{{ custom_title }}" class="h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if custom_title %}checked{% endif %} />
+                <input id="customTitleRadio" name="selected_title" type="radio" value="{{ custom_title }}" class="h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if custom_title and (not titles or selected_title == custom_title) %}checked{% endif %} />
                 <span>Use custom title</span>
               </label>
               <label for="customTitleInput" class="mb-2 block text-sm font-bold text-sand-900">Custom title</label>
@@ -185,7 +191,7 @@
               {% for title in titles %}
                 <li>
                   <label for="title_{{ loop.index }}" class="flex cursor-pointer gap-3 rounded-2xl border border-sand-200 bg-white/75 px-4 py-4 transition hover:border-sand-500 hover:bg-sand-50">
-                    <input id="title_{{ loop.index }}" name="selected_title" type="radio" value="{{ title }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if selected_title == title or (not selected_title and not custom_title and loop.first) %}checked{% endif %} />
+                    <input id="title_{{ loop.index }}" name="selected_title" type="radio" value="{{ title }}" class="mt-1 h-4 w-4 border-sand-400 text-sand-600 focus:ring-sand-500" {% if not (custom_title and selected_title == custom_title) and (selected_title == title or (not selected_title and not custom_title and loop.first)) %}checked{% endif %} />
                     <span class="text-sm font-semibold leading-6 text-sand-900">{{ title }}</span>
                   </label>
                 </li>
@@ -286,6 +292,20 @@
             </div>
           </div>
 
+          <div class="rounded-[24px] border border-sand-200 bg-sand-50/80 p-5">
+            <h3 class="font-display text-2xl text-sand-950">Links to Include in Content</h3>
+            <p class="mt-2 text-sm leading-6 text-sand-700">Add links that should be naturally incorporated into the article. They stay in the form after generation so you can keep refining and rerunning.</p>
+            {% if money_site_url %}
+              <label class="mt-4 flex items-center gap-3 rounded-2xl border border-sand-200 bg-white px-4 py-3">
+                <input type="checkbox" id="include_money_site" name="include_money_site" value="1" class="h-4 w-4 rounded border-sand-400 text-sand-600 focus:ring-sand-500" {% if include_money_site %}checked{% endif %} />
+                <span class="text-sm font-semibold text-sand-900">Include money site</span>
+              </label>
+              <p class="mt-3 text-sm text-sand-700">Money site URL: <code class="rounded bg-white px-2 py-1 text-xs text-sand-800">{{ money_site_url }}</code></p>
+            {% endif %}
+            <div id="articleLinksContainer" class="mt-4 grid gap-3"></div>
+            <button type="button" id="addArticleLinkButton" class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-moss-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-moss-500">Add Link</button>
+          </div>
+
           {% if visual %}
             <div class="rounded-[24px] border border-sand-200 bg-white/80 p-5">
               <label for="visual" class="mb-2 block text-sm font-bold text-sand-900">Visual / Image Descriptions</label>
@@ -327,6 +347,26 @@
             {% include "_content_checklist.html" %}
           {% endif %}
 
+          <div class="flex justify-start pt-2">
+            <div class="w-full max-w-3xl">
+              <label for="change_request" class="mb-2 block text-sm font-bold text-sand-900">Minor change suggestions</label>
+              {% if content %}
+                <label for="regenerate_scope" class="mb-2 block text-sm font-bold text-sand-900">Regenerate target</label>
+                <select id="regenerate_scope" name="regenerate_scope" class="mb-4 w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">
+                  <option value="full" {% if regenerate_scope == 'full' %}selected{% endif %}>Full article</option>
+                  <option value="intro" {% if regenerate_scope == 'intro' %}selected{% endif %}>Intro only</option>
+                  <option value="section" {% if regenerate_scope == 'section' %}selected{% endif %}>Weakest section</option>
+                  <option value="conclusion" {% if regenerate_scope == 'conclusion' %}selected{% endif %}>Ending only</option>
+                  <option value="meta" {% if regenerate_scope == 'meta' %}selected{% endif %}>Meta angle</option>
+                  <option value="tags" {% if regenerate_scope == 'tags' %}selected{% endif %}>Tags angle</option>
+                </select>
+              {% else %}
+                <input type="hidden" name="regenerate_scope" value="{{ regenerate_scope or 'full' }}" />
+              {% endif %}
+              <textarea id="change_request" name="change_request" placeholder="e.g. include timeline of updates, add a schedule or comparison table, highlight regulatory impact, keep paragraphs concise" class="mb-4 min-h-[110px] w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200">{{ change_request }}</textarea>
+            </div>
+          </div>
+
           <div class="flex flex-wrap justify-start gap-3 pt-2">
             <button type="button" data-generate-action="generate_meta_descriptions" data-loading-message="{% if meta_descriptions %}Regenerating news meta descriptions...{% else %}Generating news meta descriptions...{% endif %}" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if meta_descriptions %}Regenerate Meta{% else %}Generate Meta{% endif %}</button>
             <button type="button" data-generate-action="generate_visual" data-loading-message="{% if visual %}Regenerating news visuals...{% else %}Generating news visuals...{% endif %}" class="inline-flex min-h-12 items-center justify-center rounded-full bg-sand-600 px-5 py-3 text-sm font-bold text-sand-50 transition hover:bg-sand-700">{% if visual %}Regenerate Visuals{% else %}Generate Visuals{% endif %}</button>
@@ -341,6 +381,7 @@
           <input type="hidden" name="target_country" value="{{ target_country }}" />
           <input type="hidden" name="language" value="{{ language }}" />
           <input type="hidden" id="linksJsonInput" name="links_json" value='{{ links | tojson }}' />
+          <input type="hidden" id="articleLinksJsonInput" name="article_links_json" value='{{ article_links | tojson }}' />
           <input type="hidden" name="reference_fetches_json" value='{{ reference_fetches | tojson }}' />
           <input type="hidden" name="tone" value="{{ tone }}" />
           <input type="hidden" name="history_id" value="{{ history_id }}" />
@@ -382,6 +423,7 @@
   </datalist>
 
   <script id="existingLinksData" type="application/json">{{ links | tojson }}</script>
+  <script id="existingArticleLinksData" type="application/json">{{ article_links | tojson }}</script>
 {% endblock %}
 
 {% block scripts %}

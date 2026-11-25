@@ -1,18 +1,24 @@
-from config import PROVIDER, MODEL
+from config import get_current_model, get_current_provider
 from generators.title_generator import generate_titles
 
+
 def get_provider():
-    if PROVIDER == "ollama":
+    provider_name = get_current_provider().lower()
+    model_name = get_current_model()
+    if provider_name == "openrouter":
+        from providers.openrouter_provider import OpenRouterProvider
+        return OpenRouterProvider(model_name)
+    elif provider_name == "ollama":
         from providers.ollama_provider import OllamaProvider
-        return OllamaProvider(MODEL)
-    elif PROVIDER == "openai":
+        return OllamaProvider(model_name)
+    elif provider_name == "openai":
         from providers.openai_provider import OpenAIProvider
-        return OpenAIProvider(MODEL)
-    elif PROVIDER == "gemini":
+        return OpenAIProvider(model_name)
+    elif provider_name == "gemini":
         from providers.gemini_provider import GeminiProvider
-        return GeminiProvider(MODEL)
+        return GeminiProvider(model_name)
     else:
-        raise ValueError(f"Unsupported provider: {PROVIDER}")
+        raise ValueError(f"Unsupported provider: {provider_name}")
 
 def main():
     keyword = input("Enter keyword/topic: ").strip()

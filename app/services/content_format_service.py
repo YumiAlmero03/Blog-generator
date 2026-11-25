@@ -15,6 +15,56 @@ def markdown_to_output(content: str, output_format: str = "html") -> str:
     return markdown_to_html(content or "")
 
 
+def _table_cells(line: str) -> list[str]:
+    return [cell.strip().replace(r"\|", "|") for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+
+
+def _markdown_table_headers_and_rows(lines: list[str], start_index: int) -> tuple[list[str], list[list[str]], int] | None:
+    if start_index + 1 >= len(lines):
+        return None
+    line = lines[start_index].strip()
+    if "|" not in line:
+        return None
+    headers = _table_cells(line)
+    separators = _table_cells(lines[start_index + 1])
+    if len(headers) != len(separators) or not all(re.fullmatch(r":?-{2,}:?", cell) for cell in separators):
+        return None
+    next_index = start_index + 2
+    rows = []
+    while next_index < len(lines) and "|" in lines[next_index] and lines[next_index].strip():
+        cells = _table_cells(lines[next_index])
+        if len(cells) != len(headers):
+            break
+        rows.append(cells)
+        next_index += 1
+    return headers, rows, next_index
+
+
+def _render_table_html(headers: list[str], rows: list[list[str]]) -> str:
+    head = "".join(f'<th scope="col">{_inline_markdown_to_html(cell)}</th>' for cell in headers)
+    body = "".join(
+        "<tr>" + "".join(f"<td>{_inline_markdown_to_html(cell)}</td>" for cell in row) + "</tr>"
+        for row in rows
+    )
+    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+
+
+def convert_markdown_tables_to_html(content: str) -> str:
+    lines = (content or "").replace("\r\n", "\n").split("\n")
+    output = []
+    index = 0
+    while index < len(lines):
+        parsed = _markdown_table_headers_and_rows(lines, index)
+        if parsed:
+            headers, rows, next_index = parsed
+            output.append(_render_table_html(headers, rows))
+            index = next_index
+            continue
+        output.append(lines[index])
+        index += 1
+    return "\n".join(output)
+
+
 def markdown_to_html(markdown: str) -> str:
     lines = (markdown or "").replace("\r\n", "\n").split("\n")
     blocks = []
@@ -44,32 +94,19 @@ def markdown_to_html(markdown: str) -> str:
             blocks.append(f"<blockquote>{_inline_markdown_to_html(text)}</blockquote>")
             quote_lines = []
 
-    def table_cells(line):
-        return [cell.strip().replace(r"\|", "|") for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
-
     index = 0
     while index < len(lines):
+        parsed_table = _markdown_table_headers_and_rows(lines, index)
+        if parsed_table:
+            headers, rows, index = parsed_table
+            flush_paragraph()
+            flush_list()
+            flush_quote()
+            blocks.append(_render_table_html(headers, rows))
+            continue
         raw_line = lines[index]
         index += 1
         line = raw_line.strip()
-        if "|" in line and index < len(lines):
-            headers = table_cells(line)
-            separators = table_cells(lines[index])
-            if len(headers) == len(separators) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in separators):
-                flush_paragraph()
-                flush_list()
-                flush_quote()
-                index += 1
-                rows = []
-                while index < len(lines) and "|" in lines[index] and lines[index].strip():
-                    cells = table_cells(lines[index])
-                    if len(cells) != len(headers):
-                        break
-                    rows.append("<tr>" + "".join(f"<td>{_inline_markdown_to_html(cell)}</td>" for cell in cells) + "</tr>")
-                    index += 1
-                head = "".join(f'<th scope="col">{_inline_markdown_to_html(cell)}</th>' for cell in headers)
-                blocks.append("<table><thead><tr>" + head + "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>")
-                continue
         if not line:
             flush_paragraph()
             flush_list()
@@ -147,9 +184,32 @@ def html_to_markdown(html_content: str) -> str:
     text = re.sub(r"</ul>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<p\b[^>]*>(.*?)</p>", r"\1\n\n", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<blockquote\b[^>]*>(.*?)</blockquote>", r"> \1\n\n", text, flags=re.IGNORECASE | re.DOTALL)
+    def _table_to_markdown(match):
+        row_matches = re.findall(r"<tr\b[^>]*>(.*?)</tr>", match.group(0), flags=re.IGNORECASE | re.DOTALL)
+        markdown_rows = []
+        col_count = 0
+        for row_html in row_matches:
+            cells = re.findall(r"<t[hd]\b[^>]*>(.*?)</t[hd]>", row_html, flags=re.IGNORECASE | re.DOTALL)
+            if not cells:
+                continue
+            cleaned_cells = []
+            for cell_html in cells:
+                cell_text = re.sub(r"<br\s*/?>", " ", cell_html, flags=re.IGNORECASE)
+                cell_text = re.sub(r"<[^>]+>", "", cell_text)
+                cell_text = html.unescape(re.sub(r"\s+", " ", cell_text)).strip().replace("|", r"\|")
+                cleaned_cells.append(cell_text)
+            col_count = max(col_count, len(cleaned_cells))
+            markdown_rows.append("| " + " | ".join(cleaned_cells) + " |")
+        if not markdown_rows or not col_count:
+            return ""
+        separator = "| " + " | ".join(["---"] * col_count) + " |"
+        markdown_rows.insert(1, separator)
+        return "\n".join(markdown_rows) + "\n\n"
+
     text = re.sub(r"<a\b[^>]*href=['\"]([^'\"]+)['\"][^>]*>(.*?)</a>", r"[\2](\1)", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<(?:strong|b)\b[^>]*>(.*?)</(?:strong|b)>", r"**\1**", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<(?:em|i)\b[^>]*>(.*?)</(?:em|i)>", r"*\1*", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<table\b[^>]*>.*?</table>", _table_to_markdown, text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
     text = re.sub(r"<[^>]+>", "", text)
     text = html.unescape(text)

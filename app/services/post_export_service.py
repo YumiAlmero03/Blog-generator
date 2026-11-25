@@ -68,11 +68,12 @@ def normalize_post(data, *, draft=False):
         raise ValueError("Please generate article content before saving or downloading.")
     try:
         links = json.loads(field("links_json") or "[]")
+        article_links = json.loads(field("article_links_json") or "[]")
     except ValueError:
         raise ValueError("Invalid links.") from None
-    if not isinstance(links, list):
+    if not isinstance(links, list) or not isinstance(article_links, list):
         raise ValueError("Invalid links.")
-    post["content_html"] = apply_article_link_rules(post["content_html"], links, field("money_site_url"))
+    post["content_html"] = apply_article_link_rules(post["content_html"], [*links, *article_links], field("money_site_url"))
     post["content_html"] = convert_faq_blocks(post["content_html"])
     post["slug"] = slugify(post["title"])
     try:

@@ -37,8 +37,72 @@
 
       <div class="mb-5 grid gap-4 rounded-3xl border border-sand-200 bg-sand-50/70 p-5 sm:grid-cols-2">
         <div class="sm:col-span-2">
-          <h2 class="text-base font-bold text-sand-950">AI Web Search</h2>
-          <p class="mt-1 text-sm leading-6 text-sand-600">Connect Ollama web search so generators can add current web context before writing.</p>
+          <h2 class="text-base font-bold text-sand-950">AI Web Search &amp; Gemini</h2>
+          <p class="mt-1 text-sm leading-6 text-sand-600">Use Gemini Google Search grounding, Ollama web search, or Tavily so generators can add live web context before writing.</p>
+          {% if web_search_status %}
+            <p class="mt-2 text-xs font-semibold text-sand-700">Active AI provider: <code class="rounded bg-white px-1.5 py-0.5 text-sand-900">{{ web_search_status.ai_provider }}</code> · Blog &amp; social search: <strong class="text-sand-900">{{ web_search_status.general_search }}</strong> · News search: <strong class="text-sand-900">{{ web_search_status.news_search }}</strong></p>
+          {% endif %}
+        </div>
+        <div class="sm:col-span-2">
+          <label for="web_search_provider" class="mb-2 block text-sm font-bold text-sand-900">Web search provider</label>
+          <select
+            id="web_search_provider"
+            name="web_search_provider"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          >
+            <option value="auto" {% if web_search_provider == "auto" %}selected{% endif %}>Auto (use Gemini Google Search when PROVIDER=gemini, otherwise Ollama/Tavily)</option>
+            <option value="gemini" {% if web_search_provider == "gemini" %}selected{% endif %}>Gemini Google Search</option>
+            <option value="ollama" {% if web_search_provider == "ollama" %}selected{% endif %}>Ollama Web Search</option>
+            <option value="tavily" {% if web_search_provider == "tavily" %}selected{% endif %}>Tavily Search</option>
+            <option value="off" {% if web_search_provider == "off" %}selected{% endif %}>Off (no automatic web search)</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label for="gemini_api_key" class="mb-2 block text-sm font-bold text-sand-900">Gemini API key override (optional)</label>
+          <input
+            id="gemini_api_key"
+            name="gemini_api_key"
+            type="password"
+            value=""
+            placeholder="{% if gemini_has_saved_key %}Saved in Settings (enter a new key to replace){% elif gemini_has_env_key %}Using GEMINI_API_KEY from environment/.env (enter to override){% else %}AIza...{% endif %}"
+            autocomplete="off"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+          {% if gemini_has_saved_key %}
+            <label for="clear_gemini_api_key" class="mt-2 inline-flex items-center gap-2 text-xs font-medium text-sand-700">
+              <input
+                id="clear_gemini_api_key"
+                name="clear_gemini_api_key"
+                type="checkbox"
+                value="1"
+                class="h-4 w-4 rounded border-sand-300 text-sand-700 focus:ring-sand-400"
+              />
+              Clear saved Gemini API key override
+            </label>
+          {% endif %}
+        </div>
+        <div>
+          <label for="gemini_web_search_model" class="mb-2 block text-sm font-bold text-sand-900">Gemini search model</label>
+          <input
+            id="gemini_web_search_model"
+            name="gemini_web_search_model"
+            type="text"
+            value="{{ gemini_web_search_model }}"
+            placeholder="Auto ({{ gemini_search_model_placeholder }})"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
+        </div>
+        <div>
+          <label for="gemini_web_search_max_results" class="mb-2 block text-sm font-bold text-sand-900">Gemini max search sources</label>
+          <input
+            id="gemini_web_search_max_results"
+            name="gemini_web_search_max_results"
+            type="number"
+            min="1"
+            max="10"
+            value="{{ gemini_web_search_max_results }}"
+            class="w-full rounded-2xl border border-sand-200 bg-white/95 px-4 py-3 text-sand-900 outline-none transition focus:border-sand-500 focus:ring-2 focus:ring-sand-200"
+          />
         </div>
         <div class="sm:col-span-2">
           <label for="ollama_api_key" class="mb-2 block text-sm font-bold text-sand-900">Ollama API key</label>
@@ -61,10 +125,10 @@
             {% if ollama_web_search_enabled %}checked{% endif %}
             class="h-4 w-4 rounded border-sand-300 text-sand-700 focus:ring-sand-400"
           />
-          Enable web search
+          Enable Ollama web search
         </label>
         <div>
-          <label for="ollama_web_search_max_results" class="mb-2 block text-sm font-bold text-sand-900">Max search results</label>
+          <label for="ollama_web_search_max_results" class="mb-2 block text-sm font-bold text-sand-900">Ollama max search results</label>
           <input
             id="ollama_web_search_max_results"
             name="ollama_web_search_max_results"

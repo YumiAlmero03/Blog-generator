@@ -323,6 +323,7 @@ class FakeDiscoveryResult:
     pages: list
     errors: list
     sitemaps: list
+    sitemap_pages: list | None = None
 
 
 @pytest.mark.parametrize(
@@ -476,6 +477,69 @@ def test_site_seo_checks_publish_current_page_progress(monkeypatch):
         {"index": 1, "url": "https://example.com/a", "status": "checked", "score": 90, "grade": "A", "error": ""},
         {"index": 2, "url": "https://example.com/b", "status": "checked", "score": 90, "grade": "A", "error": ""},
     ]
+
+
+def test_site_seo_checks_can_restrict_urls_to_sitemap_pages(monkeypatch):
+    audited_urls = []
+
+    monkeypatch.setattr(
+        tool_controller,
+        "discover_website_pages",
+        lambda url, limit, allow_private=False: FakeDiscoveryResult(
+            base_url="https://example.com",
+            pages=["https://example.com/homepage-link"],
+            sitemap_pages=["https://example.com/from-sitemap"],
+            errors=[],
+            sitemaps=[{"url": "https://example.com/sitemap.xml", "status": "found"}],
+        ),
+    )
+
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False, use_ai=True):
+        audited_urls.append(url)
+        return {
+            "url": url,
+            "score": 90,
+            "grade": "A",
+            "checks": [],
+            "stats": {"links": {}},
+        }
+
+    monkeypatch.setattr(tool_controller, "run_seo_audit", fake_run_seo_audit)
+
+    result = tool_controller._run_site_seo_checks(
+        "https://example.com",
+        limit=10,
+        sitemap_only=True,
+    )
+
+    assert audited_urls == ["https://example.com/from-sitemap"]
+    assert result["discovered_pages"] == ["https://example.com/from-sitemap"]
+    assert result["page_source"] == "sitemap"
+
+
+def test_site_seo_checks_do_not_fallback_when_sitemap_has_no_pages(monkeypatch):
+    audit_calls = []
+    monkeypatch.setattr(
+        tool_controller,
+        "discover_website_pages",
+        lambda url, limit, allow_private=False: FakeDiscoveryResult(
+            base_url="https://example.com",
+            pages=["https://example.com/homepage-link"],
+            sitemap_pages=[],
+            errors=[],
+            sitemaps=[],
+        ),
+    )
+    monkeypatch.setattr(tool_controller, "run_seo_audit", lambda *args, **kwargs: audit_calls.append(args[0]))
+
+    result = tool_controller._run_site_seo_checks(
+        "https://example.com",
+        sitemap_only=True,
+    )
+
+    assert audit_calls == []
+    assert result["discovered_pages"] == []
+    assert result["summary"]["checked_count"] == 0
 
 
 def test_seo_checker_passes_allow_private_urls(monkeypatch):
@@ -764,7 +828,10 @@ def test_seo_checker_v2_ai_suggestions_checkbox_controls_audit(monkeypatch):
         allow_private=False,
         use_ai=True,
         progress_callback=None,
+        sitemap_only=False,
+        sitemap_url="",
     ):
+        assert sitemap_only is False
         ai_flags.append(use_ai)
         return {
             "mode": "empty",
@@ -1092,3 +1159,744 @@ def test_seo_checker_download_performance_summary_returns_html():
     assert "Recommended Maintenance Focus" in html
     assert "@page { size: A4 landscape" in html
     assert "slotcasino.site" not in html
+
+
+def test_seo_pages_inventory_csv_lists_url_title_description_keyword():
+    result = {
+        "mode": "site",
+        "base_url": "https://example.com",
+        "pages": [
+            {
+                "url": "https://example.com/best-slots",
+                "status": "checked",
+                "result": {
+                    "url": "https://example.com/best-slots",
+                    "stats": {
+                        "title": "Best Online Slots Philippines | Example Brand",
+                        "meta_description": "Play the best online slots.",
+                        "heading_outline": {"h1": []},
+                    },
+                },
+            },
+            {"url": "https://example.com/live-casino-guide", "status": "error", "result": None},
+        ],
+    }
+    app = create_app()
+    app.testing = True
+    response = app.test_client().post("/seo-checker/download-pages", data={"result_json": json.dumps(result)})
+    body = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert response.mimetype == "text/csv"
+    assert "seo-pages-example.com.csv" in response.headers["Content-Disposition"]
+    assert "URL,Title,Meta Description,Possible Main Keyword,H1,Status" in body
+    assert "best online slots philippines" in body
+    assert "Play the best online slots." in body
+    assert "live casino guide" in body
+
+
+def test_seo_checker_v2_renders_first_10_rows_and_fetches_ajax_pages(monkeypatch):
+    monkeypatch.setattr(
+        tool_controller,
+        "discover_website_pages",
+        lambda url, limit, allow_private=False: FakeDiscoveryResult(
+            base_url="https://ajax-test.example",
+            pages=["https://ajax-test.example/page-1"],
+            errors=[],
+            sitemaps=[],
+        ),
+    )
+
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False, use_ai=True):
+        return {
+            "url": url,
+            "score": 86,
+            "grade": "B",
+            "checks": [],
+            "ai_summary": {"summary": "", "priority_actions": [], "source": "Rules"},
+            "stats": {
+                "title": "Ajax Test Page",
+                "title_length": 14,
+                "meta_description": "Testing AJAX table slices.",
+                "meta_description_length": 26,
+                "word_count": 500,
+                "h1_count": 1,
+                "h2_count": 1,
+                "heading_sequence": [{"level": "h1", "text": "Ajax Test Page"}],
+                "canonical": url,
+                "robots_url": "https://ajax-test.example/robots.txt",
+                "robots_status_code": 200,
+                "sitemaps": [],
+                "open_graph": {},
+                "twitter_cards": {},
+                "missing_alt_count": 0,
+                "links": {
+                    "internal_count": 15,
+                    "external_count": 0,
+                    "checked_count": 15,
+                    "not_found_count": 15,
+                    "unreachable_count": 0,
+                    "redirect_count": 0,
+                    "not_found_links": [
+                        {
+                            "url": f"https://ajax-test.example/404-{idx}",
+                            "final_url": f"https://ajax-test.example/404-{idx}",
+                            "type": "internal",
+                            "status_code": 404,
+                            "status": "broken",
+                            "redirected": False,
+                            "text": f"Missing Link {idx}",
+                        }
+                        for idx in range(1, 16)
+                    ],
+                    "header_footer_links": [
+                        {
+                            "url": f"https://ajax-test.example/nav-{idx}",
+                            "text": f"Nav Item {idx}",
+                            "id": f"nav-{idx}",
+                            "type": "internal",
+                            "region": "header" if idx <= 10 else "footer",
+                            "is_image": False,
+                            "image_alt": "",
+                        }
+                        for idx in range(1, 16)
+                    ],
+                    "sample_checks": [
+                        {
+                            "url": f"https://ajax-test.example/sample-{idx}",
+                            "final_url": f"https://ajax-test.example/sample-{idx}",
+                            "type": "internal",
+                            "status_code": 200,
+                            "status": "ok",
+                            "redirected": False,
+                            "text": f"Sample Link {idx}",
+                        }
+                        for idx in range(1, 16)
+                    ],
+                },
+                "schemas": [
+                    {
+                        "index": idx,
+                        "valid": idx % 2 == 1,
+                        "type": f"SchemaType{idx}",
+                        "error": "" if idx % 2 == 1 else "Invalid JSON",
+                        "preview": f'{{"@type":"SchemaType{idx}"}}',
+                        "content": f'{{"@type":"SchemaType{idx}"}}',
+                        "hierarchy": [],
+                    }
+                    for idx in range(1, 16)
+                ],
+            },
+        }
+
+    monkeypatch.setattr(tool_controller, "run_seo_audit", fake_run_seo_audit)
+
+    app = create_app()
+    app.testing = True
+    client = app.test_client()
+
+    history_id = None
+    try:
+        response = client.post(
+            "/seo-checker-v2",
+            data={"url": "https://ajax-test.example", "limit": "1"},
+        )
+        html = response.get_data(as_text=True)
+        assert response.status_code == 200
+        assert "data-loading-overlay" in html
+        assert "Reading website and running SEO Checker V2..." in html
+
+        # First 10 rows are in initial SSR HTML; rows 11-15 are fetched via AJAX.
+        assert "https://ajax-test.example/nav-10" in html
+        assert "https://ajax-test.example/nav-11" not in html
+        assert "site-schema-9" in html
+        assert "site-schema-10" not in html
+        assert "https://ajax-test.example/sample-10" in html
+        assert "https://ajax-test.example/sample-11" not in html
+        assert "https://ajax-test.example/404-10" in html
+        assert "https://ajax-test.example/404-11" not in html
+
+        with get_connection() as connection:
+            saved_row = connection.execute(
+                "SELECT id FROM seo_check_history WHERE checker_version = 'v2' AND base_url = ? ORDER BY id DESC LIMIT 1",
+                ("https://ajax-test.example",),
+            ).fetchone()
+        assert saved_row is not None
+        history_id = saved_row["id"]
+
+        nav_page_2 = client.get(
+            f"/seo-checker-v2/table-data?history_id={history_id}&table=header_footer_links&page=2&page_size=10"
+        )
+        assert nav_page_2.status_code == 200
+        nav_payload = nav_page_2.get_json()
+        assert nav_payload["total_count"] == 15
+        assert nav_payload["filtered_count"] == 15
+        assert nav_payload["page_count"] == 2
+        assert len(nav_payload["rows"]) == 5
+        assert nav_payload["rows"][0]["url"] == "https://ajax-test.example/nav-11"
+        assert nav_payload["filter_options"] == ["Footer", "Header"]
+
+        schema_filtered = client.get(
+            f"/seo-checker-v2/table-data?history_id={history_id}&table=schemas&page=1&page_size=10&filter=Invalid"
+        )
+        assert schema_filtered.status_code == 200
+        schema_payload = schema_filtered.get_json()
+        assert schema_payload["filtered_count"] == 7
+        assert all(not row["valid"] for row in schema_payload["rows"])
+
+        links_search = client.get(
+            f"/seo-checker-v2/table-data?history_id={history_id}&table=page_links&page_index=0&search=sample-14"
+        )
+        assert links_search.status_code == 200
+        links_payload = links_search.get_json()
+        assert links_payload["filtered_count"] == 1
+        assert links_payload["rows"][0]["url"] == "https://ajax-test.example/sample-14"
+
+        csv_download = client.post(
+            "/seo-checker/download-pages",
+            data={"history_id": str(history_id)},
+        )
+        assert csv_download.status_code == 200
+        assert "Ajax Test Page" in csv_download.get_data(as_text=True)
+    finally:
+        if history_id is not None:
+            with get_connection() as connection:
+                connection.execute("DELETE FROM seo_check_history WHERE id = ?", (history_id,))
+
+
+def test_seo_checker_v2_uses_custom_sitemap_or_falls_back_to_homepage_links(monkeypatch):
+    calls = []
+
+    def fake_discover(url, limit=50, allow_private=False, sitemap_url="", homepage_only=False):
+        calls.append({"url": url, "sitemap_url": sitemap_url, "homepage_only": homepage_only})
+        if sitemap_url:
+            return FakeDiscoveryResult(
+                base_url="https://example.com",
+                pages=["https://example.com/custom-sitemap-page"],
+                sitemap_pages=["https://example.com/custom-sitemap-page"],
+                errors=[],
+                sitemaps=[{"url": sitemap_url, "status": "found"}],
+            )
+        return FakeDiscoveryResult(
+            base_url="https://example.com",
+            pages=["https://example.com/", "https://example.com/from-homepage"],
+            sitemap_pages=[],
+            errors=[],
+            sitemaps=[],
+        )
+
+    monkeypatch.setattr(tool_controller, "discover_website_pages", fake_discover)
+    monkeypatch.setattr(
+        tool_controller,
+        "run_seo_audit",
+        lambda url, verify_ssl=True, allow_private=False, use_ai=True: {
+            "url": url,
+            "score": 90,
+            "grade": "A",
+            "checks": [],
+            "ai_summary": {"summary": "", "priority_actions": [], "source": "Rules"},
+            "stats": {
+                "title": "Page",
+                "word_count": 500,
+                "h1_count": 1,
+                "missing_alt_count": 0,
+                "open_graph": {},
+                "twitter_cards": {},
+                "sitemaps": [],
+                "schemas": [],
+                "links": {},
+            },
+        },
+    )
+    monkeypatch.setattr(tool_controller, "record_seo_check_history", lambda result, checker_version="v1": 1)
+    monkeypatch.setattr(tool_controller, "get_previous_seo_check_history", lambda *args, **kwargs: None)
+    monkeypatch.setattr(tool_controller, "list_seo_check_history", lambda *args, **kwargs: [])
+
+    app = create_app()
+    app.testing = True
+    client = app.test_client()
+
+    # Empty sitemap_url -> homepage link mapping
+    empty_res = client.post("/seo-checker-v2", data={"url": "https://example.com", "sitemap_url": "", "limit": "5"})
+    assert empty_res.status_code == 200
+    assert calls[0] == {"url": "https://example.com", "sitemap_url": "", "homepage_only": True}
+    assert "https://example.com/from-homepage" in empty_res.get_data(as_text=True)
+
+    # Custom sitemap_url -> reads from that sitemap
+    sitemap_res = client.post(
+        "/seo-checker-v2",
+        data={"url": "https://example.com", "sitemap_url": "https://example.com/custom-sitemap.xml", "limit": "5"},
+    )
+    assert sitemap_res.status_code == 200
+    assert calls[1] == {
+        "url": "https://example.com",
+        "sitemap_url": "https://example.com/custom-sitemap.xml",
+        "homepage_only": False,
+    }
+    html = sitemap_res.get_data(as_text=True)
+    assert "https://example.com/custom-sitemap-page" in html
+    assert 'value="https://example.com/custom-sitemap.xml"' in html
+
+
+def test_robots_indexing_check_detects_noindex_and_robots_txt_disallow():
+    link_report = {
+        "internal_count": 1,
+        "external_count": 0,
+        "broken_sample_count": 0,
+        "not_found_count": 0,
+        "unreachable_count": 0,
+        "broken_count": 0,
+        "redirect_count": 0,
+        "sample_checks": [],
+    }
+    sitemap_result = {"found": True, "sitemaps": []}
+
+    # 1. Indexable page
+    indexable_parser = PageSeoParser()
+    indexable_parser.feed('<html><head><title>Valid Page Title For Testing SEO</title><meta name="robots" content="index, follow"></head><body><h1>Main</h1><h2>Sub</h2></body></html>')
+    indexable_page = seo_checker_service.FetchResult(
+        url="https://example.com/allowed",
+        status_code=200,
+        content_type="text/html",
+        text="",
+    )
+    robots_ok = {"found": True, "text": "User-agent: *\nAllow: /\n"}
+    checks_ok = seo_checker_service._build_checks(indexable_parser, indexable_page, sitemap_result, robots_ok, link_report)
+    robots_check_ok = next(check for check in checks_ok if check["name"] == "Robots indexing")
+    assert robots_check_ok["status"] == "pass"
+    assert "Indexed / allowed by robots" in robots_check_ok["detail"]
+
+    # 2. Blocked by meta robots noindex
+    noindex_parser = PageSeoParser()
+    noindex_parser.feed('<html><head><meta name="robots" content="noindex, nofollow"></head><body></body></html>')
+    checks_noindex = seo_checker_service._build_checks(noindex_parser, indexable_page, sitemap_result, robots_ok, link_report)
+    robots_check_noindex = next(check for check in checks_noindex if check["name"] == "Robots indexing")
+    assert robots_check_noindex["status"] == "fail"
+    assert "meta robots (noindex, nofollow)" in robots_check_noindex["detail"]
+
+    # 3. Blocked by X-Robots-Tag header
+    header_blocked_page = seo_checker_service.FetchResult(
+        url="https://example.com/allowed",
+        status_code=200,
+        content_type="text/html",
+        text="",
+        x_robots_tag="noindex",
+    )
+    checks_header = seo_checker_service._build_checks(indexable_parser, header_blocked_page, sitemap_result, robots_ok, link_report)
+    robots_check_header = next(check for check in checks_header if check["name"] == "Robots indexing")
+    assert robots_check_header["status"] == "fail"
+    assert "X-Robots-Tag (noindex)" in robots_check_header["detail"]
+
+    # 4. Blocked by robots.txt Disallow
+    robots_disallow = {"found": True, "text": "User-agent: *\nDisallow: /allowed\n"}
+    checks_disallow = seo_checker_service._build_checks(indexable_parser, indexable_page, sitemap_result, robots_disallow, link_report)
+    robots_check_disallow = next(check for check in checks_disallow if check["name"] == "Robots indexing")
+    assert robots_check_disallow["status"] == "fail"
+    assert "disallowed in robots.txt" in robots_check_disallow["detail"]
+
+
+def test_seo_checker_v2_recheck_specific_page_updates_page_summary_and_history(monkeypatch):
+    audited_urls = []
+    phase = {"second_succeeds": False}
+
+    monkeypatch.setattr(
+        tool_controller,
+        "discover_website_pages",
+        lambda url, limit, allow_private=False: FakeDiscoveryResult(
+            base_url="https://recheck-test.example",
+            pages=[
+                "https://recheck-test.example/first",
+                "https://recheck-test.example/second",
+            ],
+            errors=[],
+            sitemaps=[],
+        ),
+    )
+
+    def _audit_payload(url, score, grade, title, schemas=None):
+        return {
+            "url": url,
+            "score": score,
+            "grade": grade,
+            "checks": [],
+            "ai_summary": {"summary": "", "priority_actions": [], "source": "Rules"},
+            "stats": {
+                "title": title,
+                "title_length": len(title),
+                "meta_description": f"{title} description",
+                "meta_description_length": 20,
+                "word_count": 400,
+                "h1_count": 1,
+                "h2_count": 1,
+                "heading_sequence": [{"level": "h1", "text": title}],
+                "canonical": url,
+                "robots_url": "https://recheck-test.example/robots.txt",
+                "robots_status_code": 200,
+                "sitemaps": [],
+                "open_graph": {},
+                "twitter_cards": {},
+                "missing_alt_count": 0,
+                "links": {
+                    "internal_count": 1,
+                    "external_count": 0,
+                    "checked_count": 1,
+                    "not_found_count": 0,
+                    "unreachable_count": 0,
+                    "redirect_count": 0,
+                    "not_found_links": [],
+                    "header_footer_links": [],
+                    "sample_checks": [],
+                },
+                "schemas": schemas or [],
+            },
+        }
+
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False, use_ai=True):
+        audited_urls.append(url)
+        if url.endswith("/second"):
+            if not phase["second_succeeds"]:
+                raise RuntimeError("Temporary gateway timeout")
+            return _audit_payload(
+                url,
+                100,
+                "A",
+                "Second Page Fixed",
+                schemas=[
+                    {
+                        "index": 1,
+                        "valid": True,
+                        "type": "WebPage",
+                        "error": "",
+                        "preview": '{"@type":"WebPage"}',
+                        "content": '{"@type":"WebPage"}',
+                        "hierarchy": [],
+                    }
+                ],
+            )
+        return _audit_payload(url, 80, "B", "First Page")
+
+    monkeypatch.setattr(tool_controller, "run_seo_audit", fake_run_seo_audit)
+
+    app = create_app()
+    app.testing = True
+    client = app.test_client()
+
+    history_id = None
+    try:
+        initial = client.post(
+            "/seo-checker-v2",
+            data={"url": "https://recheck-test.example", "limit": "5"},
+        )
+        assert initial.status_code == 200
+        initial_html = initial.get_data(as_text=True)
+        assert "1/2 checked" in initial_html
+        assert "Temporary gateway timeout" in initial_html
+        assert "data-recheck-page-form" in initial_html
+        assert 'name="page_url" value="https://recheck-test.example/second"' in initial_html
+        assert audited_urls == [
+            "https://recheck-test.example/first",
+            "https://recheck-test.example/second",
+        ]
+
+        with get_connection() as connection:
+            saved_row = connection.execute(
+                "SELECT id FROM seo_check_history WHERE checker_version = 'v2' AND base_url = ? ORDER BY id DESC LIMIT 1",
+                ("https://recheck-test.example",),
+            ).fetchone()
+        assert saved_row is not None
+        history_id = saved_row["id"]
+
+        audited_urls.clear()
+        phase["second_succeeds"] = True
+
+        rechecked = client.post(
+            "/seo-checker-v2",
+            data={
+                "action": "recheck_page",
+                "history_id": str(history_id),
+                "page_index": "1",
+                "page_url": "https://recheck-test.example/second",
+            },
+        )
+        assert rechecked.status_code == 200
+        rechecked_html = rechecked.get_data(as_text=True)
+
+        assert audited_urls == ["https://recheck-test.example/second"]
+        assert "2/2 checked" in rechecked_html
+        assert "90/100" in rechecked_html
+        assert "Second Page Fixed" in rechecked_html
+        assert "Rechecked https://recheck-test.example/second" in rechecked_html
+        assert 'data-scroll-to-active-page="1"' in rechecked_html
+        assert 'data-seo-v2-tab="1"\n            aria-selected="true"' in rechecked_html
+        assert '<article data-seo-v2-panel="0" class="hidden">' in rechecked_html
+        assert '<article data-seo-v2-panel="1" class="">' in rechecked_html
+
+        restored = client.get(f"/seo-checker-v2?history_id={history_id}")
+        restored_html = restored.get_data(as_text=True)
+        assert restored.status_code == 200
+        assert "2/2 checked" in restored_html
+        assert "90/100" in restored_html
+        assert "Second Page Fixed" in restored_html
+
+        schemas_ajax = client.get(f"/seo-checker-v2/table-data?history_id={history_id}&table=schemas")
+        assert schemas_ajax.status_code == 200
+        schemas_payload = schemas_ajax.get_json()
+        assert schemas_payload["total_count"] == 1
+        assert schemas_payload["rows"][0]["page"] == "https://recheck-test.example/second"
+    finally:
+        if history_id is not None:
+            with get_connection() as connection:
+                connection.execute("DELETE FROM seo_check_history WHERE id = ?", (history_id,))
+
+
+def test_seo_checker_v2_recheck_page_handles_missing_history_and_google_issues_scope(monkeypatch):
+    app = create_app()
+    app.testing = True
+    client = app.test_client()
+
+    missing_res = client.post(
+        "/seo-checker-v2",
+        data={
+            "action": "recheck_page",
+            "history_id": "999999999",
+            "page_index": "0",
+            "page_url": "https://missing-history.example/a",
+        },
+    )
+    assert missing_res.status_code == 200
+    assert "Could not find the saved SEO Checker V2 report for this recheck." in missing_res.get_data(as_text=True)
+
+    inspected_batches = []
+
+    @dataclass
+    class FakeGoogleItem:
+        url: str
+        status: str = "indexed"
+        user_canonical: str = ""
+        google_canonical: str = ""
+        coverage_state: str = "Submitted and indexed"
+        last_crawl_time: str = "2026-11-18T00:00:00Z"
+        detail: str = ""
+
+    @dataclass
+    class FakeGoogleResponse:
+        items: list
+
+    monkeypatch.setattr(
+        "app.services.google_issues_service.inspect_google_index_status_by_url_domain",
+        lambda urls, access_token="", service_account_json="": (
+            inspected_batches.append(list(urls)),
+            FakeGoogleResponse(items=[FakeGoogleItem(url=u, user_canonical=u, google_canonical=u) for u in urls]),
+        )[1],
+    )
+    monkeypatch.setattr(tool_controller, "get_setting", lambda key, default="": "token" if key == "google_oauth_access_token" else default)
+
+    def fail_on_recheck(url, verify_ssl=True, allow_private=False, use_ai=True):
+        raise RuntimeError("Still failing upstream")
+
+    monkeypatch.setattr(tool_controller, "run_seo_audit", fail_on_recheck)
+
+    seed_result = {
+        "mode": "site",
+        "source_url": "https://scope-test.example",
+        "base_url": "https://scope-test.example",
+        "limit": 2,
+        "use_ai": False,
+        "check_google_issues": True,
+        "verify_ssl": True,
+        "allow_private": False,
+        "discovered_pages": [
+            "https://scope-test.example/one",
+            "https://scope-test.example/two",
+        ],
+        "pages": [
+            {
+                "index": 1,
+                "url": "https://scope-test.example/one",
+                "tab_label": "/one",
+                "status": "checked",
+                "result": {
+                    "url": "https://scope-test.example/one",
+                    "score": 90,
+                    "grade": "A",
+                    "checks": [],
+                    "stats": {
+                        "title": "One",
+                        "word_count": 100,
+                        "h1_count": 1,
+                        "missing_alt_count": 0,
+                        "open_graph": {},
+                        "twitter_cards": {},
+                        "sitemaps": [],
+                        "links": {},
+                        "schemas": [],
+                    },
+                },
+                "error": "",
+            },
+            {
+                "index": 2,
+                "url": "https://scope-test.example/two",
+                "tab_label": "/two",
+                "status": "checked",
+                "result": {
+                    "url": "https://scope-test.example/two",
+                    "score": 82,
+                    "grade": "B",
+                    "checks": [],
+                    "stats": {
+                        "title": "Two",
+                        "word_count": 100,
+                        "h1_count": 1,
+                        "missing_alt_count": 0,
+                        "open_graph": {},
+                        "twitter_cards": {},
+                        "sitemaps": [],
+                        "links": {},
+                        "schemas": [],
+                    },
+                },
+                "error": "",
+            },
+        ],
+        "summary": {"checked_count": 2, "discovered_count": 2, "average_score": 86, "average_grade": "B"},
+    }
+    history_id = record_seo_check_history(seed_result, checker_version="v2")
+    try:
+        err_res = client.post(
+            "/seo-checker-v2",
+            data={
+                "action": "recheck_page",
+                "history_id": str(history_id),
+                "page_index": "1",
+                "page_url": "https://scope-test.example/two",
+                "check_google_issues": "1",
+                "use_ai": "0",
+                "ignore_ssl_errors": "0",
+                "allow_private_urls": "0",
+            },
+        )
+        assert err_res.status_code == 200
+        err_html = err_res.get_data(as_text=True)
+        assert "Recheck failed for https://scope-test.example/two: Still failing upstream" in err_html
+        assert inspected_batches == [["https://scope-test.example/two"]]
+        snapshot = get_seo_check_history_result(history_id, checker_version="v2")
+        assert snapshot["result"]["summary"]["checked_count"] == 1
+        assert snapshot["result"]["summary"]["error_count"] == 1
+    finally:
+        with get_connection() as connection:
+            connection.execute("DELETE FROM seo_check_history WHERE id = ?", (history_id,))
+
+
+def test_seo_checker_v2_single_page_only_audits_exact_url_without_discovery(monkeypatch):
+    audited_urls = []
+
+    def fail_discover(*args, **kwargs):
+        raise AssertionError("discover_website_pages must not be called in single_page_only mode")
+
+    monkeypatch.setattr(tool_controller, "discover_website_pages", fail_discover)
+
+    def fake_run_seo_audit(url, verify_ssl=True, allow_private=False, use_ai=True):
+        audited_urls.append(url)
+        return {
+            "url": url,
+            "score": 94 if len(audited_urls) == 1 else 98,
+            "grade": "A",
+            "checks": [],
+            "ai_summary": {"summary": "", "priority_actions": [], "source": "Rules"},
+            "stats": {
+                "title": f"Specific Page Audit {len(audited_urls)}",
+                "title_length": 21,
+                "meta_description": "Single page audit description",
+                "meta_description_length": 29,
+                "word_count": 650,
+                "h1_count": 1,
+                "h2_count": 2,
+                "heading_sequence": [{"level": "h1", "text": "Specific Page"}],
+                "canonical": url,
+                "robots_url": "https://single-page-test.example/robots.txt",
+                "robots_status_code": 200,
+                "sitemaps": [],
+                "open_graph": {},
+                "twitter_cards": {},
+                "missing_alt_count": 0,
+                "links": {
+                    "internal_count": 1,
+                    "external_count": 0,
+                    "checked_count": 1,
+                    "not_found_count": 0,
+                    "unreachable_count": 0,
+                    "redirect_count": 0,
+                    "not_found_links": [],
+                    "header_footer_links": [],
+                    "sample_checks": [],
+                },
+                "schemas": [],
+            },
+        }
+
+    monkeypatch.setattr(tool_controller, "run_seo_audit", fake_run_seo_audit)
+
+    app = create_app()
+    app.testing = True
+    client = app.test_client()
+
+    history_id = None
+    try:
+        response = client.post(
+            "/seo-checker-v2",
+            data={
+                "url": "https://single-page-test.example/blog/my-post?ref=nav#top",
+                "sitemap_url": "https://single-page-test.example/sitemap.xml",
+                "limit": "50",
+                "single_page_only": "1",
+            },
+        )
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+
+        assert audited_urls == ["https://single-page-test.example/blog/my-post?ref=nav"]
+        assert "1/1 checked" in html
+        assert "Specific Page Audit 1" in html
+        assert "94/100" in html
+        assert 'name="single_page_only" value="1" checked' in html
+        assert "Check Specific Page" in html
+
+        with get_connection() as connection:
+            saved_row = connection.execute(
+                "SELECT id, base_url, checked_count FROM seo_check_history WHERE checker_version = 'v2' AND base_url = ? ORDER BY id DESC LIMIT 1",
+                ("https://single-page-test.example/blog/my-post?ref=nav",),
+            ).fetchone()
+        assert saved_row is not None
+        assert saved_row["checked_count"] == 1
+        history_id = saved_row["id"]
+
+        restored = client.get(f"/seo-checker-v2?history_id={history_id}")
+        assert restored.status_code == 200
+        restored_html = restored.get_data(as_text=True)
+        assert 'name="single_page_only" value="1" checked' in restored_html
+        assert "Check Specific Page" in restored_html
+
+        rechecked = client.post(
+            "/seo-checker-v2",
+            data={
+                "action": "recheck_page",
+                "history_id": str(history_id),
+                "page_index": "0",
+                "page_url": "https://single-page-test.example/blog/my-post?ref=nav",
+            },
+        )
+        assert rechecked.status_code == 200
+        rechecked_html = rechecked.get_data(as_text=True)
+        assert audited_urls == [
+            "https://single-page-test.example/blog/my-post?ref=nav",
+            "https://single-page-test.example/blog/my-post?ref=nav",
+        ]
+        assert "98/100" in rechecked_html
+        assert 'name="single_page_only" value="1" checked' in rechecked_html
+    finally:
+        if history_id is not None:
+            with get_connection() as connection:
+                connection.execute("DELETE FROM seo_check_history WHERE id = ?", (history_id,))
+
+

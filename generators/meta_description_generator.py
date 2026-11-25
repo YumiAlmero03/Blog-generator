@@ -1,6 +1,11 @@
 import json
 import re
-from generation_retry_policy import can_accept_close_enough, raise_if_generation_cancelled, wait_before_retry
+from generation_retry_policy import (
+    can_accept_close_enough,
+    max_generation_attempts,
+    raise_if_generation_cancelled,
+    wait_before_retry,
+)
 from prompts import build_backlink_meta_description_prompt, build_meta_description_prompt
 from utils import extract_json_string
 from logger import logger
@@ -21,7 +26,8 @@ def _generate_meta_descriptions_from_prompt(
     cleaned_forbidden_phrases = _clean_forbidden_phrases(forbidden_phrases or [])
 
     attempt = 0
-    while attempt < MAX_ATTEMPTS:
+    effective_max_attempts = max(1, min(MAX_ATTEMPTS, max_generation_attempts()))
+    while attempt < effective_max_attempts:
         raise_if_generation_cancelled(progress_callback)
         attempt += 1
         retry_instruction = ""
@@ -256,6 +262,7 @@ def generate_meta_descriptions(
     brand: str = "",
     brand_context: str = "",
     language: str = "English",
+    reference_context: str = "",
     progress_callback=None,
 ):
     prompt = build_meta_description_prompt(
@@ -265,6 +272,7 @@ def generate_meta_descriptions(
         brand=brand,
         brand_context=brand_context,
         language=language,
+        reference_context=reference_context,
     )
     return _generate_meta_descriptions_from_prompt(provider, prompt, target_count=count, progress_callback=progress_callback)
 
@@ -275,6 +283,7 @@ def generate_meta_description(
     brand: str = "",
     brand_context: str = "",
     language: str = "English",
+    reference_context: str = "",
     progress_callback=None,
 ):
     """Legacy function for single meta description"""
@@ -286,6 +295,7 @@ def generate_meta_description(
         brand=brand,
         brand_context=brand_context,
         language=language,
+        reference_context=reference_context,
         progress_callback=progress_callback,
     )
     return descriptions[0]["text"] if descriptions else ""

@@ -24,6 +24,10 @@ from app.services.page_reference_service import build_page_reference_context
 from app.services.page_layout_service import group_page_html
 
 
+def unlimited_rebate():
+    return render_template("unlimited_rebate.html", **base_template_context())
+
+
 def page_generator():
     state = {
         "keyword": "",

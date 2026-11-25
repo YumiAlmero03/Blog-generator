@@ -1,7 +1,7 @@
 import json
 import re
 
-from app.services.ollama_web_search_service import build_web_research_context
+from app.services.web_search_service import build_news_web_research_context as build_web_research_context
 from generators.content_generator import _generate_content_from_prompt, count_html_words, suggest_content_tags
 from generators.meta_description_generator import _generate_meta_descriptions_from_prompt
 from generators.title_generator import _generate_titles_from_prompt
@@ -173,6 +173,9 @@ def generate_news_content(
     max_words: int = 1400,
     current_date: str = "",
     language: str = "English",
+    change_request: str = "",
+    links: list | None = None,
+    money_site_url: str = "",
     progress_callback=None,
 ) -> str:
     reference_context = _with_web_research_context(
@@ -193,6 +196,9 @@ def generate_news_content(
         max_words=max_words,
         current_date=current_date or current_news_date(),
         language=language,
+        change_request=change_request,
+        links=links,
+        money_site_url=money_site_url,
     )
     markdown_content = _generate_content_from_prompt(
         provider,
@@ -205,9 +211,10 @@ def generate_news_content(
         progress_callback=progress_callback,
     )
     markdown_content = _remove_selected_title_heading(markdown_content, title)
+    from app.services.article_link_service import apply_article_link_rules
     from app.services.content_format_service import markdown_to_output
 
-    return markdown_to_output(markdown_content, "html")
+    return apply_article_link_rules(markdown_to_output(markdown_content, "html"), links, money_site_url)
 
 
 def generate_news_tags(
@@ -283,13 +290,10 @@ def _contains_old_news_year(text: str) -> bool:
 
 
 def _with_web_research_context(reference_context: str, query: str, progress_callback=None) -> str:
-    web_context = build_web_research_context(query, progress_callback=progress_callback)
-    if not web_context:
-        return reference_context
     cleaned_reference_context = (reference_context or "").strip()
     if cleaned_reference_context:
-        return f"{cleaned_reference_context}\n\n---\n\n{web_context}"
-    return web_context
+        return cleaned_reference_context
+    return build_web_research_context(query, progress_callback=progress_callback)
 
 
 def _news_search_query(topic: str, target_country: str = "") -> str:

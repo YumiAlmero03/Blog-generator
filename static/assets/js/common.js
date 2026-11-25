@@ -138,6 +138,42 @@
     });
   }
 
+  function scrollGenerationLogToBottom() {
+    const applyScroll = function () {
+      generationLogBoxes().forEach(function (box) {
+        box.scrollTop = box.scrollHeight;
+      });
+    };
+    applyScroll();
+    if (window.requestAnimationFrame) {
+      window.requestAnimationFrame(applyScroll);
+    }
+  }
+
+  const observedGenerationLogBoxes = new WeakSet();
+  let generationLogResizeObserver = null;
+
+  function observeGenerationLogBoxes() {
+    if (!("ResizeObserver" in window)) {
+      return;
+    }
+    if (!generationLogResizeObserver) {
+      generationLogResizeObserver = new window.ResizeObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry && entry.target) {
+            entry.target.scrollTop = entry.target.scrollHeight;
+          }
+        });
+      });
+    }
+    generationLogBoxes().forEach(function (box) {
+      if (!observedGenerationLogBoxes.has(box)) {
+        observedGenerationLogBoxes.add(box);
+        generationLogResizeObserver.observe(box);
+      }
+    });
+  }
+
   function renderGenerationLog() {
     generationLogBoxes().forEach(function (box) {
       box.innerHTML = "";
@@ -161,8 +197,8 @@
         wrapper.appendChild(body);
         box.appendChild(wrapper);
       });
-      box.scrollTop = box.scrollHeight;
     });
+    scrollGenerationLogToBottom();
   }
 
   function appendGenerationLog(kind, message) {
@@ -289,12 +325,12 @@
     if (usesInlineLoading() && ["Queued in background...", "Generating..."].includes(cleanedMessage)) {
       return;
     }
+    const inlineStatus = getInlineTarget("inlineStatusTarget");
+    if (inlineStatus && !["Queued in background...", "Generating..."].includes(cleanedMessage)) {
+      inlineStatus.textContent = cleanedMessage;
+      inlineStatus.classList.toggle("hidden", !cleanedMessage);
+    }
     if (usesInlineLoading()) {
-      const status = getInlineTarget("inlineStatusTarget");
-      if (status) {
-        status.textContent = cleanedMessage;
-        status.classList.toggle("hidden", !cleanedMessage);
-      }
       return;
     }
     const status = getOverlayStatus();
@@ -305,12 +341,13 @@
 
   function setLoadingError(message) {
     const cleanedMessage = String(message || "");
+    const error = getInlineTarget("inlineErrorTarget");
+    if (error) {
+      error.textContent = cleanedMessage;
+      error.classList.toggle("hidden", !cleanedMessage);
+    }
     if (usesInlineLoading()) {
-      const error = getInlineTarget("inlineErrorTarget");
-      if (error) {
-        error.textContent = cleanedMessage;
-        error.classList.toggle("hidden", !cleanedMessage);
-      } else if (cleanedMessage) {
+      if (!error && cleanedMessage) {
         setLoadingStatus(cleanedMessage);
       }
       return;
@@ -381,6 +418,7 @@
     setLoadingPrompt("");
     getOverlayActions();
     overlay.classList.add("active");
+    scrollGenerationLogToBottom();
   }
 
   function hideLoading() {
@@ -1272,5 +1310,16 @@
   };
 
   initThemeToggle();
-  window.addEventListener("load", hideLoading);
+  scrollGenerationLogToBottom();
+  observeGenerationLogBoxes();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      scrollGenerationLogToBottom();
+      observeGenerationLogBoxes();
+    });
+  }
+  window.addEventListener("load", function () {
+    hideLoading();
+    scrollGenerationLogToBottom();
+  });
 })();
